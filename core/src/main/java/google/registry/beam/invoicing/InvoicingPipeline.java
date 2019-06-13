@@ -17,6 +17,7 @@ package google.registry.beam.invoicing;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.auth.oauth2.GoogleCredentials;
+import com.google.common.collect.ImmutableList;
 import google.registry.beam.invoicing.BillingEvent.InvoiceGroupingKey;
 import google.registry.beam.invoicing.BillingEvent.InvoiceGroupingKey.InvoiceGroupingKeyCoder;
 import google.registry.config.CredentialModule.LocalCredentialJson;
@@ -88,6 +89,10 @@ public class InvoicingPipeline implements Serializable {
   @Inject @LocalCredentialJson String credentialJson;
 
   @Inject
+  @Config("defaultCredentialOauthScopes")
+  ImmutableList<String> requiredScopes;
+
+  @Inject
   InvoicingPipeline() {}
 
   /** Custom options for running the invoicing pipeline. */
@@ -109,8 +114,12 @@ public class InvoicingPipeline implements Serializable {
     // We can't store options as a member variable due to serialization concerns.
     InvoicingPipelineOptions options = PipelineOptionsFactory.as(InvoicingPipelineOptions.class);
     try {
-      options.setGcpCredential(
-          GoogleCredentials.fromStream(new ByteArrayInputStream(credentialJson.getBytes(UTF_8))));
+      GoogleCredentials credential =
+          GoogleCredentials.fromStream(new ByteArrayInputStream(credentialJson.getBytes(UTF_8)));
+      if (credential.createScopedRequired()) {
+        credential = credential.createScoped(requiredScopes);
+      }
+      options.setGcpCredential(credential);
     } catch (IOException e) {
       throw new RuntimeException(
           "Cannot obtain local credential to deploy the invoicing pipeline", e);
