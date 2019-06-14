@@ -27,8 +27,11 @@ import google.registry.model.eppcommon.Trid;
 import google.registry.model.reporting.HistoryEntry;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 /** Unit tests for {@link PollMessage}. */
+@RunWith(JUnit4.class)
 public class PollMessageTest extends EntityTestCase {
 
   HistoryEntry historyEntry;

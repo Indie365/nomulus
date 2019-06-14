@@ -28,8 +28,11 @@ import google.registry.model.eppcommon.Trid;
 import google.registry.model.reporting.DomainTransactionRecord.TransactionReportField;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 /** Unit tests for {@link HistoryEntry}. */
+@RunWith(JUnit4.class)
 public class HistoryEntryTest extends EntityTestCase {
 
   HistoryEntry historyEntry;

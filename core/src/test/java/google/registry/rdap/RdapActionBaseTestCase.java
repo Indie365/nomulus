@@ -45,7 +45,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 /** Common unit test code for actions inheriting {@link RdapActionBase}. */
-@RunWith(JUnit4.class)
 public class RdapActionBaseTestCase<A extends RdapActionBase> {
 
   @Rule

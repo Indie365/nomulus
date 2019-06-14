@@ -48,8 +48,11 @@ import org.joda.money.Money;
 import org.joda.time.DateTime;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 /** Unit tests for {@link Registry}. */
+@RunWith(JUnit4.class)
 public class RegistryTest extends EntityTestCase {
   Registry registry;
 

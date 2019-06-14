@@ -28,8 +28,11 @@ import google.registry.model.EntityTestCase;
 import google.registry.model.contact.ContactResource;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 /** Unit tests for {@link EppResourceIndex}. */
+@RunWith(JUnit4.class)
 public class EppResourceIndexTest extends EntityTestCase  {
 
   ContactResource contact;

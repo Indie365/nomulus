@@ -57,8 +57,11 @@ import org.joda.money.Money;
 import org.joda.time.DateTime;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 /** Unit tests for {@link DomainBase}. */
+@RunWith(JUnit4.class)
 public class DomainBaseTest extends EntityTestCase {
 
   DomainBase domain;

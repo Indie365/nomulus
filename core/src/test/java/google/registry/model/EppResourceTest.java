@@ -29,8 +29,11 @@ import google.registry.testing.TestCacheRule;
 import org.joda.time.Duration;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 /** Unit tests for {@link EppResource}. */
+@RunWith(JUnit4.class)
 public class EppResourceTest extends EntityTestCase {
 
   @Rule

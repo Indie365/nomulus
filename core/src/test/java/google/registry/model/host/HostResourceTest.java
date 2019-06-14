@@ -37,8 +37,11 @@ import google.registry.model.transfer.TransferStatus;
 import org.joda.time.DateTime;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 /** Unit tests for {@link HostResource}. */
+@RunWith(JUnit4.class)
 public class HostResourceTest extends EntityTestCase {
 
   final DateTime day3 = clock.nowUtc();

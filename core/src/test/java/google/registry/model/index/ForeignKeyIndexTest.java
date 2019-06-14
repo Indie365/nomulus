@@ -37,8 +37,11 @@ import org.joda.time.Duration;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 /** Unit tests for {@link ForeignKeyIndex}. */
+@RunWith(JUnit4.class)
 public class ForeignKeyIndexTest extends EntityTestCase {
 
   @Rule

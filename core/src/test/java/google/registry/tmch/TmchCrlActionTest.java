@@ -29,8 +29,11 @@ import java.security.cert.CRLException;
 import java.security.cert.CertificateNotYetValidException;
 import org.joda.time.DateTime;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 /** Unit tests for {@link TmchCrlAction}. */
+@RunWith(JUnit4.class)
 public class TmchCrlActionTest extends TmchActionTestCase {
 
   private TmchCrlAction newTmchCrlAction(TmchCaMode tmchCaMode) throws MalformedURLException {

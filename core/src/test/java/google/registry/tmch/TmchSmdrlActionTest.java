@@ -24,8 +24,11 @@ import google.registry.model.smd.SignedMarkRevocationList;
 import java.util.Optional;
 import org.joda.time.DateTime;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 /** Unit tests for {@link TmchSmdrlAction}. */
+@RunWith(JUnit4.class)
 public class TmchSmdrlActionTest extends TmchActionTestCase {
 
   private static final DateTime now = DateTime.parse("2014-01-01T00:00:00Z");

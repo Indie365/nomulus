@@ -23,8 +23,11 @@ import google.registry.model.eppinput.EppInput.ResourceCommandWrapper;
 import google.registry.model.eppinput.ResourceCommand;
 import google.registry.testing.EppLoader;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 /** Tests for DomainCommand. */
+@RunWith(JUnit4.class)
 public class DomainCommandTest extends ResourceCommandTestCase {
 
   @Test

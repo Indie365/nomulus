@@ -45,8 +45,11 @@ import google.registry.util.CidrAddressBlock;
 import org.joda.money.CurrencyUnit;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
-/** Unit tests for {@link Registrar}. */
+ /** Unit tests for {@link Registrar}. */
+ @RunWith(JUnit4.class)
 public class RegistrarTest extends EntityTestCase {
   private Registrar registrar;
   private RegistrarContact abuseAdminContact;

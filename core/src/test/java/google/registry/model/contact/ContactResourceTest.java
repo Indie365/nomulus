@@ -39,8 +39,11 @@ import google.registry.model.transfer.TransferData;
 import google.registry.model.transfer.TransferStatus;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 /** Unit tests for {@link ContactResource}. */
+@RunWith(JUnit4.class)
 public class ContactResourceTest extends EntityTestCase {
   ContactResource contactResource;
 

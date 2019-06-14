@@ -24,8 +24,11 @@ import google.registry.model.tmch.ClaimsListShard;
 import java.util.Optional;
 import org.joda.time.DateTime;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 /** Unit tests for {@link TmchDnlAction}. */
+@RunWith(JUnit4.class)
 public class TmchDnlActionTest extends TmchActionTestCase {
 
   private TmchDnlAction newTmchDnlAction() {

@@ -16,8 +16,11 @@ package google.registry.model.host;
 
 import google.registry.model.ResourceCommandTestCase;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 /** Test xml roundtripping of commands. */
+@RunWith(JUnit4.class)
 public class HostCommandTest extends ResourceCommandTestCase {
   @Test
   public void testCreate() throws Exception {
