@@ -37,6 +37,10 @@ apt-get install google-cloud-sdk-app-engine-java -y
 apt-get install git -y
 # Install docker
 apt-get install docker.io -y
+# Install Chrome
+apt-get install wget -y
+wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+apt install ./google-chrome-stable_current_amd64.deb -y
 apt-get remove apt-utils locales lsb-release -y
 apt-get autoclean -y
 apt-get autoremove -y
