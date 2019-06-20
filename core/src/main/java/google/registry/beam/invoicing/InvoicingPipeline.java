@@ -17,10 +17,10 @@ package google.registry.beam.invoicing;
 import com.google.auth.oauth2.GoogleCredentials;
 import google.registry.beam.invoicing.BillingEvent.InvoiceGroupingKey;
 import google.registry.beam.invoicing.BillingEvent.InvoiceGroupingKey.InvoiceGroupingKeyCoder;
+import google.registry.config.CredentialModule.LocalCredential;
 import google.registry.config.RegistryConfig.Config;
 import google.registry.reporting.billing.BillingModule;
 import google.registry.reporting.billing.GenerateInvoicesAction;
-import google.registry.tools.AuthModule.LocalOAuth2Credentials;
 import java.io.Serializable;
 import javax.inject.Inject;
 import org.apache.beam.runners.dataflow.DataflowRunner;
@@ -81,8 +81,7 @@ public class InvoicingPipeline implements Serializable {
   @Config("invoiceFilePrefix")
   String invoiceFilePrefix;
 
-  @Inject @LocalOAuth2Credentials
-  GoogleCredentials credentials;
+  @Inject @LocalCredential GoogleCredentials credentials;
 
   @Inject
   InvoicingPipeline() {}

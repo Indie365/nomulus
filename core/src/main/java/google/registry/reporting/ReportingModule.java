@@ -17,8 +17,10 @@ package google.registry.reporting;
 import static google.registry.request.RequestParameters.extractOptionalParameter;
 import static google.registry.request.RequestParameters.extractRequiredParameter;
 
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
+import com.google.api.client.googleapis.util.Utils;
 import com.google.api.services.dataflow.Dataflow;
+import com.google.auth.http.HttpCredentialsAdapter;
+import com.google.auth.oauth2.GoogleCredentials;
 import dagger.Module;
 import dagger.Provides;
 import google.registry.config.CredentialModule.DefaultCredential;
@@ -118,8 +120,11 @@ public class ReportingModule {
   /** Constructs a {@link Dataflow} API client with default settings. */
   @Provides
   static Dataflow provideDataflow(
-      @DefaultCredential GoogleCredential credential, @Config("projectId") String projectId) {
-    return new Dataflow.Builder(credential.getTransport(), credential.getJsonFactory(), credential)
+      @DefaultCredential GoogleCredentials credential, @Config("projectId") String projectId) {
+    return new Dataflow.Builder(
+            Utils.getDefaultTransport(),
+            Utils.getDefaultJsonFactory(),
+            new HttpCredentialsAdapter(credential))
         .setApplicationName(String.format("%s billing", projectId))
         .build();
   }

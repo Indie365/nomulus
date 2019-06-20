@@ -14,8 +14,10 @@
 
 package google.registry.export;
 
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
+import com.google.api.client.googleapis.util.Utils;
 import com.google.api.services.drive.Drive;
+import com.google.auth.http.HttpCredentialsAdapter;
+import com.google.auth.oauth2.GoogleCredentials;
 import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
@@ -32,8 +34,12 @@ public final class DriveModule {
 
   @Provides
   static Drive provideDrive(
-      @DefaultCredential GoogleCredential credential, @Config("projectId") String projectId) {
-    return new Drive.Builder(credential.getTransport(), credential.getJsonFactory(), credential)
+      @DefaultCredential GoogleCredentials credential, @Config("projectId") String projectId) {
+
+    return new Drive.Builder(
+            Utils.getDefaultTransport(),
+            Utils.getDefaultJsonFactory(),
+            new HttpCredentialsAdapter(credential))
         .setApplicationName(projectId)
         .build();
   }

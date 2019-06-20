@@ -14,7 +14,9 @@
 
 package google.registry.export.datastore;
 
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
+import com.google.api.client.googleapis.util.Utils;
+import com.google.auth.http.HttpCredentialsAdapter;
+import com.google.auth.oauth2.GoogleCredentials;
 import dagger.Module;
 import dagger.Provides;
 import google.registry.config.CredentialModule;
@@ -28,10 +30,12 @@ public abstract class DatastoreAdminModule {
   @Singleton
   @Provides
   static DatastoreAdmin provideDatastoreAdmin(
-      @CredentialModule.DefaultCredential GoogleCredential credential,
+      @CredentialModule.DefaultCredential GoogleCredentials credential,
       @RegistryConfig.Config("projectId") String projectId) {
     return new DatastoreAdmin.Builder(
-            credential.getTransport(), credential.getJsonFactory(), credential)
+            Utils.getDefaultTransport(),
+            Utils.getDefaultJsonFactory(),
+            new HttpCredentialsAdapter(credential))
         .setApplicationName(projectId)
         .setProjectId(projectId)
         .build();

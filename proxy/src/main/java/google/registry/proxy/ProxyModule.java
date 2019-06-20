@@ -20,11 +20,13 @@ import static google.registry.proxy.ProxyConfig.getProxyConfig;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterException;
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.googleapis.util.Utils;
 import com.google.api.services.cloudkms.v1.CloudKMS;
 import com.google.api.services.cloudkms.v1.model.DecryptRequest;
 import com.google.api.services.storage.Storage;
+import com.google.auth.http.HttpCredentialsAdapter;
+import com.google.auth.oauth2.AccessToken;
+import com.google.auth.oauth2.GoogleCredentials;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.flogger.LoggerConfig;
@@ -50,6 +52,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Date;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -69,6 +72,13 @@ import javax.inject.Singleton;
 @Module
 public class ProxyModule {
 
+  @Parameter(
+      names = "--log",
+      description =
+          "Whether to log activities for debugging. "
+              + "This cannot be enabled for production as logs contain PII.")
+  boolean log;
+
   @Parameter(names = "--whois", description = "Port for WHOIS")
   private Integer whoisPort;
 
@@ -87,12 +97,133 @@ public class ProxyModule {
   @Parameter(names = "--env", description = "Environment to run the proxy in")
   private Environment env = Environment.LOCAL;
 
-  @Parameter(
-      names = "--log",
-      description =
-          "Whether to log activities for debugging. "
-              + "This cannot be enabled for production as logs contain PII.")
-  boolean log;
+  @Singleton
+  @Provides
+  static GoogleCredentials provideCredential(ProxyConfig config) {
+    try {
+      GoogleCredentials credential = GoogleCredentials.getApplicationDefault();
+      if (credential.createScopedRequired()) {
+        credential = credential.createScoped(config.gcpScopes);
+      }
+      return credential;
+    } catch (IOException e) {
+      throw new RuntimeException("Unable to obtain OAuth2 credential.", e);
+    }
+  }
+
+  /** Access token supplier that auto refreshes 1 minute before expiry. */
+  @Singleton
+  @Provides
+  @Named("accessToken")
+  static Supplier<String> provideAccessTokenSupplier(
+      GoogleCredentials credential, ProxyConfig config) {
+    return () -> {
+      AccessToken accessToken = credential.getAccessToken();
+      Date nextExpirationTime =
+          new Date(
+              System.currentTimeMillis() + config.accessTokenRefreshBeforeExpirationSeconds * 1000);
+      // If we never obtained an access token, the expiration time is null.
+      if (accessToken == null
+          // If we have an access token, make sure to refresh it ahead of time.
+          || accessToken.getExpirationTime().before(nextExpirationTime)) {
+        try {
+          credential.refresh();
+        } catch (IOException e) {
+          throw new RuntimeException("Cannot refresh access token.", e);
+        }
+      }
+      return credential.getAccessToken().getTokenValue();
+    };
+  }
+
+  @Singleton
+  @Provides
+  static CloudKMS provideCloudKms(GoogleCredentials credential, ProxyConfig config) {
+    return new CloudKMS.Builder(
+            Utils.getDefaultTransport(),
+            Utils.getDefaultJsonFactory(),
+            new HttpCredentialsAdapter(credential))
+        .setApplicationName(config.projectId)
+        .build();
+  }
+
+  @Singleton
+  @Provides
+  static Storage provideStorage(GoogleCredentials credential, ProxyConfig config) {
+    return new Storage.Builder(
+            Utils.getDefaultTransport(),
+            Utils.getDefaultJsonFactory(),
+            new HttpCredentialsAdapter(credential))
+        .setApplicationName(config.projectId)
+        .build();
+  }
+
+  // This binding should not be used directly. Use those provided in CertificateModule instead.
+  @Provides
+  @Named("encryptedPemBytes")
+  static byte[] provideEncryptedPemBytes(Storage storage, ProxyConfig config) {
+    try {
+      ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+      storage
+          .objects()
+          .get(config.gcs.bucket, config.gcs.sslPemFilename)
+          .executeMediaAndDownloadTo(outputStream);
+      return Base64.getMimeDecoder().decode(outputStream.toByteArray());
+    } catch (IOException e) {
+      throw new RuntimeException(
+          String.format(
+              "Error reading encrypted PEM file %s from GCS bucket %s",
+              config.gcs.sslPemFilename, config.gcs.bucket),
+          e);
+    }
+  }
+
+  // This binding should not be used directly. Use those provided in CertificateModule instead.
+  @Provides
+  @Named("pemBytes")
+  static byte[] providePemBytes(
+      CloudKMS cloudKms, @Named("encryptedPemBytes") byte[] encryptedPemBytes, ProxyConfig config) {
+    String cryptoKeyUrl =
+        String.format(
+            "projects/%s/locations/%s/keyRings/%s/cryptoKeys/%s",
+            config.projectId, config.kms.location, config.kms.keyRing, config.kms.cryptoKey);
+    try {
+      DecryptRequest decryptRequest = new DecryptRequest().encodeCiphertext(encryptedPemBytes);
+      return cloudKms
+          .projects()
+          .locations()
+          .keyRings()
+          .cryptoKeys()
+          .decrypt(cryptoKeyUrl, decryptRequest)
+          .execute()
+          .decodePlaintext();
+    } catch (IOException e) {
+      throw new RuntimeException(
+          String.format("PEM file decryption failed using CryptoKey: %s", cryptoKeyUrl), e);
+    }
+  }
+
+  @Provides
+  static SslProvider provideSslProvider() {
+    // Prefer OpenSSL.
+    return OpenSsl.isAvailable() ? SslProvider.OPENSSL : SslProvider.JDK;
+  }
+
+  @Provides
+  @Singleton
+  static Clock provideClock() {
+    return new SystemClock();
+  }
+
+  @Provides
+  static ExecutorService provideExecutorService() {
+    return Executors.newWorkStealingPool();
+  }
+
+  @Provides
+  static ScheduledExecutorService provideScheduledExecutorService() {
+    return Executors.newSingleThreadScheduledExecutor();
+  }
 
   /**
    * Configure logging parameters depending on the {@link Environment}.
@@ -205,126 +336,6 @@ public class ProxyModule {
   @Provides
   LoggingHandler provideLoggingHandler() {
     return new LoggingHandler(LogLevel.DEBUG);
-  }
-
-  @Singleton
-  @Provides
-  static GoogleCredential provideCredential(ProxyConfig config) {
-    try {
-      GoogleCredential credential = GoogleCredential.getApplicationDefault();
-      if (credential.createScopedRequired()) {
-        credential = credential.createScoped(config.gcpScopes);
-      }
-      return credential;
-    } catch (IOException e) {
-      throw new RuntimeException("Unable to obtain OAuth2 credential.", e);
-    }
-  }
-
-  /** Access token supplier that auto refreshes 1 minute before expiry. */
-  @Singleton
-  @Provides
-  @Named("accessToken")
-  static Supplier<String> provideAccessTokenSupplier(
-      GoogleCredential credential, ProxyConfig config) {
-    return () -> {
-      // If we never obtained an access token, the expiration time is null.
-      if (credential.getExpiresInSeconds() == null
-          // If we have an access token, make sure to refresh it ahead of time.
-          || credential.getExpiresInSeconds() < config.accessTokenRefreshBeforeExpirationSeconds) {
-        try {
-          credential.refreshToken();
-        } catch (IOException e) {
-          throw new RuntimeException("Cannot refresh access token.", e);
-        }
-      }
-      return credential.getAccessToken();
-    };
-  }
-
-  @Singleton
-  @Provides
-  static CloudKMS provideCloudKms(GoogleCredential credential, ProxyConfig config) {
-    return new CloudKMS.Builder(
-            Utils.getDefaultTransport(), Utils.getDefaultJsonFactory(), credential)
-        .setApplicationName(config.projectId)
-        .build();
-  }
-
-  @Singleton
-  @Provides
-  static Storage provideStorage(GoogleCredential credential, ProxyConfig config) {
-    return new Storage.Builder(
-            Utils.getDefaultTransport(), Utils.getDefaultJsonFactory(), credential)
-        .setApplicationName(config.projectId)
-        .build();
-  }
-
-  // This binding should not be used directly. Use those provided in CertificateModule instead.
-  @Provides
-  @Named("encryptedPemBytes")
-  static byte[] provideEncryptedPemBytes(Storage storage, ProxyConfig config) {
-    try {
-      ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-      storage
-          .objects()
-          .get(config.gcs.bucket, config.gcs.sslPemFilename)
-          .executeMediaAndDownloadTo(outputStream);
-      return Base64.getMimeDecoder().decode(outputStream.toByteArray());
-    } catch (IOException e) {
-      throw new RuntimeException(
-          String.format(
-              "Error reading encrypted PEM file %s from GCS bucket %s",
-              config.gcs.sslPemFilename, config.gcs.bucket),
-          e);
-    }
-  }
-
-  // This binding should not be used directly. Use those provided in CertificateModule instead.
-  @Provides
-  @Named("pemBytes")
-  static byte[] providePemBytes(
-      CloudKMS cloudKms, @Named("encryptedPemBytes") byte[] encryptedPemBytes, ProxyConfig config) {
-    String cryptoKeyUrl =
-        String.format(
-            "projects/%s/locations/%s/keyRings/%s/cryptoKeys/%s",
-            config.projectId, config.kms.location, config.kms.keyRing, config.kms.cryptoKey);
-    try {
-      DecryptRequest decryptRequest = new DecryptRequest().encodeCiphertext(encryptedPemBytes);
-      return cloudKms
-          .projects()
-          .locations()
-          .keyRings()
-          .cryptoKeys()
-          .decrypt(cryptoKeyUrl, decryptRequest)
-          .execute()
-          .decodePlaintext();
-    } catch (IOException e) {
-      throw new RuntimeException(
-          String.format("PEM file decryption failed using CryptoKey: %s", cryptoKeyUrl), e);
-    }
-  }
-
-  @Provides
-  static SslProvider provideSslProvider() {
-    // Prefer OpenSSL.
-    return OpenSsl.isAvailable() ? SslProvider.OPENSSL : SslProvider.JDK;
-  }
-
-  @Provides
-  @Singleton
-  static Clock provideClock() {
-    return new SystemClock();
-  }
-
-  @Provides
-  static ExecutorService provideExecutorService() {
-    return Executors.newWorkStealingPool();
-  }
-
-  @Provides
-  static ScheduledExecutorService provideScheduledExecutorService() {
-    return Executors.newSingleThreadScheduledExecutor();
   }
 
   @Singleton

@@ -14,9 +14,10 @@
 
 package google.registry.tools;
 
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.googleapis.util.Utils;
 import com.google.api.services.appengine.v1.Appengine;
+import com.google.auth.http.HttpCredentialsAdapter;
+import com.google.auth.oauth2.GoogleCredentials;
 import dagger.Module;
 import dagger.Provides;
 import google.registry.config.CredentialModule.LocalCredential;
@@ -30,9 +31,11 @@ public abstract class AppEngineAdminApiModule {
   @Provides
   @Singleton
   public static Appengine provideAppengine(
-      @LocalCredential GoogleCredential credential, @Config("projectId") String projectId) {
+      @LocalCredential GoogleCredentials credential, @Config("projectId") String projectId) {
     return new Appengine.Builder(
-            Utils.getDefaultTransport(), Utils.getDefaultJsonFactory(), credential)
+            Utils.getDefaultTransport(),
+            Utils.getDefaultJsonFactory(),
+            new HttpCredentialsAdapter(credential))
         .setApplicationName(projectId)
         .build();
   }

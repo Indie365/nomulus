@@ -14,9 +14,11 @@
 
 package google.registry.bigquery;
 
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
+import com.google.api.client.googleapis.util.Utils;
 import com.google.api.services.bigquery.Bigquery;
 import com.google.api.services.bigquery.model.TableFieldSchema;
+import com.google.auth.http.HttpCredentialsAdapter;
+import com.google.auth.oauth2.GoogleCredentials;
 import com.google.common.collect.ImmutableList;
 import dagger.Module;
 import dagger.Provides;
@@ -29,18 +31,21 @@ import java.util.Map;
 @Module
 public abstract class BigqueryModule {
 
-  /** Provides a map of BigQuery table names to field names. */
-  @Multibinds
-  abstract Map<String, ImmutableList<TableFieldSchema>> bigquerySchemas();
+  // No subclasses.
+  private BigqueryModule() {}
 
   @Provides
   static Bigquery provideBigquery(
-      @DefaultCredential GoogleCredential credential, @Config("projectId") String projectId) {
-    return new Bigquery.Builder(credential.getTransport(), credential.getJsonFactory(), credential)
+      @DefaultCredential GoogleCredentials credential, @Config("projectId") String projectId) {
+    return new Bigquery.Builder(
+            Utils.getDefaultTransport(),
+            Utils.getDefaultJsonFactory(),
+            new HttpCredentialsAdapter(credential))
         .setApplicationName(projectId)
         .build();
   }
 
-  // No subclasses.
-  private BigqueryModule() {}
+  /** Provides a map of BigQuery table names to field names. */
+  @Multibinds
+  abstract Map<String, ImmutableList<TableFieldSchema>> bigquerySchemas();
 }

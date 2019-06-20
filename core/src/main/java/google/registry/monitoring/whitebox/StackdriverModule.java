@@ -14,10 +14,12 @@
 
 package google.registry.monitoring.whitebox;
 
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
+import com.google.api.client.googleapis.util.Utils;
 import com.google.api.services.monitoring.v3.Monitoring;
 import com.google.api.services.monitoring.v3.model.MonitoredResource;
 import com.google.appengine.api.modules.ModulesService;
+import com.google.auth.http.HttpCredentialsAdapter;
+import com.google.auth.oauth2.GoogleCredentials;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.monitoring.metrics.MetricReporter;
@@ -39,9 +41,11 @@ public final class StackdriverModule {
 
   @Provides
   static Monitoring provideMonitoring(
-      @JsonCredential GoogleCredential credential, @Config("projectId") String projectId) {
+      @JsonCredential GoogleCredentials credential, @Config("projectId") String projectId) {
     return new Monitoring.Builder(
-            credential.getTransport(), credential.getJsonFactory(), credential)
+            Utils.getDefaultTransport(),
+            Utils.getDefaultJsonFactory(),
+            new HttpCredentialsAdapter(credential))
         .setApplicationName(projectId)
         .build();
   }

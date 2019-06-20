@@ -21,7 +21,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
 
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.http.GenericUrl;
 import com.google.api.client.http.HttpRequest;
 import com.google.api.client.http.HttpRequestFactory;
@@ -37,7 +36,7 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public class RequestFactoryModuleTest {
 
-  private final GoogleCredential googleCredential = mock(GoogleCredential.class);
+  private final HttpRequestInitializer httpRequestInitializer = mock(HttpRequestInitializer.class);
 
   @Rule public final SystemPropertyRule systemPropertyRule = new SystemPropertyRule();
 
@@ -52,12 +51,13 @@ public class RequestFactoryModuleTest {
     boolean origIsLocal = RegistryConfig.CONFIG_SETTINGS.get().appEngine.isLocal;
     RegistryConfig.CONFIG_SETTINGS.get().appEngine.isLocal = true;
     try {
-      HttpRequestFactory factory = RequestFactoryModule.provideHttpRequestFactory(googleCredential);
+      HttpRequestFactory factory =
+          RequestFactoryModule.provideHttpRequestFactory(httpRequestInitializer);
       HttpRequestInitializer initializer = factory.getInitializer();
       assertThat(initializer).isNotNull();
       HttpRequest request = factory.buildGetRequest(new GenericUrl("http://localhost"));
       initializer.initialize(request);
-      verifyZeroInteractions(googleCredential);
+      verifyZeroInteractions(httpRequestInitializer);
     } finally {
       RegistryConfig.CONFIG_SETTINGS.get().appEngine.isLocal = origIsLocal;
     }
@@ -69,15 +69,16 @@ public class RequestFactoryModuleTest {
     boolean origIsLocal = RegistryConfig.CONFIG_SETTINGS.get().appEngine.isLocal;
     RegistryConfig.CONFIG_SETTINGS.get().appEngine.isLocal = false;
     try {
-      HttpRequestFactory factory = RequestFactoryModule.provideHttpRequestFactory(googleCredential);
+      HttpRequestFactory factory =
+          RequestFactoryModule.provideHttpRequestFactory(httpRequestInitializer);
       HttpRequestInitializer initializer = factory.getInitializer();
       assertThat(initializer).isNotNull();
       // HttpRequestFactory#buildGetRequest() calls initialize() once.
       HttpRequest request = factory.buildGetRequest(new GenericUrl("http://localhost"));
-      verify(googleCredential).initialize(request);
+      verify(httpRequestInitializer).initialize(request);
       assertThat(request.getConnectTimeout()).isEqualTo(REQUEST_TIMEOUT_MS);
       assertThat(request.getReadTimeout()).isEqualTo(REQUEST_TIMEOUT_MS);
-      verifyNoMoreInteractions(googleCredential);
+      verifyNoMoreInteractions(httpRequestInitializer);
     } finally {
       RegistryConfig.CONFIG_SETTINGS.get().appEngine.isLocal = origIsLocal;
     }

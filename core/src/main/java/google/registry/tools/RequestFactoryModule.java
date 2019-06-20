@@ -14,13 +14,16 @@
 
 package google.registry.tools;
 
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.http.HttpRequestFactory;
+import com.google.api.client.http.HttpRequestInitializer;
 import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.auth.http.HttpCredentialsAdapter;
+import com.google.auth.oauth2.GoogleCredentials;
 import dagger.Module;
 import dagger.Provides;
 import google.registry.config.CredentialModule.DefaultCredential;
 import google.registry.config.RegistryConfig;
+import javax.inject.Qualifier;
 
 /**
  * Module for providing the HttpRequestFactory.
@@ -30,12 +33,19 @@ import google.registry.config.RegistryConfig;
  */
 @Module
 class RequestFactoryModule {
-  
+
   static final int REQUEST_TIMEOUT_MS = 10 * 60 * 1000;
 
   @Provides
+  @DefaultCredentialInitializer
+  static HttpRequestInitializer provideHttpRequestInitializer(
+      @DefaultCredential GoogleCredentials credential) {
+    return new HttpCredentialsAdapter(credential);
+  }
+
+  @Provides
   static HttpRequestFactory provideHttpRequestFactory(
-      @DefaultCredential GoogleCredential credential) {
+      @DefaultCredentialInitializer HttpRequestInitializer httpRequestInitializer) {
     if (RegistryConfig.areServersLocal()) {
       return new NetHttpTransport()
           .createRequestFactory(
@@ -47,14 +57,22 @@ class RequestFactoryModule {
       return new NetHttpTransport()
           .createRequestFactory(
               request -> {
-                credential.initialize(request);
+                httpRequestInitializer.initialize(request);
                 // GAE request times out after 10 min, so here we set the timeout to 10 min. This is
                 // needed to support some nomulus commands like updating premium lists that take
                 // a lot of time to complete.
-                // See https://developers.google.com/api-client-library/java/google-api-java-client/errors
+                // See
+                // https://developers.google.com/api-client-library/java/google-api-java-client/errors
                 request.setConnectTimeout(REQUEST_TIMEOUT_MS);
                 request.setReadTimeout(REQUEST_TIMEOUT_MS);
               });
     }
   }
+
+  /**
+   * Dagger qualifier to provide {@link HttpRequestInitializer} binding to {@link
+   * DefaultCredential}.
+   */
+  @Qualifier
+  @interface DefaultCredentialInitializer {}
 }

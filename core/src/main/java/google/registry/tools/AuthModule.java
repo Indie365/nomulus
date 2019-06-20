@@ -20,7 +20,6 @@ import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
 import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
 import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets.Details;
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.util.store.AbstractDataStoreFactory;
@@ -42,7 +41,6 @@ import google.registry.config.RegistryConfig.Config;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.lang.annotation.Documented;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -59,14 +57,6 @@ public class AuthModule {
 
   private static final File DATA_STORE_DIR =
       new File(System.getProperty("user.home"), ".config/nomulus/credentials");
-
-  @Module
-  abstract static class LocalCredentialModule {
-    @Binds
-    @DefaultCredential
-    abstract GoogleCredential provideLocalCredentialAsDefaultCredential(
-        @LocalCredential GoogleCredential credential);
-  }
 
   @Provides
   @StoredCredential
@@ -86,35 +76,18 @@ public class AuthModule {
 
   @Provides
   @LocalCredential
-  public static GoogleCredential provideLocalCredential(
+  public static GoogleCredentials provideLocalCredential(
       @LocalCredentialJson String credentialJson,
       @Config("localCredentialOauthScopes") ImmutableList<String> scopes) {
     try {
-      GoogleCredential credential =
-          GoogleCredential.fromStream(new ByteArrayInputStream(credentialJson.getBytes(UTF_8)));
+      GoogleCredentials credential =
+          GoogleCredentials.fromStream(new ByteArrayInputStream(credentialJson.getBytes(UTF_8)));
       if (credential.createScopedRequired()) {
         credential = credential.createScoped(scopes);
       }
       return credential;
     } catch (IOException e) {
       throw new RuntimeException(e);
-    }
-  }
-
-  @Provides
-  @LocalOAuth2Credentials
-  public static GoogleCredentials provideLocalOAuth2Credentials(
-      @LocalCredentialJson String credentialJson,
-      @Config("localCredentialOauthScopes") ImmutableList<String> scopes) {
-    try {
-      GoogleCredentials credentials =
-          GoogleCredentials.fromStream(new ByteArrayInputStream(credentialJson.getBytes(UTF_8)));
-      if (credentials.createScopedRequired()) {
-        credentials = credentials.createScoped(scopes);
-      }
-      return credentials;
-    } catch (IOException e) {
-      throw new UncheckedIOException(e);
     }
   }
 
@@ -198,16 +171,11 @@ public class AuthModule {
     }
   }
 
-  /** Raised when we need a user login. */
-  static class LoginRequiredException extends RuntimeException {
-    LoginRequiredException() {}
-  }
-
   /**
    * Dagger qualifier for the {@link Credential} constructed from the data stored on disk.
    *
    * <p>This {@link Credential} should not be used in another module, hence the private qualifier.
-   * It's only use is to build a {@link GoogleCredential}, which is used in injection sites
+   * It's only use is to build a {@link GoogleCredentials}, which is used in injection sites
    * elsewhere.
    */
   @Qualifier
@@ -227,9 +195,16 @@ public class AuthModule {
   @Retention(RetentionPolicy.RUNTIME)
   @interface OAuthClientId {}
 
-  /** Dagger qualifier for the local OAuth2 Credentials. */
-  @Qualifier
-  @Documented
-  @Retention(RetentionPolicy.RUNTIME)
-  public @interface LocalOAuth2Credentials {}
+  @Module
+  abstract static class LocalCredentialModule {
+    @Binds
+    @DefaultCredential
+    abstract GoogleCredentials provideLocalCredentialAsDefaultCredential(
+        @LocalCredential GoogleCredentials credential);
+  }
+
+  /** Raised when we need a user login. */
+  static class LoginRequiredException extends RuntimeException {
+    LoginRequiredException() {}
+  }
 }

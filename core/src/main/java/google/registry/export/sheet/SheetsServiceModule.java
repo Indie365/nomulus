@@ -14,8 +14,10 @@
 
 package google.registry.export.sheet;
 
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
+import com.google.api.client.googleapis.util.Utils;
 import com.google.api.services.sheets.v4.Sheets;
+import com.google.auth.http.HttpCredentialsAdapter;
+import com.google.auth.oauth2.GoogleCredentials;
 import dagger.Module;
 import dagger.Provides;
 import google.registry.config.CredentialModule.JsonCredential;
@@ -27,8 +29,11 @@ public final class SheetsServiceModule {
 
   @Provides
   static Sheets provideSheets(
-      @JsonCredential GoogleCredential credential, @Config("projectId") String projectId) {
-    return new Sheets.Builder(credential.getTransport(), credential.getJsonFactory(), credential)
+      @JsonCredential GoogleCredentials credential, @Config("projectId") String projectId) {
+    return new Sheets.Builder(
+            Utils.getDefaultTransport(),
+            Utils.getDefaultJsonFactory(),
+            new HttpCredentialsAdapter(credential))
         .setApplicationName(projectId)
         .build();
   }
