@@ -77,7 +77,6 @@ public class DeleteProberDataAction implements Runnable {
   @Inject @Config("registryAdminClientId") String registryAdminClientId;
   @Inject MapreduceRunner mrRunner;
   @Inject Response response;
-  @Inject RegistryEnvironment registryEnvironment;
   @Inject DeleteProberDataAction() {}
 
   @Override
@@ -96,7 +95,7 @@ public class DeleteProberDataAction implements Runnable {
 
   private ImmutableSet<String> getProberRoidSuffixes() {
     checkArgument(
-        !RegistryEnvironment.PRODUCTION.equals(registryEnvironment)
+        !RegistryEnvironment.PRODUCTION.equals(RegistryEnvironment.get())
             || tlds.stream().allMatch(tld -> tld.endsWith(".test")),
         "On production, can only work on TLDs that end with .test");
     ImmutableSet<String> deletableTlds =

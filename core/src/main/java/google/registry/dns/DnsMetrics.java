@@ -180,8 +180,6 @@ public class DnsMetrics {
               LABEL_DESCRIPTORS_FOR_LATENCY,
               EXPONENTIAL_FITTER);
 
-  @Inject RegistryEnvironment registryEnvironment;
-
   @Inject
   DnsMetrics() {}
 
@@ -225,7 +223,7 @@ public class DnsMetrics {
     hostsCommittedCount.incrementBy(numberOfHosts, tld, status.name(), dnsWriter);
 
     // We don't want to record the following metrics in production, as they are quite expensive
-    if (registryEnvironment == RegistryEnvironment.PRODUCTION) {
+    if (RegistryEnvironment.get() == RegistryEnvironment.PRODUCTION) {
       return;
     }
 

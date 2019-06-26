@@ -92,7 +92,6 @@ public class RegistrarSettingsAction implements Runnable, JsonActionRunner.JsonA
   @Inject SendEmailUtils sendEmailUtils;
   @Inject AuthenticatedRegistrarAccessor registrarAccessor;
   @Inject AuthResult authResult;
-  @Inject RegistryEnvironment registryEnvironment;
 
   @Inject RegistrarSettingsAction() {}
 
@@ -334,7 +333,7 @@ public class RegistrarSettingsAction implements Runnable, JsonActionRunner.JsonA
       // If a REAL registrar isn't in compliance with regards to having an abuse contact set,
       // prevent addition of allowed TLDs until that's fixed.
       if (Registrar.Type.REAL.equals(initialRegistrar.getType())
-          && RegistryEnvironment.PRODUCTION.equals(registryEnvironment)) {
+          && RegistryEnvironment.PRODUCTION.equals(RegistryEnvironment.get())) {
         checkArgumentPresent(
             initialRegistrar.getWhoisAbuseContact(),
             "Cannot add allowed TLDs if there is no WHOIS abuse contact set.");
@@ -496,7 +495,7 @@ public class RegistrarSettingsAction implements Runnable, JsonActionRunner.JsonA
       return;
     }
     enqueueRegistrarSheetSync(appEngineServiceUtils.getCurrentVersionHostname("backend"));
-    String environment = Ascii.toLowerCase(String.valueOf(registryEnvironment));
+    String environment = Ascii.toLowerCase(String.valueOf(RegistryEnvironment.get()));
     sendEmailUtils.sendEmail(
         String.format(
             "Registrar %s (%s) updated in registry %s environment",
