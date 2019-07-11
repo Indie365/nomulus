@@ -17,8 +17,10 @@ package google.registry.beam.spec11;
 import static com.google.common.base.Preconditions.checkArgument;
 import static google.registry.beam.BeamUtils.getQueryFromFile;
 
+import com.google.auth.oauth2.GoogleCredentials;
 import com.google.auto.value.AutoValue;
 import google.registry.beam.spec11.SafeBrowsingTransforms.EvaluateSafeBrowsingFn;
+import google.registry.config.CredentialModule.RawLocalCredential;
 import google.registry.config.RegistryConfig.Config;
 import google.registry.util.Retrier;
 import google.registry.util.SqlTemplate;
@@ -93,6 +95,10 @@ public class Spec11Pipeline implements Serializable {
   @Config("reportingBucketUrl")
   String reportingBucketUrl;
 
+  @Inject
+  @RawLocalCredential
+  GoogleCredentials googleCredentials;
+
   @Inject Retrier retrier;
 
   @Inject
@@ -134,6 +140,9 @@ public class Spec11Pipeline implements Serializable {
     // This causes p.run() to stage the pipeline as a template on GCS, as opposed to running it.
     options.setTemplateLocation(spec11TemplateUrl);
     options.setStagingLocation(beamStagingUrl);
+    // This credential is used when Dataflow deploys the template to GCS in target GCP project.
+    // So, please make sure the credential has write permission to GCS in that project.
+    options.setGcpCredential(googleCredentials);
 
     Pipeline p = Pipeline.create(options);
     PCollection<Subdomain> domains =

@@ -37,6 +37,7 @@ import dagger.Provides;
 import google.registry.config.CredentialModule.DefaultCredential;
 import google.registry.config.CredentialModule.LocalCredential;
 import google.registry.config.CredentialModule.LocalCredentialJson;
+import google.registry.config.CredentialModule.RawLocalCredential;
 import google.registry.config.RegistryConfig.Config;
 import google.registry.util.GoogleCredentialsBundle;
 import java.io.ByteArrayInputStream;
@@ -75,9 +76,14 @@ public class AuthModule {
     }
   }
 
+  /** Provides a single {@link GoogleCredentials} created from the local credential. This should be
+   *  used only when {@link LocalCredential} is not feasible due to non-serialization problem.
+   *  Right now, we only find that Apache Beam pipeline requires serializable object to store
+   *  credential.
+   */
   @Provides
-  @LocalCredential
-  public static GoogleCredentialsBundle provideLocalCredential(
+  @RawLocalCredential
+  public static GoogleCredentials provideRawLocalCredential(
       @LocalCredentialJson String credentialJson,
       @Config("localCredentialOauthScopes") ImmutableList<String> scopes) {
     try {
@@ -86,10 +92,17 @@ public class AuthModule {
       if (credential.createScopedRequired()) {
         credential = credential.createScoped(scopes);
       }
-      return GoogleCredentialsBundle.create(credential);
+      return credential;
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  @Provides
+  @LocalCredential
+  public static GoogleCredentialsBundle provideLocalCredential(
+      @RawLocalCredential GoogleCredentials credential) {
+    return GoogleCredentialsBundle.create(credential);
   }
 
   @Provides

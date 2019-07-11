@@ -136,6 +136,12 @@ public abstract class CredentialModule {
   @Retention(RetentionPolicy.RUNTIME)
   public @interface DelegatedCredential {}
 
+  /** Dagger qualifier for the raw local credential used in the nomulus tool. */
+  @Qualifier
+  @Documented
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface RawLocalCredential {}
+
   /** Dagger qualifier for the local credential used in the nomulus tool. */
   @Qualifier
   @Documented

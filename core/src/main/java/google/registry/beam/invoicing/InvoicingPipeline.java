@@ -14,8 +14,10 @@
 
 package google.registry.beam.invoicing;
 
+import com.google.auth.oauth2.GoogleCredentials;
 import google.registry.beam.invoicing.BillingEvent.InvoiceGroupingKey;
 import google.registry.beam.invoicing.BillingEvent.InvoiceGroupingKey.InvoiceGroupingKeyCoder;
+import google.registry.config.CredentialModule.RawLocalCredential;
 import google.registry.config.RegistryConfig.Config;
 import google.registry.reporting.billing.BillingModule;
 import google.registry.reporting.billing.GenerateInvoicesAction;
@@ -80,6 +82,10 @@ public class InvoicingPipeline implements Serializable {
   String invoiceFilePrefix;
 
   @Inject
+  @RawLocalCredential
+  GoogleCredentials googleCredentials;
+
+  @Inject
   InvoicingPipeline() {}
 
   /** Custom options for running the invoicing pipeline. */
@@ -105,6 +111,10 @@ public class InvoicingPipeline implements Serializable {
     // This causes p.run() to stage the pipeline as a template on GCS, as opposed to running it.
     options.setTemplateLocation(invoiceTemplateUrl);
     options.setStagingLocation(beamStagingUrl);
+    // This credential is used when Dataflow deploys the template to GCS in target GCP project.
+    // So, please make sure the credential has write permission to GCS in that project.
+    options.setGcpCredential(googleCredentials);
+
     Pipeline p = Pipeline.create(options);
 
     PCollection<BillingEvent> billingEvents =
