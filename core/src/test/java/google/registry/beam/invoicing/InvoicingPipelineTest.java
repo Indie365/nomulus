@@ -18,6 +18,7 @@ import static com.google.common.truth.Truth.assertThat;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import google.registry.util.GoogleCredentialsBundle;
 import google.registry.util.ResourceUtils;
 import java.io.File;
 import java.io.IOException;
@@ -38,6 +39,9 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnit;
+import org.mockito.junit.MockitoRule;
 
 /** Unit tests for {@link InvoicingPipeline}. */
 @RunWith(JUnit4.class)
@@ -53,20 +57,25 @@ public class InvoicingPipelineTest {
 
   @Rule public final transient TestPipeline p = TestPipeline.fromOptions(pipelineOptions);
   @Rule public final TemporaryFolder tempFolder = new TemporaryFolder();
+  @Rule public final MockitoRule mocks = MockitoJUnit.rule();
+
+  @Mock public GoogleCredentialsBundle googleCredentialsBundle;
 
   private InvoicingPipeline invoicingPipeline;
 
   @Before
   public void initializePipeline() throws IOException {
-    invoicingPipeline = new InvoicingPipeline();
-    invoicingPipeline.projectId = "test-project";
     File beamTempFolder = tempFolder.newFolder();
-    invoicingPipeline.beamBucketUrl = beamTempFolder.getAbsolutePath();
-    invoicingPipeline.invoiceFilePrefix = "REG-INV";
-    invoicingPipeline.beamStagingUrl = beamTempFolder.getAbsolutePath() + "/staging";
-    invoicingPipeline.invoiceTemplateUrl =
-        beamTempFolder.getAbsolutePath() + "/templates/invoicing";
-    invoicingPipeline.billingBucketUrl = tempFolder.getRoot().getAbsolutePath();
+    String beamTempFolderPath = beamTempFolder.getAbsolutePath();
+    invoicingPipeline = new InvoicingPipeline(
+        "test-project",
+        beamTempFolderPath,
+        beamTempFolderPath + "/templates/invoicing",
+        beamTempFolderPath + "/staging",
+        tempFolder.getRoot().getAbsolutePath(),
+        "REG-INV",
+        googleCredentialsBundle
+    );
   }
 
   private ImmutableList<BillingEvent> getInputEvents() {
