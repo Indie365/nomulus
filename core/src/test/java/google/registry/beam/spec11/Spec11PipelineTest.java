@@ -21,11 +21,13 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
 
+import com.google.auth.oauth2.GoogleCredentials;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.CharStreams;
 import google.registry.beam.spec11.SafeBrowsingTransforms.EvaluateSafeBrowsingFn;
 import google.registry.testing.FakeClock;
 import google.registry.testing.FakeSleeper;
+import google.registry.util.GoogleCredentialsBundle;
 import google.registry.util.ResourceUtils;
 import google.registry.util.Retrier;
 import java.io.ByteArrayInputStream;
@@ -50,6 +52,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.BasicHttpEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.message.BasicStatusLine;
+import org.joda.time.DateTime;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -60,7 +63,10 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.mockito.Mock;
 import org.mockito.invocation.InvocationOnMock;
+import org.mockito.junit.MockitoJUnit;
+import org.mockito.junit.MockitoRule;
 import org.mockito.stubbing.Answer;
 
 /** Unit tests for {@link Spec11Pipeline}. */
@@ -78,16 +84,21 @@ public class Spec11PipelineTest {
   @Rule public final transient TestPipeline p = TestPipeline.fromOptions(pipelineOptions);
   @Rule public final TemporaryFolder tempFolder = new TemporaryFolder();
 
+  private final Retrier retrier = new Retrier(
+      new FakeSleeper(new FakeClock(DateTime.parse("2019-07-15TZ"))), 1);
   private Spec11Pipeline spec11Pipeline;
 
   @Before
   public void initializePipeline() throws IOException {
-    spec11Pipeline = new Spec11Pipeline();
-    spec11Pipeline.projectId = "test-project";
-    spec11Pipeline.reportingBucketUrl = tempFolder.getRoot().getAbsolutePath();
     File beamTempFolder = tempFolder.newFolder();
-    spec11Pipeline.beamStagingUrl = beamTempFolder.getAbsolutePath() + "/staging";
-    spec11Pipeline.spec11TemplateUrl = beamTempFolder.getAbsolutePath() + "/templates/invoicing";
+    spec11Pipeline = new Spec11Pipeline(
+        "test-project",
+        beamTempFolder.getAbsolutePath() + "/staging",
+        beamTempFolder.getAbsolutePath() + "/templates/invoicing",
+        tempFolder.getRoot().getAbsolutePath(),
+        GoogleCredentialsBundle.create(GoogleCredentials.create(null)),
+        retrier
+    );
   }
 
   private static final ImmutableList<String> BAD_DOMAINS =
