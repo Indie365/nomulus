@@ -29,6 +29,7 @@ import google.registry.ui.server.registrar.ConsoleRegistrarCreatorAction;
 import google.registry.ui.server.registrar.ConsoleUiAction;
 import google.registry.ui.server.registrar.OteStatusAction;
 import google.registry.ui.server.registrar.RegistrarConsoleModule;
+import google.registry.ui.server.registrar.RegistrarDomainLockAction;
 import google.registry.ui.server.registrar.RegistrarSettingsAction;
 
 /** Dagger component with per-request lifetime for "default" App Engine module. */
@@ -48,6 +49,7 @@ interface FrontendRequestComponent {
   EppTlsAction eppTlsAction();
   FlowComponent.Builder flowComponentBuilder();
   OteStatusAction oteStatusAction();
+  RegistrarDomainLockAction registrarDomainLockAction();
   RegistrarSettingsAction registrarSettingsAction();
 
   @Subcomponent.Builder

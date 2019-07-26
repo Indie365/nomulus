@@ -37,6 +37,12 @@
     <url-pattern>/registrar-create</url-pattern>
   </servlet-mapping>
 
+  <!-- Registrar domain lock/unlock. -->
+  <servlet-mapping>
+    <servlet-name>frontend-servlet</servlet-name>
+    <url-pattern>/registrar-domain-lock</url-pattern>
+  </servlet-mapping>
+
   <!-- OT&E creation console. -->
   <servlet-mapping>
     <servlet-name>frontend-servlet</servlet-name>

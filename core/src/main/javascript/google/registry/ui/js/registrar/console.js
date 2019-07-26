@@ -25,6 +25,7 @@ goog.require('registry.registrar.AdminSettings');
 goog.require('registry.registrar.ContactSettings');
 goog.require('registry.registrar.ContactUs');
 goog.require('registry.registrar.Dashboard');
+goog.require('registry.registrar.RegistryLock');
 goog.require('registry.registrar.Resources');
 goog.require('registry.registrar.SecuritySettings');
 goog.require('registry.registrar.WhoisSettings');
@@ -95,6 +96,11 @@ registry.registrar.Console = function(params) {
   // don't trust the client-side to secure our application anyway)
   if (this.params.isAdmin) {
     this.pageMap['admin-settings'] = registry.registrar.AdminSettings;
+  }
+  // For registrar-based domain locking, if available
+  // TODO: this should be based on registrar + contact
+  if (this.params.isAdmin) {
+    this.pageMap['registry-lock'] = registry.registrar.RegistryLock;
   }
 };
 goog.inherits(registry.registrar.Console, registry.Console);
