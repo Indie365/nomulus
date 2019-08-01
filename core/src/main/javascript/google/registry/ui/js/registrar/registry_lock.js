@@ -82,7 +82,6 @@ registry.registrar.RegistryLock.prototype.runAfterRender = function(objArgs) {
  */
 registry.registrar.RegistryLock.prototype.showModal_ = function(targetElement, domain, isLock) {
   var parentElement = targetElement.parentElement;
-  var previousHtml = parentElement.innerHTML;
   var modalElement = goog.soy.renderAsElement(registry.soy.registrar.registrylock.confirmModal, {domain: domain, isLock: isLock});
   parentElement.prepend(modalElement);
   goog.dom.getRequiredElement("domain-lock-password").focus();
@@ -127,7 +126,6 @@ registry.registrar.RegistryLock.prototype.onInputKeyUp_ = function(e) {
  * @private
  */
 registry.registrar.RegistryLock.prototype.onLockDomain_ = function(e) {
-  console.log(e);
   var domain = goog.dom.getRequiredElement('lock-domain-input').value;
   this.showModal_(e.target, domain, true);
 };

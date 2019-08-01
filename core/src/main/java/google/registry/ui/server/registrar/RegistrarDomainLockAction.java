@@ -59,7 +59,6 @@ public final class RegistrarDomainLockAction implements Runnable {
 
   private static final Gson GSON = new Gson();
 
-  private static final String CLIENT_ID_PARAM = "clientId";
   private static final String LOCKS_PARAM = "locks";
   private static final String FULLY_QUALIFIED_DOMAIN_NAME_PARAM = "fullyQualifiedDomainName";
   private static final String LOCKED_TIME_PARAM = "lockedTime";
@@ -72,12 +71,16 @@ public final class RegistrarDomainLockAction implements Runnable {
   @Inject AuthenticatedRegistrarAccessor registrarAccessor;
   @Inject AuthResult authResult;
 
-  @Inject
-  @Parameter(PARAM_CLIENT_ID)
+  @Inject @Parameter(PARAM_CLIENT_ID)
   Optional<String> paramClientId;
 
-  @Inject
-  RegistrarDomainLockAction() {}
+  @Inject @Parameter(FULLY_QUALIFIED_DOMAIN_NAME_PARAM)
+  Optional<String> fullyQualifiedDomainName;
+
+  @Inject @Parameter("lockOrUnlock")
+  Optional<String> lockOrUnlock;
+
+  @Inject RegistrarDomainLockAction() {}
 
   @Override
   public void run() {
@@ -85,29 +88,65 @@ public final class RegistrarDomainLockAction implements Runnable {
     response.setContentType(MediaType.JSON_UTF_8);
     response.setHeader(X_FRAME_OPTIONS, "SAMEORIGIN"); // Disallow iframing.
     response.setHeader("X-Ui-Compatible", "IE=edge"); // Ask IE not to be silly.
-    if (!Action.Method.GET.equals(method)) {
-      throw new UnsupportedOperationException("Only GET requests for now");
-    }
 
+    Registrar registrar;
     try {
-      String clientId = paramClientId.orElse(registrarAccessor.guessClientId());
-      Registrar registrar = registrarAccessor.getRegistrar(clientId);
-      verifyRegistrarLockAccess(registrar);
-      ImmutableList<DummyRegistrarLock> lockedDomains = getLockedDomains(registrar);
-      Map<String, ?> resultMap = createResultMap(registrar, lockedDomains);
-      response.setPayload(GSON.toJson(resultMap));
+      registrar = getRegistrarAndVerifyLockAccess();
     } catch (RegistrarAccessDeniedException e) {
       logger.atWarning().withCause(e).log(
           "User %s doesn't have access to registrar console.", authResult.userIdForLogging());
       response.setStatus(SC_FORBIDDEN);
+      return;
     }
+
+    if (Action.Method.GET.equals(method)) {
+      runGet(registrar);
+    } else if (Method.POST.equals(method)) {
+      runPost(registrar);
+    } else {
+      throw new UnsupportedOperationException("Only GET/POST requests are supported");
+    }
+  }
+
+  private void runGet(Registrar registrar) {
+    ImmutableList<DummyRegistrarLock> lockedDomains = getLockedDomains(registrar);
+    Map<String, ?> resultMap = createResultMap(registrar, lockedDomains);
+    response.setPayload(GSON.toJson(resultMap));
+  }
+
+  private void runPost(Registrar registrar) {
+    String domainName =
+        fullyQualifiedDomainName.orElseThrow(
+            () -> new IllegalArgumentException("Must supply domain name to lock/unlock"));
+    // this is hacky but we'll have something better when it's actually implemented
+    String lockOrUnlockParam = lockOrUnlock.orElseThrow(() -> new IllegalArgumentException("Must supply lockOrUnlock"));
+    boolean lock;
+    if ("lock".equals(lockOrUnlockParam)) {
+      lock = true;
+    } else if ("unlock".equals(lockOrUnlockParam)) {
+      lock = false;
+    } else {
+      throw new IllegalArgumentException("lockOrUnlock must be either 'lock' or 'unlock'");
+    }
+
+    // TODO: actually do the lock / unlock
+    logger.atInfo().log(
+        String.format("Performing action %s to domain %s", lock ? "lock" : "unlock", domainName));
+    runGet(registrar);
+  }
+
+  private Registrar getRegistrarAndVerifyLockAccess() throws RegistrarAccessDeniedException {
+    String clientId = paramClientId.orElse(registrarAccessor.guessClientId());
+    Registrar registrar = registrarAccessor.getRegistrar(clientId);
+    verifyRegistrarLockAccess(registrar);
+    return registrar;
   }
 
   private Map<String, ?> createResultMap(
       Registrar registrar, ImmutableList<DummyRegistrarLock> lockedDomains) {
     PreconditionsUtils.checkArgumentNotNull(lockedDomains);
     return ImmutableMap.of(
-        CLIENT_ID_PARAM, registrar.getClientId(),
+        PARAM_CLIENT_ID, registrar.getClientId(),
         LOCKS_PARAM,
             lockedDomains.stream().map(DummyRegistrarLock::toMap).collect(toImmutableList()));
   }

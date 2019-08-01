@@ -144,4 +144,16 @@ public final class RegistrarConsoleModule {
   static Optional<String> provideOptionalPasscode(HttpServletRequest req) {
     return extractOptionalParameter(req, "passcode");
   }
+
+  @Provides
+  @Parameter("fullyQualifiedDomainName")
+  static Optional<String> provideOptionalFullyQualifiedDomainName(HttpServletRequest req) {
+    return extractOptionalParameter(req, "fullyQualifiedDomainName");
+  }
+
+  @Provides
+  @Parameter("lockOrUnlock")
+  static Optional<String> provideLockOrUnlock(HttpServletRequest req) {
+    return extractOptionalParameter(req, "lockOrUnlock");
+  }
 }
