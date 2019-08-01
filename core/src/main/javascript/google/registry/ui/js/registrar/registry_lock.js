@@ -46,7 +46,8 @@ goog.inherits(registry.registrar.RegistryLock, registry.ResourceComponent);
 
 registry.registrar.RegistryLock.prototype.runAfterRender = function(objArgs) {
   // Listen to the "submit" button click as well as the enter key
-  goog.events.listen(goog.dom.getRequiredElement('lock-domain-submit'),
+  var submitButton = goog.dom.getRequiredElement('lock-domain-submit');
+  goog.events.listen(submitButton,
                      goog.events.EventType.CLICK,
                      this.onLockDomain_,
                      false,
@@ -79,16 +80,15 @@ registry.registrar.RegistryLock.prototype.runAfterRender = function(objArgs) {
  * Shows the lock/unlock confirmation modal
  * @private
  */
-registry.registrar.RegistryLock.prototype.showModal_ = function(domain, isLock) {
-  // TODO: put this as a child to the element that triggered it so as to not confuse screen readers
-  // TODO: reset focus after close to the element that triggered it
-  // TODO: verify that all other elements are hidden
-  var parentElement = goog.dom.getRequiredElement('lock-confirm-modal-holder');
-  goog.soy.renderElement(parentElement, registry.soy.registrar.registrylock.confirmModal, {domain: domain, isLock: isLock});
+registry.registrar.RegistryLock.prototype.showModal_ = function(targetElement, domain, isLock) {
+  var parentElement = targetElement.parentElement;
+  var previousHtml = parentElement.innerHTML;
+  var modalElement = goog.soy.renderAsElement(registry.soy.registrar.registrylock.confirmModal, {domain: domain, isLock: isLock});
+  parentElement.prepend(modalElement);
   // delete the modal when the user clicks the cancel button
   goog.events.listen(goog.dom.getRequiredElement('domain-lock-cancel'),
                      goog.events.EventType.CLICK,
-                     function() { goog.soy.renderElement(parentElement, registry.soy.registrar.registrylock.empty);},
+                     function() { parentElement.removeChild(parentElement.firstChild); },
                      false,
                      this);
 
@@ -100,11 +100,14 @@ registry.registrar.RegistryLock.prototype.showModal_ = function(domain, isLock) 
  * @private
  */
 registry.registrar.RegistryLock.prototype.onUnlockDomain_ = function(e) {
-  // the domain is stored in the button ID
+  // the domain is stored in the button ID if it's the right type of button
   var idRegex = /button-unlock-(.*)/
   var targetId = e.target.id;
-  var domain = targetId.match(idRegex)[1];
-  this.showModal_(domain, false);
+  var match = targetId.match(idRegex);
+  if (match) {
+    var domain = match[1];
+    this.showModal_(e.target, domain, false);
+  }
 }
 
 /**
@@ -114,7 +117,7 @@ registry.registrar.RegistryLock.prototype.onUnlockDomain_ = function(e) {
 registry.registrar.RegistryLock.prototype.onInputKeyUp_ = function(e) {
   if (e.keyCode === goog.events.KeyCodes.ENTER) {
     e.preventDefault();
-    this.onLockDomain_();
+    this.onLockDomain_(e);
   }
 }
 
@@ -122,7 +125,8 @@ registry.registrar.RegistryLock.prototype.onInputKeyUp_ = function(e) {
  * Click handler for lock-domain button.
  * @private
  */
-registry.registrar.RegistryLock.prototype.onLockDomain_ = function() {
+registry.registrar.RegistryLock.prototype.onLockDomain_ = function(e) {
+  console.log(e);
   var domain = goog.dom.getRequiredElement('lock-domain-input').value;
-  this.showModal_(domain, true);
+  this.showModal_(e.target, domain, true);
 };
