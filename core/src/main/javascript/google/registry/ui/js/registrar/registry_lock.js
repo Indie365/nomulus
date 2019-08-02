@@ -61,7 +61,6 @@ registry.registrar.RegistryLock.prototype.runAfterRender = function(objArgs) {
                      false,
                      this);
 
-  var onUnlockClick = this.onUnlockDomain_;
   // Load the existing locks and display them in the table
   goog.net.XhrIo.send('/registry-lock-get?clientId=' + objArgs.clientId,
       // note: bind this.onUnlockDomain because we lose the "this" reference in the XhrIo callback
