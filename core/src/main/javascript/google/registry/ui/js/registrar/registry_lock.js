@@ -63,7 +63,7 @@ registry.registrar.RegistryLock.prototype.runAfterRender = function(objArgs) {
 
   var onUnlockClick = this.onUnlockDomain_;
   // Load the existing locks and display them in the table
-  goog.net.XhrIo.send('/registrar-domain-lock?clientId=' + objArgs.clientId,
+  goog.net.XhrIo.send('/registry-lock-get?clientId=' + objArgs.clientId,
       // note: bind this.onUnlockDomain because we lose the "this" reference in the XhrIo callback
       goog.bind(this.fillExistingLocks_, this, this.onUnlockDomain_));
 };
@@ -115,7 +115,7 @@ registry.registrar.RegistryLock.prototype.showModal_ = function(targetElement, d
  * @private
  */
 registry.registrar.RegistryLock.prototype.lockOrUnlockDomain_ = function(domain, isLock, e) {
-  goog.net.XhrIo.send('/registrar-domain-lock',
+  goog.net.XhrIo.send('/registry-lock-post',
     // note: bind this.onUnlockDomain because we lose the "this" reference in the XhrIo callback
     goog.bind(this.fillExistingLocks_, this, this.onUnlockDomain_),
     'POST',
