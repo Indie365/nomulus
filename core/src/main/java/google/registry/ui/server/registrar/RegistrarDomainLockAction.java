@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.net.MediaType;
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import google.registry.model.registrar.Registrar;
 import google.registry.request.Action;
 import google.registry.request.Action.Method;
@@ -38,9 +39,11 @@ import google.registry.request.auth.AuthResult;
 import google.registry.request.auth.AuthenticatedRegistrarAccessor;
 import google.registry.request.auth.AuthenticatedRegistrarAccessor.RegistrarAccessDeniedException;
 import google.registry.util.PreconditionsUtils;
+import java.io.IOException;
 import java.util.Map;
 import java.util.Optional;
 import javax.inject.Inject;
+import javax.servlet.http.HttpServletRequest;
 import org.joda.time.DateTime;
 
 /**
@@ -67,6 +70,7 @@ public final class RegistrarDomainLockAction implements Runnable {
   public static final String PATH = "/registrar-domain-lock";
 
   @Inject @RequestMethod Method method;
+  @Inject HttpServletRequest request;
   @Inject Response response;
   @Inject AuthenticatedRegistrarAccessor registrarAccessor;
   @Inject AuthResult authResult;
@@ -74,11 +78,8 @@ public final class RegistrarDomainLockAction implements Runnable {
   @Inject @Parameter(PARAM_CLIENT_ID)
   Optional<String> paramClientId;
 
-  @Inject @Parameter(FULLY_QUALIFIED_DOMAIN_NAME_PARAM)
   Optional<String> fullyQualifiedDomainName;
-
-  @Inject @Parameter("lockOrUnlock")
-  Optional<String> lockOrUnlock;
+  Optional<Boolean> isDomainLock;
 
   @Inject RegistrarDomainLockAction() {}
 
@@ -115,24 +116,30 @@ public final class RegistrarDomainLockAction implements Runnable {
   }
 
   private void runPost(Registrar registrar) {
+    fillFieldsFromRequest();
     String domainName =
         fullyQualifiedDomainName.orElseThrow(
             () -> new IllegalArgumentException("Must supply domain name to lock/unlock"));
     // this is hacky but we'll have something better when it's actually implemented
-    String lockOrUnlockParam = lockOrUnlock.orElseThrow(() -> new IllegalArgumentException("Must supply lockOrUnlock"));
-    boolean lock;
-    if ("lock".equals(lockOrUnlockParam)) {
-      lock = true;
-    } else if ("unlock".equals(lockOrUnlockParam)) {
-      lock = false;
-    } else {
-      throw new IllegalArgumentException("lockOrUnlock must be either 'lock' or 'unlock'");
-    }
-
+    boolean lock =
+        isDomainLock.orElseThrow(() -> new IllegalArgumentException("Must supply isLock"));
     // TODO: actually do the lock / unlock
     logger.atInfo().log(
         String.format("Performing action %s to domain %s", lock ? "lock" : "unlock", domainName));
     runGet(registrar);
+  }
+
+  // We don't have a good built-in way of automatically parsing the POST body
+  private void fillFieldsFromRequest() {
+    try {
+      Map<String, String> postData =
+          GSON.fromJson(request.getReader(), new TypeToken<Map<String, String>>(){}.getType());
+      this.paramClientId = Optional.of(postData.get(PARAM_CLIENT_ID));
+      this.fullyQualifiedDomainName = Optional.of(postData.get(FULLY_QUALIFIED_DOMAIN_NAME_PARAM));
+      this.isDomainLock = Optional.of(Boolean.valueOf(postData.get("isDomainLock")));
+    } catch (IOException e) {
+      throw new IllegalArgumentException("Error when parsing JSON", e);
+    }
   }
 
   private Registrar getRegistrarAndVerifyLockAccess() throws RegistrarAccessDeniedException {

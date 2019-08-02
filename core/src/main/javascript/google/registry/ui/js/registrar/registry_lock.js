@@ -45,6 +45,9 @@ registry.registrar.RegistryLock = function(console, resource) {
 goog.inherits(registry.registrar.RegistryLock, registry.ResourceComponent);
 
 registry.registrar.RegistryLock.prototype.runAfterRender = function(objArgs) {
+  this.clientId = objArgs.clientId;
+  this.xsrfToken = objArgs.xsrfToken;
+
   // Listen to the "submit" button click as well as the enter key
   var submitButton = goog.dom.getRequiredElement('lock-domain-submit');
   goog.events.listen(submitButton,
@@ -60,21 +63,29 @@ registry.registrar.RegistryLock.prototype.runAfterRender = function(objArgs) {
 
   var onUnlockClick = this.onUnlockDomain_;
   // Load the existing locks and display them in the table
-  goog.net.XhrIo.send('/registrar-domain-lock?clientId=' + objArgs.clientId, function(e) {
-    var response =
-            /** @type {!registry.json.locks.ExistingLocksResponse} */
-            (e.target.getResponseJson(registry.Resource.PARSER_BREAKER_));
-    var existingLocksDiv = goog.dom.getRequiredElement('existing-locks-div');
-    goog.soy.renderElement(
-        existingLocksDiv, registry.soy.registrar.registrylock.existingLocksTable,
-        {locks: response.locks});
-    // For all unlock buttons, listen and perform the unlock action if they're clicked
-    var unlockButtons = goog.dom.getElementsByClass('domain-unlock-button', existingLocksDiv);
-    for (let i = 0; i < unlockButtons.length; i++) {
-      goog.events.listen(unlockButtons[i], goog.events.EventType.CLICK, onUnlockClick, false, this);
-    }
-  });
+  goog.net.XhrIo.send('/registrar-domain-lock?clientId=' + objArgs.clientId,
+      // note: bind this.onUnlockDomain because we lose the "this" reference in the XhrIo callback
+      goog.bind(this.fillExistingLocks_, this, this.onUnlockDomain_));
 };
+
+/**
+ * Fills the locks table with the response received from the server
+ * @private
+ */
+registry.registrar.RegistryLock.prototype.fillExistingLocks_ = function(onUnlockClick, e) {
+  var response =
+          /** @type {!registry.json.locks.ExistingLocksResponse} */
+          (e.target.getResponseJson(registry.Resource.PARSER_BREAKER_));
+  var existingLocksDiv = goog.dom.getRequiredElement('existing-locks-div');
+  goog.soy.renderElement(
+      existingLocksDiv, registry.soy.registrar.registrylock.existingLocksTable,
+      {locks: response.locks});
+  // For all unlock buttons, listen and perform the unlock action if they're clicked
+  var unlockButtons = goog.dom.getElementsByClass('domain-unlock-button', existingLocksDiv);
+  for (let i = 0; i < unlockButtons.length; i++) {
+    goog.events.listen(unlockButtons[i], goog.events.EventType.CLICK, onUnlockClick, false, this);
+  }
+}
 
 /**
  * Shows the lock/unlock confirmation modal
@@ -92,7 +103,30 @@ registry.registrar.RegistryLock.prototype.showModal_ = function(targetElement, d
                      false,
                      this);
 
-  // TODO : do the submit
+  goog.events.listen(goog.dom.getRequiredElement('domain-lock-submit'),
+                     goog.events.EventType.CLICK,
+                     goog.bind(this.lockOrUnlockDomain_, this, domain, isLock),
+                     false,
+                     this);
+}
+
+/**
+ * Locks or unlocks the specified domain
+ * @private
+ */
+registry.registrar.RegistryLock.prototype.lockOrUnlockDomain_ = function(domain, isLock, e) {
+  goog.net.XhrIo.send('/registrar-domain-lock',
+    // note: bind this.onUnlockDomain because we lose the "this" reference in the XhrIo callback
+    goog.bind(this.fillExistingLocks_, this, this.onUnlockDomain_),
+    'POST',
+    goog.json.serialize({
+      'clientId': this.clientId,
+      "fullyQualifiedDomainName": "domain.example",
+      "isLock": isLock
+    }), {
+      'X-CSRF-Token': this.xsrfToken,
+      'Content-Type': 'application/json; charset=UTF-8'
+    });
 }
 
 /**
