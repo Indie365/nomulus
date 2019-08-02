@@ -70,7 +70,7 @@
 {template .confirmModal}
   {@param domain: string}
   {@param isLock: bool}
-  <div class="{css('lock-confirm-modal')}">
+  <div id="lock-confirm-modal" class="{css('lock-confirm-modal')}">
     <div class="modal-content">
       <p>Are you sure you want to {if not $isLock}un{/if}lock the domain {$domain}? We will send
         an email to the email address on file to confirm the {if not $isLock}un{/if}lock.</p>

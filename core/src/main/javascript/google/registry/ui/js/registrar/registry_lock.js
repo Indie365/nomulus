@@ -65,14 +65,27 @@ registry.registrar.RegistryLock.prototype.runAfterRender = function(objArgs) {
   // Load the existing locks and display them in the table
   goog.net.XhrIo.send('/registry-lock-get?clientId=' + objArgs.clientId,
       // note: bind this.onUnlockDomain because we lose the "this" reference in the XhrIo callback
+      // so we won't have it in fillExistingLocks_()
       goog.bind(this.fillExistingLocks_, this, this.onUnlockDomain_));
 };
+
+/**
+ * Removes the lock/unlock-confirmation modal if it exists
+ * @private
+ */
+const removeModalIfExists_ = function() {
+  var modalElement = goog.dom.getElement("lock-confirm-modal");
+  if (modalElement != null) {
+    modalElement.parentElement.removeChild(modalElement);
+  }
+}
 
 /**
  * Fills the locks table with the response received from the server
  * @private
  */
 registry.registrar.RegistryLock.prototype.fillExistingLocks_ = function(onUnlockClick, e) {
+  removeModalIfExists_();
   var response =
           /** @type {!registry.json.locks.ExistingLocksResponse} */
           (e.target.getResponseJson(registry.Resource.PARSER_BREAKER_));
@@ -99,7 +112,7 @@ registry.registrar.RegistryLock.prototype.showModal_ = function(targetElement, d
   // delete the modal when the user clicks the cancel button
   goog.events.listen(goog.dom.getRequiredElement('domain-lock-cancel'),
                      goog.events.EventType.CLICK,
-                     function() { parentElement.removeChild(parentElement.firstChild); },
+                     removeModalIfExists_,
                      false,
                      this);
 
@@ -117,6 +130,7 @@ registry.registrar.RegistryLock.prototype.showModal_ = function(targetElement, d
 registry.registrar.RegistryLock.prototype.lockOrUnlockDomain_ = function(domain, isLock, e) {
   goog.net.XhrIo.send('/registry-lock-post',
     // note: bind this.onUnlockDomain because we lose the "this" reference in the XhrIo callback
+    // so we won't have it in fillExistingLocks_()
     goog.bind(this.fillExistingLocks_, this, this.onUnlockDomain_),
     'POST',
     goog.json.serialize({
