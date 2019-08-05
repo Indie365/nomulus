@@ -31,9 +31,11 @@ import java.util.Optional;
 import javax.inject.Inject;
 
 /**
- * Admin servlet that allows for getting or updating registrar locks for a particular registrar.
+ * Admin servlet that allows for updating registrar locks for a particular registrar. Locks /
+ * unlocks must be verified separately before they are written permanently.
  *
- * <p>Note: locks / unlocks must be verified separately before they are written permanently.
+ * <p>Note: at the moment we have no mechanism for JSON GET/POSTs in the same class or at the same *
+ * URL, which is why this is distinct from the {@link RegistryLockGetAction}.
  */
 @Action(
     service = Action.Service.DEFAULT,
