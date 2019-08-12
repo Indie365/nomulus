@@ -40,22 +40,20 @@ import org.mockito.Mockito;
 /**
  * Unit Tests on {@link ProbingSequence}
  *
- * <p>First tests the construction of sequences and ensures the ordering is exactly how
- * we expect it to be.</p>
+ * <p>First tests the construction of sequences and ensures the ordering is exactly how we expect it
+ * to be.
  *
- * <p>Then tests the execution of each step, by ensuring the methods treatment of any kind
- * of response from the {@link ProbingStep}s or {@link ProbingAction}s is what is expected.</p>
+ * <p>Then tests the execution of each step, by ensuring the methods treatment of any kind of
+ * response from the {@link ProbingStep}s or {@link ProbingAction}s is what is expected.
  *
- * <p>On every test that runs the sequence, in order for the sequence to stop, we expect an
- * error to be thrown on calling token.next(), as it should return null, which will create a {@link
- * NullPointerException}, ending the sequence after the last step has been performed.</p>
+ * <p>On every test that runs the sequence, in order for the sequence to stop, we expect an error to
+ * be thrown on calling token.next(), as it should return null, which will create a {@link
+ * NullPointerException}, ending the sequence after the last step has been performed.
  */
 @RunWith(JUnit4.class)
 public class ProbingSequenceTest {
 
-  /**
-   * Default mock {@link ProbingAction} returned when generating an action with a mockStep.
-   */
+  /** Default mock {@link ProbingAction} returned when generating an action with a mockStep. */
   private ProbingAction mockAction = Mockito.mock(ProbingAction.class);
 
   /**
@@ -64,15 +62,10 @@ public class ProbingSequenceTest {
    */
   private ProbingStep mockStep = Mockito.mock(ProbingStep.class);
 
-
-  /**
-   * Default mock {@link Token} that is passed into each {@link ProbingSequence} tested.
-   */
+  /** Default mock {@link Token} that is passed into each {@link ProbingSequence} tested. */
   private Token mockToken = Mockito.mock(Token.class);
 
-  /**
-   * Default mock {@link Channel} returned by {@code mockAction}
-   */
+  /** Default mock {@link Channel} returned by {@code mockAction} */
   private Channel mockChannel = Mockito.mock(Channel.class);
 
   /**
@@ -111,11 +104,12 @@ public class ProbingSequenceTest {
     ProbingStep secondStep = Mockito.mock(ProbingStep.class);
     ProbingStep thirdStep = Mockito.mock(ProbingStep.class);
 
-    ProbingSequence sequence = new ProbingSequence.Builder(mockToken)
-        .add(firstStep)
-        .add(secondStep)
-        .add(thirdStep)
-        .build();
+    ProbingSequence sequence =
+        new ProbingSequence.Builder(mockToken)
+            .add(firstStep)
+            .add(secondStep)
+            .add(thirdStep)
+            .build();
 
     assertThat(sequence.get()).isEqualTo(firstStep);
     sequence = sequence.next();
@@ -135,12 +129,13 @@ public class ProbingSequenceTest {
     ProbingStep secondStep = Mockito.mock(ProbingStep.class);
     ProbingStep thirdStep = Mockito.mock(ProbingStep.class);
 
-    ProbingSequence sequence = new ProbingSequence.Builder(mockToken)
-        .add(thirdStep)
-        .add(secondStep)
-        .markFirstRepeated()
-        .add(firstStep)
-        .build();
+    ProbingSequence sequence =
+        new ProbingSequence.Builder(mockToken)
+            .add(thirdStep)
+            .add(secondStep)
+            .markFirstRepeated()
+            .add(firstStep)
+            .build();
 
     assertThat(sequence.get()).isEqualTo(thirdStep);
     sequence = sequence.next();
@@ -152,30 +147,28 @@ public class ProbingSequenceTest {
     sequence = sequence.next();
 
     assertThat(sequence.get()).isEqualTo(secondStep);
-
   }
 
   @Test
   public void testRunStep_Success() throws UndeterminedStateException {
-    //Always returns a succeeded future on call to mockAction.
+    // Always returns a succeeded future on call to mockAction.
     doReturn(channel.newSucceededFuture()).when(mockAction).call();
 
     // Has mockStep always return mockAction on call to generateAction
     doReturn(mockAction).when(mockStep).generateAction(any(Token.class));
 
-    //Dummy step that server purpose of placeholder to test ability of ProbingSequence to move on.
+    // Dummy step that server purpose of placeholder to test ability of ProbingSequence to move on.
     ProbingStep secondStep = Mockito.mock(ProbingStep.class);
     ProbingAction secondAction = Mockito.mock(ProbingAction.class);
 
-    doReturn(channel.newFailedFuture(new UnrecoverableStateException(""))).when(secondAction)
+    doReturn(channel.newFailedFuture(new UnrecoverableStateException("")))
+        .when(secondAction)
         .call();
     doReturn(secondAction).when(secondStep).generateAction(mockToken);
 
-    //Build testable sequence from mocked components.
-    ProbingSequence sequence = new ProbingSequence.Builder(mockToken)
-        .add(mockStep)
-        .add(secondStep)
-        .build();
+    // Build testable sequence from mocked components.
+    ProbingSequence sequence =
+        new ProbingSequence.Builder(mockToken).add(mockStep).add(secondStep).build();
 
     sequence.start();
 
@@ -190,7 +183,7 @@ public class ProbingSequenceTest {
     verify(secondStep).generateAction(mockToken);
     verify(secondAction).call();
 
-    //We should have modified the token's channel after the first, succeeded step.
+    // We should have modified the token's channel after the first, succeeded step.
     assertThat(mockToken.channel()).isEqualTo(mockChannel);
   }
 
@@ -225,11 +218,9 @@ public class ProbingSequenceTest {
     doReturn(channel.newFailedFuture(new UnrecoverableStateException(""))).when(thirdAction).call();
     doReturn(thirdAction).when(mockStep).generateAction(secondToken);
 
-    //Build testable sequence from mocked components.
-    ProbingSequence sequence = new ProbingSequence.Builder(mockToken)
-        .add(mockStep)
-        .add(secondStep)
-        .build();
+    // Build testable sequence from mocked components.
+    ProbingSequence sequence =
+        new ProbingSequence.Builder(mockToken).add(mockStep).add(secondStep).build();
 
     sequence.start();
 
@@ -245,7 +236,7 @@ public class ProbingSequenceTest {
     verify(secondStep).generateAction(any(Token.class));
     verify(secondAction).call();
 
-    //We should have modified the token's channel after the first, succeeded step.
+    // We should have modified the token's channel after the first, succeeded step.
     assertThat(mockToken.channel()).isEqualTo(mockChannel);
   }
 
@@ -257,7 +248,7 @@ public class ProbingSequenceTest {
     // Returns mock action on call to generate action for ProbingStep.
     doReturn(mockAction).when(mockStep).generateAction(mockToken);
 
-    //Dummy step that server purpose of placeholder to test ability of ProbingSequence to move on.
+    // Dummy step that server purpose of placeholder to test ability of ProbingSequence to move on.
     ProbingStep secondStep = Mockito.mock(ProbingStep.class);
 
     // We create a second token that when used to generate an action throws an
@@ -266,15 +257,13 @@ public class ProbingSequenceTest {
     doReturn(secondToken).when(mockToken).next();
     doThrow(new UnrecoverableStateException("")).when(mockStep).generateAction(secondToken);
 
-    //Build testable sequence from mocked components.
-    ProbingSequence sequence = new ProbingSequence.Builder(mockToken)
-        .add(mockStep)
-        .add(secondStep)
-        .build();
+    // Build testable sequence from mocked components.
+    ProbingSequence sequence =
+        new ProbingSequence.Builder(mockToken).add(mockStep).add(secondStep).build();
 
     sequence.start();
 
-    //We expect that we have generated actions twice. First, when we generate a real action, and
+    // We expect that we have generated actions twice. First, when we generate a real action, and
     // second when we throw an UnrecoverableStateException.
     verify(mockStep, times(2)).generateAction(any(Token.class));
 
@@ -290,13 +279,12 @@ public class ProbingSequenceTest {
     verify(secondStep, times(0)).generateAction(any(Token.class));
   }
 
-
   @Test
   public void testRunStep_FailureGenerating() throws UndeterminedStateException {
     // Create a mock first step that returns the dummy action when called to generate an action.
     doThrow(UndeterminedStateException.class).when(mockStep).generateAction(mockToken);
 
-    //Dummy step that server purpose of placeholder to test ability of ProbingSequence to move on.
+    // Dummy step that server purpose of placeholder to test ability of ProbingSequence to move on.
     ProbingStep secondStep = Mockito.mock(ProbingStep.class);
 
     // We create a second token that when used to generate an action throws an
@@ -305,15 +293,13 @@ public class ProbingSequenceTest {
     doReturn(secondToken).when(mockToken).next();
     doThrow(new UnrecoverableStateException("")).when(mockStep).generateAction(secondToken);
 
-    //Build testable sequence from mocked components.
-    ProbingSequence sequence = new ProbingSequence.Builder(mockToken)
-        .add(mockStep)
-        .add(secondStep)
-        .build();
+    // Build testable sequence from mocked components.
+    ProbingSequence sequence =
+        new ProbingSequence.Builder(mockToken).add(mockStep).add(secondStep).build();
 
     sequence.start();
 
-    //We expect that we have generated actions twice. First, when we throw a generic
+    // We expect that we have generated actions twice. First, when we throw a generic
     // UndeterminedException, and second when we throw an UnrecoverableStateException.
     verify(mockStep, times(2)).generateAction(any(Token.class));
 
