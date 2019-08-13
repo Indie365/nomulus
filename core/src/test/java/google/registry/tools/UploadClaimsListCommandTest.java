@@ -18,7 +18,8 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
 import static google.registry.testing.JUnitBackports.assertThrows;
 
-import google.registry.model.tmch.ClaimsListShard;
+import google.registry.model.tmch.ClaimsList;
+import google.registry.model.tmch.ClaimsListCache;
 import java.io.FileNotFoundException;
 import org.joda.time.DateTime;
 import org.junit.Test;
@@ -36,7 +37,7 @@ public class UploadClaimsListCommandTest extends CommandTestCase<UploadClaimsLis
       "anotherexample,2013041500/A/C/7/rHdC4wnrWRvPY6nneCVtQhFj0000000003,2011-08-16T12:00:00.0Z");
     runCommand("--force", filename);
 
-    ClaimsListShard claimsList = ClaimsListShard.get();
+    ClaimsList claimsList = ClaimsListCache.get();
     assertThat(claimsList.getCreationTime()).isEqualTo(DateTime.parse("2012-08-16T00:00:00.0Z"));
     assertThat(claimsList.getClaimKey("example"))
         .hasValue("2013041500/2/6/9/rJ1NrDO92vDsAzf7EQzgjX4R0000000001");
