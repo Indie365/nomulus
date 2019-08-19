@@ -1465,6 +1465,51 @@ public final class RegistryConfig {
     return Duration.millis(CONFIG_SETTINGS.get().datastore.baseOfyRetryMillis);
   }
 
+  /** Returns the JDBC driver class name. */
+  public static String getDriverClassName() {
+    return CONFIG_SETTINGS.get().hibernate.driverClassName;
+  }
+
+  /** Returns the default database transaction isolation. */
+  public static String getHibernateConnectionIsolation() {
+    return CONFIG_SETTINGS.get().hibernate.connectionIsolation;
+  }
+
+  /** Returns true if hibernate.show_sql is enabled. */
+  public static String getHibernateShowSql() {
+    return CONFIG_SETTINGS.get().hibernate.showSql;
+  }
+
+  /** Returns true if schema modification is allowed. */
+  public static String getHibernateHbm2ddlAuto() {
+    return CONFIG_SETTINGS.get().hibernate.hbm2ddlAuto;
+  }
+
+  /** Returns the class name of the connection pool provider. */
+  public static String getHibernateConnectionProviderClass() {
+    return CONFIG_SETTINGS.get().hibernate.connectionProviderClass;
+  }
+
+  /** Returns the connection timeout for HikariCP. */
+  public static String getHibernateHikariConnectionTimeout() {
+    return CONFIG_SETTINGS.get().hibernate.hikariConnectionTimeout;
+  }
+
+  /** Returns the minimum idle connections for HikariCP. */
+  public static String getHibernateHikariMinimumIdle() {
+    return CONFIG_SETTINGS.get().hibernate.hikariMinimumIdle;
+  }
+
+  /** Returns the maximum pool size for HikariCP. */
+  public static String getHibernateHikariMaximumPoolSize() {
+    return CONFIG_SETTINGS.get().hibernate.hikariMaximumPoolSize;
+  }
+
+  /** Returns the idle timeout for HikariCP. */
+  public static String getHibernateHikariIdleTimeout() {
+    return CONFIG_SETTINGS.get().hibernate.hikariIdleTimeout;
+  }
+
   /** Returns the roid suffix to be used for the roids of all contacts and hosts. */
   public static String getContactAndHostRoidSuffix() {
     return CONFIG_SETTINGS.get().registryPolicy.contactAndHostRoidSuffix;

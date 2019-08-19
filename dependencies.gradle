@@ -125,6 +125,7 @@ ext {
       'org.seleniumhq.selenium:selenium-chrome-driver:3.141.59',
       'org.seleniumhq.selenium:selenium-java:3.141.59',
       'org.seleniumhq.selenium:selenium-remote-driver:3.141.59',
+      'org.testcontainers:postgresql:1.11.3',
       'org.testcontainers:selenium:1.10.7',
       'org.yaml:snakeyaml:1.17',
       'xerces:xmlParserAPIs:2.6.2',
