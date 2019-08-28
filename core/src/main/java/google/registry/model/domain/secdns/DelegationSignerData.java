@@ -30,11 +30,13 @@ import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
  */
 @Embed
 @XmlType(name = "dsData")
+@javax.persistence.Entity
 public class DelegationSignerData extends ImmutableObject {
 
   private DelegationSignerData() {}
 
   /** The identifier for this particular key in the domain. */
+  @javax.persistence.Id
   int keyTag;
 
   /**

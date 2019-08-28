@@ -21,6 +21,7 @@ import com.googlecode.objectify.annotation.Embed;
 import com.googlecode.objectify.annotation.Index;
 import google.registry.model.ImmutableObject;
 import google.registry.model.contact.ContactResource;
+import javax.persistence.Id;
 import javax.xml.bind.annotation.XmlEnumValue;
 
 /**
@@ -39,6 +40,7 @@ import javax.xml.bind.annotation.XmlEnumValue;
  *     RFC 5731 - EPP Domain Name Mapping - Contact and Client Identifiers</a>
  */
 @Embed
+@javax.persistence.Entity
 public class DesignatedContact extends ImmutableObject {
 
   /**
@@ -65,8 +67,7 @@ public class DesignatedContact extends ImmutableObject {
 
   Type type;
 
-  @Index
-  Key<ContactResource> contact;
+  @Index @Id Key<ContactResource> contact;
 
   public Type getType() {
     return type;

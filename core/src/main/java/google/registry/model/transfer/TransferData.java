@@ -31,6 +31,8 @@ import google.registry.model.eppcommon.Trid;
 import google.registry.model.poll.PollMessage;
 import java.util.Set;
 import javax.annotation.Nullable;
+import javax.persistence.ElementCollection;
+import javax.persistence.Embedded;
 import org.joda.time.DateTime;
 
 /**
@@ -39,12 +41,13 @@ import org.joda.time.DateTime;
  */
 @Embed
 @Unindex
+@javax.persistence.Embeddable
 public class TransferData extends BaseTransferObject implements Buildable {
 
   public static final TransferData EMPTY = new TransferData();
 
   /** The transaction id of the most recent transfer request (or null if there never was one). */
-  Trid transferRequestTrid;
+  @Embedded Trid transferRequestTrid;
 
   /**
    * The period to extend the registration upon completion of the transfer.
@@ -52,7 +55,7 @@ public class TransferData extends BaseTransferObject implements Buildable {
    * <p>By default, domain transfers are for one year. This can be changed to zero by using the
    * superuser EPP extension.
    */
-  Period transferPeriod = Period.create(1, Unit.YEARS);
+  @Embedded Period transferPeriod = Period.create(1, Unit.YEARS);
 
   /**
    * The registration expiration time resulting from the approval - speculative or actual - of the
@@ -81,6 +84,7 @@ public class TransferData extends BaseTransferObject implements Buildable {
    * be deleted.
    */
   @IgnoreSave(IfNull.class)
+  @ElementCollection
   Set<Key<? extends TransferServerApproveEntity>> serverApproveEntities;
 
   /**
