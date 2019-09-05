@@ -19,6 +19,10 @@ import static google.registry.request.Action.Method.POST;
 
 import com.google.common.flogger.FluentLogger;
 import google.registry.keyring.api.KeyModule.Key;
+import google.registry.model.tmch.ClaimsListDao;
+import google.registry.model.tmch.ClaimsListDatabaseDao;
+import google.registry.model.transaction.DatabaseTransactionManager;
+import google.registry.model.transaction.TransactionManager;
 import google.registry.request.Action;
 import google.registry.request.auth.Auth;
 import google.registry.schema.tmch.ClaimsList;
@@ -60,5 +64,9 @@ public final class TmchDnlAction implements Runnable {
     logger.atInfo().log(
         "Inserted %,d claims into Datastore, created at %s",
         claims.getLabelsToKeys().size(), claims.getCreationTimestamp());
+
+    ClaimsListDao databaseDao = new ClaimsListDatabaseDao();
+    TransactionManager tm = new DatabaseTransactionManager();
+    tm.transact(() -> databaseDao.save(claims));
   }
 }
