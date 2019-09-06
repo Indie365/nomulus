@@ -1,6 +1,12 @@
 {
   "allowedLicenses": [
     {
+      "moduleLicense": "3-Clause BSD License"
+    },
+    {
+      "moduleLicense": "Apache"
+    },
+    {
       "moduleLicense": "Apache Software License, Version 1.1"
     },
     {

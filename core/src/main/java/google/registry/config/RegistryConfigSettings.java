@@ -26,6 +26,7 @@ public class RegistryConfigSettings {
   public RegistryPolicy registryPolicy;
   public Datastore datastore;
   public Hibernate hibernate;
+  public CloudSql cloudSql;
   public CloudDns cloudDns;
   public Caching caching;
   public IcannReporting icannReporting;
@@ -110,11 +111,17 @@ public class RegistryConfigSettings {
   public static class Hibernate {
     public String connectionIsolation;
     public String logSqlQueries;
-    public String hbm2ddlAuto;
     public String hikariConnectionTimeout;
     public String hikariMinimumIdle;
     public String hikariMaximumPoolSize;
     public String hikariIdleTimeout;
+  }
+
+  /** Configuration for CloudSql */
+  public static class CloudSql {
+    public String jdbcUrl;
+    public String gcsBucketForCredential;
+    public String credentialObjectName;
   }
 
   /** Configuration for Apache Beam (Cloud Dataflow). */
@@ -200,6 +207,8 @@ public class RegistryConfigSettings {
   public static class Kms {
     public String keyringName;
     public String projectId;
+    public String location;
+    public String keyForCloudSql;
   }
 
   /** Configuration options for the registry tool. */

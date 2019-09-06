@@ -22,7 +22,17 @@ import static google.registry.config.RegistryConfig.getHibernateHikariMaximumPoo
 import static google.registry.config.RegistryConfig.getHibernateHikariMinimumIdle;
 import static google.registry.config.RegistryConfig.getHibernateLogSqlQueries;
 
+import com.google.appengine.tools.cloudstorage.GcsFilename;
+import com.google.appengine.tools.cloudstorage.GcsServiceFactory;
+import com.google.appengine.tools.cloudstorage.RetryParams;
+import com.google.cloud.kms.v1.CryptoKeyName;
+import com.google.cloud.kms.v1.KeyManagementServiceClient;
 import com.google.common.collect.ImmutableMap;
+import com.google.protobuf.ByteString;
+import google.registry.config.RegistryConfig;
+import google.registry.gcs.GcsUtils;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
 import org.hibernate.cfg.Environment;
@@ -35,6 +45,9 @@ public class EntityManagerFactoryProvider {
   public static final String HIKARI_MINIMUM_IDLE = "hibernate.hikari.minimumIdle";
   public static final String HIKARI_MAXIMUM_POOL_SIZE = "hibernate.hikari.maximumPoolSize";
   public static final String HIKARI_IDLE_TIMEOUT = "hibernate.hikari.idleTimeout";
+
+  // Size of Google Cloud Storage client connection buffer in bytes.
+  private static final int GCS_BUFFER_SIZE = 1024 * 1024;
 
   private static ImmutableMap<String, String> getDefaultProperties() {
     ImmutableMap.Builder<String, String> properties = ImmutableMap.builder();
@@ -57,9 +70,11 @@ public class EntityManagerFactoryProvider {
   }
 
   /** Constructs the {@link EntityManagerFactory} instance. */
-  public static EntityManagerFactory create(String jdbcUrl, String username, String password) {
+  public static EntityManagerFactory create(
+      String jdbcUrl, String username, String password, ImmutableMap<String, String> overrides) {
     ImmutableMap.Builder<String, String> properties = ImmutableMap.builder();
     properties.putAll(getDefaultProperties());
+    properties.putAll(overrides);
     properties.put(Environment.URL, jdbcUrl);
     properties.put(Environment.USER, username);
     properties.put(Environment.PASS, password);
@@ -69,5 +84,58 @@ public class EntityManagerFactoryProvider {
         emf != null,
         "Persistence.createEntityManagerFactory() returns a null EntityManagerFactory");
     return emf;
+  }
+
+  /** Constructs the {@link EntityManagerFactory} instance for the App Engine application. */
+  public static EntityManagerFactory createForAppEngine() {
+
+    GcsUtils gcsUtils =
+        new GcsUtils(
+            GcsServiceFactory.createGcsService(RetryParams.getDefaultInstance()), GCS_BUFFER_SIZE);
+
+    ByteString cipherText;
+    try {
+      cipherText =
+          ByteString.readFrom(
+              gcsUtils.openInputStream(
+                  new GcsFilename(
+                      RegistryConfig.getCloudSqlGcsBucketForCredential(),
+                      RegistryConfig.getCloudSqlCredentialObjectName())));
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
+
+    String[] credentialFields;
+    try (KeyManagementServiceClient client = KeyManagementServiceClient.create()) {
+      CryptoKeyName name =
+          CryptoKeyName.of(
+              RegistryConfig.getKmsKeyRingProjectId(),
+              RegistryConfig.getKmsKeyRingLocation(),
+              RegistryConfig.getKmsKeyRingName(),
+              RegistryConfig.getKeyNameForCloudSql());
+
+      // The credential uses the below format, the delimiter is a single space:
+      // [instanceConnectionName] [username] [password]
+      credentialFields =
+          client.decrypt(name.toString(), cipherText).getPlaintext().toStringUtf8().split(" ");
+      if (credentialFields.length != 3) {
+        throw new IllegalArgumentException(
+            "Number of fields in the credential file is not correct");
+      }
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
+
+    String instanceConnectionName = credentialFields[0];
+    String username = credentialFields[1];
+    String password = credentialFields[2];
+
+    ImmutableMap.Builder<String, String> overrides = ImmutableMap.builder();
+    // For Java users, the Cloud SQL JDBC Socket Factory can provide authenticated connections.
+    // See https://github.com/GoogleCloudPlatform/cloud-sql-jdbc-socket-factory for details.
+    overrides.put("socketFactory", "com.google.cloud.sql.postgres.SocketFactory");
+    overrides.put("cloudSqlInstance", instanceConnectionName);
+
+    return create(RegistryConfig.getCloudSqlJdbcUrl(), username, password, overrides.build());
   }
 }

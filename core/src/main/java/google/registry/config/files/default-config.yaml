@@ -211,6 +211,15 @@ hibernate:
   hikariMaximumPoolSize: 20
   hikariIdleTimeout: 300000
 
+cloudSql:
+  # jdbc url for the Cloud Sql database.
+  jdbcUrl: jdbc:postgresql://localhost
+
+  # The credential file is stored on GCS, and it contains the
+  # Cloud Sql instance connection name, username and password.
+  gcsBucketForCredential: bucketName
+  credentialObjectName: object/name
+
 cloudDns:
   # Set both properties to null in Production.
   # The root url for the Cloud DNS API.  Set this to a non-null value to
@@ -407,6 +416,12 @@ keyring:
     # The name to use for the Cloud KMS KeyRing which will store encryption keys
     # for Nomulus secrets.
     keyringName: nomulus
+
+    # Where the KeyRing is stored.
+    location: global
+
+    # Name of the key used for Cloud Sql.
+    keyForCloudSql: key-for-cloud-sql
 
 # Configuration options relevant to the "nomulus" registry tool.
 registryTool:

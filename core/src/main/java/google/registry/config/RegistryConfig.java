@@ -1469,11 +1469,6 @@ public final class RegistryConfig {
     return CONFIG_SETTINGS.get().hibernate.logSqlQueries;
   }
 
-  /** Returns true if schema modification is allowed. */
-  public static String getHibernateHbm2ddlAuto() {
-    return CONFIG_SETTINGS.get().hibernate.hbm2ddlAuto;
-  }
-
   /** Returns the connection timeout for HikariCP. */
   public static String getHibernateHikariConnectionTimeout() {
     return CONFIG_SETTINGS.get().hibernate.hikariConnectionTimeout;
@@ -1502,6 +1497,41 @@ public final class RegistryConfig {
   /** Returns the global automatic transfer length for contacts. */
   public static Duration getContactAutomaticTransferLength() {
     return Duration.standardDays(CONFIG_SETTINGS.get().registryPolicy.contactAutomaticTransferDays);
+  }
+
+  /** Returns the jdbc url used to connect to Cloud Sql database. */
+  public static String getCloudSqlJdbcUrl() {
+    return CONFIG_SETTINGS.get().cloudSql.jdbcUrl;
+  }
+
+  /** Returns the jdbc url used to connect to Cloud Sql database. */
+  public static String getCloudSqlGcsBucketForCredential() {
+    return CONFIG_SETTINGS.get().cloudSql.gcsBucketForCredential;
+  }
+
+  /** Returns the jdbc url used to connect to Cloud Sql database. */
+  public static String getCloudSqlCredentialObjectName() {
+    return CONFIG_SETTINGS.get().cloudSql.credentialObjectName;
+  }
+
+  /** Returns the KMS KeyRing name. */
+  public static String getKmsKeyRingName() {
+    return CONFIG_SETTINGS.get().keyring.kms.keyringName;
+  }
+
+  /** Returns the project id where the KMS KeyRing is stored. */
+  public static String getKmsKeyRingProjectId() {
+    return CONFIG_SETTINGS.get().keyring.kms.projectId;
+  }
+
+  /** Returns the location where the KMS KeyRing is stored. */
+  public static String getKmsKeyRingLocation() {
+    return CONFIG_SETTINGS.get().keyring.kms.location;
+  }
+
+  /** Returns the name of key used for Cloud Sql. */
+  public static String getKeyNameForCloudSql() {
+    return CONFIG_SETTINGS.get().keyring.kms.keyForCloudSql;
   }
 
   /**
