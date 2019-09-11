@@ -18,12 +18,20 @@ package google.registry.model.ofy;
 import static google.registry.model.ofy.ObjectifyService.ofy;
 
 import google.registry.model.transaction.TransactionManager;
+import javax.inject.Inject;
+import javax.inject.Singleton;
 import org.joda.time.DateTime;
 
 /** Datastore implementation of {@link TransactionManager}. */
+@Singleton
 public class DatastoreTransactionManager implements TransactionManager {
 
   private Ofy injectedOfy;
+
+  @Inject
+  public DatastoreTransactionManager() {
+    this(null);
+  }
 
   /** Constructs an instance. */
   public DatastoreTransactionManager(Ofy injectedOfy) {
