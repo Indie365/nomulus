@@ -14,24 +14,30 @@
 
 package google.registry.model.transaction;
 
-import google.registry.model.ofy.DatastoreTransactionManager;
+import com.google.common.annotations.VisibleForTesting;
+import google.registry.persistence.DaggerPersistenceComponent;
+import google.registry.persistence.PersistenceComponent;
 
 /** Factory class to create {@link TransactionManager} instance. */
 public class TransactionManagerFactory {
 
-  private static final TransactionManager TM = createTransactionManager();
+  @VisibleForTesting
+  static PersistenceComponent component = DaggerPersistenceComponent.create();
 
   private TransactionManagerFactory() {}
 
-  private static TransactionManager createTransactionManager() {
-    // TODO: Conditionally returns the corresponding implementation once we have
-    //  CloudSqlTransactionManager
-    return new DatastoreTransactionManager(null);
-  }
-
   /** Returns {@link TransactionManager} instance. */
   public static TransactionManager tm() {
+    // TODO: Returns DatabaseTransactionManager when we want to migrate all traffic
+    //  to Cloud Sql.
+    return component.datastoreTransactionManager();
+  }
 
-    return TM;
+  public static DatabaseTransactionManager dbtm() {
+    return component.appEngineDatabaseTransactionManager();
+  }
+
+  public static PersistenceComponent dao() {
+    return component;
   }
 }
