@@ -117,6 +117,10 @@ public final class TestDataHelper {
   /**
    * Constructs the relative classpath for the given {@code filename} under the {@code context}'s
    * package.
+   *
+   * <p>For example, if the {@code context} is a class with name com.google.registry.FileClasspath,
+   * and the given {@code filename} is testdata.txt, then the return value would be
+   * com/google/registry/testdata.txt.
    */
   public static String fileClassPath(Class<?> context, String filename) {
     String packagePath = context.getPackage().getName().replace('.', '/');
