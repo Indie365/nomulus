@@ -128,6 +128,25 @@ public class JpaTransactionManagerTest {
     assertCompanyEmpty();
   }
 
+  @Test
+  public void transact_reusesExistingTransaction() {
+    assertPersonEmpty();
+    assertCompanyEmpty();
+    txnManager.transact(
+        () ->
+            txnManager.transact(
+                () -> {
+                  insertPerson(10);
+                  insertCompany("Foo");
+                  insertCompany("Bar");
+                }));
+    assertPersonCount(1);
+    assertPersonExist(10);
+    assertCompanyCount(2);
+    assertCompanyExist("Foo");
+    assertCompanyExist("Bar");
+  }
+
   private void insertPerson(int age) {
     txnManager
         .getEntityManager()

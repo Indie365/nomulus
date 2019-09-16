@@ -63,6 +63,9 @@ public class JpaTransactionManager implements TransactionManager {
 
   @Override
   public <T> T transact(Work<T> work) {
+    if (inTransaction()) {
+      return work.run();
+    }
     TransactionInfo local = transactionInfo.get();
     local.entityManager = emf.createEntityManager();
     EntityTransaction txn = local.entityManager.getTransaction();
