@@ -109,14 +109,14 @@ public class DateTimeUtilsTest {
   public void testSuccess_toZonedDateTime_fromStringZulu() {
     DateTime dateTime = DateTime.parse("2015-10-13T11:22:33.168Z");
     ZonedDateTime zonedDateTime = toZonedDateTime(dateTime);
-    assertThat(zonedDateTime.toString()).isEqualTo("2015-10-13T11:22:33.168Z");
+    assertThat(zonedDateTime.toString()).isEqualTo("2015-10-13T11:22:33.168Z[UTC]");
   }
 
   @Test
   public void testSuccess_toZonedDateTime_leapYear() {
     DateTime dateTime = DateTime.parse("2016-02-29T11:22:33.168Z");
     ZonedDateTime zonedDateTime = toZonedDateTime(dateTime);
-    assertThat(zonedDateTime.toString()).isEqualTo("2016-02-29T11:22:33.168Z");
+    assertThat(zonedDateTime.toString()).isEqualTo("2016-02-29T11:22:33.168Z[UTC]");
   }
 
   @Test
