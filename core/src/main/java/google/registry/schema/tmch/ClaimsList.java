@@ -20,11 +20,13 @@ import static google.registry.util.DateTimeUtils.toZonedDateTime;
 
 import java.time.ZonedDateTime;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -53,7 +55,7 @@ public class ClaimsList {
   @Column(name = "creation_timestamp", nullable = false)
   private ZonedDateTime creationTimestamp;
 
-  @ElementCollection
+  @ElementCollection(fetch = FetchType.EAGER)
   @CollectionTable(
       name = "ClaimsEntry",
       joinColumns = @JoinColumn(name = "revision_id", referencedColumnName = "revision_id"))
@@ -70,8 +72,7 @@ public class ClaimsList {
   private ClaimsList() {}
 
   /** Constructs a {@link ClaimsList} object. */
-  public static ClaimsList create(
-      DateTime creationTimestamp, Map<String, String> labelsToKeys) {
+  public static ClaimsList create(DateTime creationTimestamp, Map<String, String> labelsToKeys) {
     return new ClaimsList(toZonedDateTime(creationTimestamp), labelsToKeys);
   }
 
@@ -95,5 +96,24 @@ public class ClaimsList {
   /** Returns the claim key for a given domain if there is one, empty otherwise. */
   public Optional<String> getClaimKey(String label) {
     return Optional.ofNullable(labelsToKeys.get(label));
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o instanceof ClaimsList) {
+      ClaimsList that = (ClaimsList) o;
+      return this.revisionId.equals(that.revisionId)
+          && this.creationTimestamp.equals(that.creationTimestamp)
+          && this.labelsToKeys.equals(that.labelsToKeys);
+    }
+    return false;
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(revisionId, creationTimestamp, labelsToKeys);
   }
 }

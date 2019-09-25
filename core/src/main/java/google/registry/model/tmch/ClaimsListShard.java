@@ -227,7 +227,7 @@ public class ClaimsListShard extends ImmutableObject {
     return instance;
   }
 
-  /** Constructs a {@link ClaimsListShard} from the given {@link ClaimsList}.  */
+  /** Constructs a {@link ClaimsListShard} from the given {@link ClaimsList}. */
   public static ClaimsListShard create(ClaimsList claimsList) {
     ClaimsListShard instance = new ClaimsListShard();
     instance.id = allocateId();
