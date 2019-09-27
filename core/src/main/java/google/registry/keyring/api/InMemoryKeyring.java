@@ -40,6 +40,7 @@ public final class InMemoryKeyring implements Keyring {
   private final String marksdbSmdrlLoginAndPassword;
   private final String jsonCredential;
   private final String cloudSqlPassword;
+  private final String cloudSqlPasswordForTool;
 
   public InMemoryKeyring(
       PGPKeyPair rdeStagingKey,
@@ -55,7 +56,8 @@ public final class InMemoryKeyring implements Keyring {
       String marksdbLordnPassword,
       String marksdbSmdrlLoginAndPassword,
       String jsonCredential,
-      String cloudSqlPassword) {
+      String cloudSqlPassword,
+      String cloudSqlPasswordForTool) {
     checkArgument(PgpHelper.isSigningKey(rdeSigningKey.getPublicKey()),
         "RDE signing key must support signing: %s", rdeSigningKey.getKeyID());
     checkArgument(rdeStagingKey.getPublicKey().isEncryptionKey(),
@@ -82,6 +84,7 @@ public final class InMemoryKeyring implements Keyring {
         checkNotNull(marksdbSmdrlLoginAndPassword, "marksdbSmdrlLoginAndPassword");
     this.jsonCredential = checkNotNull(jsonCredential, "jsonCredential");
     this.cloudSqlPassword = checkNotNull(cloudSqlPassword, "cloudSqlPassword");
+    this.cloudSqlPasswordForTool = checkNotNull(cloudSqlPasswordForTool, "cloudSqlPasswordForTool");
   }
 
   @Override
@@ -157,6 +160,11 @@ public final class InMemoryKeyring implements Keyring {
   @Override
   public String getCloudSqlPassword() {
     return cloudSqlPassword;
+  }
+
+  @Override
+  public String getCloudSqlPasswordForTool() {
+    return cloudSqlPasswordForTool;
   }
 
   /** Does nothing. */

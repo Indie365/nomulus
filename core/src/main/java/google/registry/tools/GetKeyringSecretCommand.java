@@ -68,6 +68,9 @@ final class GetKeyringSecretCommand implements CommandWithRemoteApi {
       case CLOUD_SQL_PASSWORD:
         out.write(KeySerializer.serializeString(keyring.getCloudSqlPassword()));
         break;
+      case CLOUD_SQL_PASSWORD_FOR_TOOL:
+        out.write(KeySerializer.serializeString(keyring.getCloudSqlPasswordForTool()));
+        break;
       case ICANN_REPORTING_PASSWORD:
         out.write(KeySerializer.serializeString(keyring.getIcannReportingPassword()));
         break;

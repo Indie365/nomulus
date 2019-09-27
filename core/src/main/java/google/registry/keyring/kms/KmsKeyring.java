@@ -68,6 +68,7 @@ public class KmsKeyring implements Keyring {
   /** Key labels for string secrets. */
   enum StringKeyLabel {
     CLOUD_SQL_PASSWORD_STRING,
+    CLOUD_SQL_PASSWORD_FOR_TOOL_STRING,
     SAFE_BROWSING_API_KEY,
     ICANN_REPORTING_PASSWORD_STRING,
     JSON_CREDENTIAL_STRING,
@@ -92,6 +93,11 @@ public class KmsKeyring implements Keyring {
   @Override
   public String getCloudSqlPassword() {
     return getString(StringKeyLabel.CLOUD_SQL_PASSWORD_STRING);
+  }
+
+  @Override
+  public String getCloudSqlPasswordForTool() {
+    return getString(StringKeyLabel.CLOUD_SQL_PASSWORD_FOR_TOOL_STRING);
   }
 
   @Override

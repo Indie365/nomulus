@@ -121,6 +121,8 @@ public class RegistryConfigSettings {
   public static class CloudSql {
     public String jdbcUrl;
     public String username;
+    public String jdbcUrlForTool;
+    public String usernameForTool;
     public String instanceConnectionName;
   }
 

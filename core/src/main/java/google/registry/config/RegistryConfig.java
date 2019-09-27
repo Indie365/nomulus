@@ -405,6 +405,18 @@ public final class RegistryConfig {
     }
 
     @Provides
+    @Config("cloudSqlJdbcUrlForTool")
+    public static String providesCloudSqlJdbcUrlForTool(RegistryConfigSettings config) {
+      return config.cloudSql.jdbcUrlForTool;
+    }
+
+    @Provides
+    @Config("cloudSqlUsernameForTool")
+    public static String providesCloudSqlUsernameForTool(RegistryConfigSettings config) {
+      return config.cloudSql.usernameForTool;
+    }
+
+    @Provides
     @Config("cloudSqlInstanceConnectionName")
     public static String providesCloudSqlInstanceConnectionName(RegistryConfigSettings config) {
       return config.cloudSql.instanceConnectionName;

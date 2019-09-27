@@ -24,6 +24,7 @@ import static google.registry.keyring.kms.KmsKeyring.PublicKeyLabel.BRDA_SIGNING
 import static google.registry.keyring.kms.KmsKeyring.PublicKeyLabel.RDE_RECEIVER_PUBLIC;
 import static google.registry.keyring.kms.KmsKeyring.PublicKeyLabel.RDE_SIGNING_PUBLIC;
 import static google.registry.keyring.kms.KmsKeyring.PublicKeyLabel.RDE_STAGING_PUBLIC;
+import static google.registry.keyring.kms.KmsKeyring.StringKeyLabel.CLOUD_SQL_PASSWORD_FOR_TOOL_STRING;
 import static google.registry.keyring.kms.KmsKeyring.StringKeyLabel.CLOUD_SQL_PASSWORD_STRING;
 import static google.registry.keyring.kms.KmsKeyring.StringKeyLabel.ICANN_REPORTING_PASSWORD_STRING;
 import static google.registry.keyring.kms.KmsKeyring.StringKeyLabel.JSON_CREDENTIAL_STRING;
@@ -72,6 +73,10 @@ public final class KmsUpdater {
 
   public KmsUpdater setCloudSqlPassword(String password) {
     return setString(password, CLOUD_SQL_PASSWORD_STRING);
+  }
+
+  public KmsUpdater setCloudSqlPasswordForTool(String password) {
+    return setString(password, CLOUD_SQL_PASSWORD_FOR_TOOL_STRING);
   }
 
   public KmsUpdater setRdeSigningKey(PGPKeyPair keyPair) throws IOException, PGPException {

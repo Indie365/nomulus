@@ -216,6 +216,11 @@ cloudSql:
   jdbcUrl: jdbc:postgresql://localhost
   # Username for the database user.
   username: username
+
+  # Nomulus tool uses a different jdbc url and user to connect to Cloud SQL
+  jdbcUrlForTool: jdbc:postgresql://localhost/tool
+  usernameForTool: toolusername
+
   # This name is used by Cloud SQL when connecting to the database.
   instanceConnectionName: project-id:region:instance-id
 

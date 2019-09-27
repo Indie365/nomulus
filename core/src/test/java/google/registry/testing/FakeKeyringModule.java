@@ -57,6 +57,7 @@ public final class FakeKeyringModule {
   private static final String MARKSDB_SMDRL_LOGIN_AND_PASSWORD = "smdrl:yolo";
   private static final String JSON_CREDENTIAL = "json123";
   private static final String CLOUD_SQL_PASSWORD = "cloudsqlpw";
+  private static final String CLOUD_SQL_PASSWORD_FOR_TOOL = "cloudsqlpwfortool";
 
   @Provides
   public Keyring get() {
@@ -84,6 +85,11 @@ public final class FakeKeyringModule {
       @Override
       public String getCloudSqlPassword() {
         return CLOUD_SQL_PASSWORD;
+      }
+
+      @Override
+      public String getCloudSqlPasswordForTool() {
+        return CLOUD_SQL_PASSWORD_FOR_TOOL;
       }
 
       @Override

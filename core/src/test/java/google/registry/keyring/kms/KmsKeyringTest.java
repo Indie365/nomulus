@@ -56,6 +56,15 @@ public class KmsKeyringTest {
   }
 
   @Test
+  public void test_getCloudSqlPasswordForTool() throws Exception {
+    saveCleartextSecret("cloud-sql-password-for-tool-string");
+
+    String cloudSqlPasswordForTool = keyring.getCloudSqlPasswordForTool();
+
+    assertThat(cloudSqlPasswordForTool).isEqualTo("cloud-sql-password-for-tool-stringmoo");
+  }
+
+  @Test
   public void test_getRdeSigningKey() throws Exception {
     saveKeyPairSecret("rde-signing-public", "rde-signing-private");
 
