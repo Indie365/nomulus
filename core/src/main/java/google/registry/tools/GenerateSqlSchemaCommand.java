@@ -27,6 +27,7 @@ import google.registry.model.domain.secdns.DelegationSignerData;
 import google.registry.model.eppcommon.Trid;
 import google.registry.model.transfer.BaseTransferObject;
 import google.registry.model.transfer.TransferData;
+import google.registry.persistence.BloomFilterConverter;
 import google.registry.persistence.CreateAutoTimestampConverter;
 import google.registry.persistence.NomulusNamingStrategy;
 import google.registry.persistence.NomulusPostgreSQLDialect;
@@ -63,6 +64,7 @@ public class GenerateSqlSchemaCommand implements Command {
   private static final ImmutableSet<Class> SQL_TABLE_CLASSES =
       ImmutableSet.of(
           BaseTransferObject.class,
+          BloomFilterConverter.class,
           ClaimsList.class,
           CreateAutoTimestampConverter.class,
           DelegationSignerData.class,
