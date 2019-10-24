@@ -17,6 +17,7 @@ package google.registry.tools;
 import static com.google.common.truth.Truth.assertThat;
 import static google.registry.model.domain.token.AllocationToken.TokenType.SINGLE_USE;
 import static google.registry.model.ofy.ObjectifyService.ofy;
+import static google.registry.testing.DatastoreHelper.createTlds;
 import static google.registry.testing.DatastoreHelper.persistResource;
 import static google.registry.testing.JUnitBackports.assertThrows;
 
@@ -91,6 +92,7 @@ public class DeleteAllocationTokensCommandTest
 
   @Test
   public void test_defaultOptions_doesntDeletePerDomainTokens() throws Exception {
+    createTlds("bar");
     AllocationToken preDom1 = persistToken("prefixasdfg897as", "foo.bar", false);
     AllocationToken preDom2 = persistToken("prefix98HAZXadbn", "foo.bar", true);
     runCommandForced("--prefix", "prefix");
@@ -101,6 +103,7 @@ public class DeleteAllocationTokensCommandTest
 
   @Test
   public void test_withDomains_doesDeletePerDomainTokens() throws Exception {
+    createTlds("bar");
     AllocationToken preDom1 = persistToken("prefixasdfg897as", "foo.bar", false);
     AllocationToken preDom2 = persistToken("prefix98HAZXadbn", "foo.bar", true);
     runCommandForced("--prefix", "prefix", "--with_domains");
