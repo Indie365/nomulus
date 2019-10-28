@@ -16,20 +16,15 @@ package google.registry.model.domain.token;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
-import static com.google.common.base.Predicates.equalTo;
-import static com.google.common.collect.Iterables.any;
 import static google.registry.model.domain.token.AllocationToken.TokenStatus.CANCELLED;
 import static google.registry.model.domain.token.AllocationToken.TokenStatus.ENDED;
 import static google.registry.model.domain.token.AllocationToken.TokenStatus.NOT_STARTED;
 import static google.registry.model.domain.token.AllocationToken.TokenStatus.VALID;
 import static google.registry.util.CollectionUtils.forceEmptyToNull;
 import static google.registry.util.CollectionUtils.nullToEmptyImmutableCopy;
-import static google.registry.util.DomainNameUtils.ACE_PREFIX;
 import static google.registry.util.PreconditionsUtils.checkArgumentNotNull;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.CharMatcher;
-import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
@@ -40,6 +35,8 @@ import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
 import com.googlecode.objectify.annotation.Mapify;
+import google.registry.flows.EppException;
+import google.registry.flows.domain.DomainFlowUtils;
 import google.registry.model.BackupGroupRoot;
 import google.registry.model.Buildable;
 import google.registry.model.CreateAutoTimestamp;
@@ -47,10 +44,7 @@ import google.registry.model.annotations.ReportedOn;
 import google.registry.model.common.TimedTransitionProperty;
 import google.registry.model.common.TimedTransitionProperty.TimeMapper;
 import google.registry.model.common.TimedTransitionProperty.TimedTransition;
-import google.registry.model.registry.Registries;
 import google.registry.model.reporting.HistoryEntry;
-import google.registry.util.Idn;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nullable;
@@ -226,30 +220,9 @@ public class AllocationToken extends BackupGroupRoot implements Buildable {
       return this;
     }
 
-    public Builder setDomainName(@Nullable String domainName) {
+    public Builder setDomainName(@Nullable String domainName) throws EppException {
       if (domainName != null) {
-        List<String> parts = Splitter.on('.').splitToList(domainName);
-        String tld = parts.get(parts.size() - 1);
-        checkArgument(
-            CharMatcher.inRange('a', 'z')
-                .or(CharMatcher.inRange('0', '9').or(CharMatcher.anyOf("-.")))
-                .matchesAllOf(domainName),
-            "Name contains invalid characters");
-        checkArgument(!any(parts, equalTo("")), "Domain name can't have any empty parts");
-        checkArgument(parts.size() > 1, "Domain name doesn't have enough parts");
-        checkArgument(Registries.getTlds().contains(tld), "TLD does not exist");
-        checkArgument(parts.get(0).length() <= 63, "Domain name is too long");
-        checkArgument(!parts.get(0).startsWith("-"), "Domain name has a leading dash");
-        checkArgument(!parts.get(0).endsWith("-"), "Domain name has a trailing dash");
-        String unicode = Idn.toUnicode(parts.get(0));
-        checkArgument(
-            !(parts.get(0).startsWith(ACE_PREFIX) && parts.get(0).equals(unicode)),
-            "Domain name starts with xn-- but is not a valid IDN");
-        checkArgument(
-            !(!parts.get(0).startsWith(ACE_PREFIX)
-                && parts.get(0).length() >= 4
-                && parts.get(0).substring(2).startsWith("--")),
-            "Non-IDN domain names cannot contain dashes in the third or fourth position");
+        DomainFlowUtils.validateDomainName(domainName);
       }
       getInstance().domainName = domainName;
       return this;

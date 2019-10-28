@@ -39,6 +39,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Streams;
 import com.google.common.io.Files;
 import com.googlecode.objectify.Key;
+import google.registry.flows.EppException;
 import google.registry.model.domain.token.AllocationToken;
 import google.registry.model.domain.token.AllocationToken.TokenStatus;
 import google.registry.model.domain.token.AllocationToken.TokenType;
@@ -175,7 +176,15 @@ class GenerateAllocationTokensCommand implements CommandWithRemoteApi {
                     Optional.ofNullable(tokenStatusTransitions)
                         .ifPresent(token::setTokenStatusTransitions);
                     Optional.ofNullable(domainNames)
-                        .ifPresent(d -> token.setDomainName(d.removeFirst()));
+                        .ifPresent(
+                            d -> {
+                              try {
+                                token.setDomainName(d.removeFirst());
+                              } catch (EppException e) {
+                                // Don't generate the allocation token for the invalid domain name
+                                return;
+                              }
+                            });
                     return token.build();
                   })
               .collect(toImmutableSet());
