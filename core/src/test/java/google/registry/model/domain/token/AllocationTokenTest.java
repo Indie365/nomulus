@@ -23,7 +23,7 @@ import static google.registry.model.domain.token.AllocationToken.TokenStatus.VAL
 import static google.registry.model.domain.token.AllocationToken.TokenType.SINGLE_USE;
 import static google.registry.model.domain.token.AllocationToken.TokenType.UNLIMITED_USE;
 import static google.registry.model.ofy.ObjectifyService.ofy;
-import static google.registry.testing.DatastoreHelper.createTlds;
+import static google.registry.testing.DatastoreHelper.createTld;
 import static google.registry.testing.DatastoreHelper.persistResource;
 import static google.registry.testing.JUnitBackports.assertThrows;
 import static google.registry.util.DateTimeUtils.START_OF_TIME;
@@ -32,6 +32,9 @@ import static org.joda.time.DateTimeZone.UTC;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
 import com.googlecode.objectify.Key;
+import google.registry.flows.EppException;
+import google.registry.flows.domain.DomainFlowUtils.BadDomainNamePartsCountException;
+import google.registry.flows.domain.DomainFlowUtils.TldDoesNotExistException;
 import google.registry.model.EntityTestCase;
 import google.registry.model.domain.token.AllocationToken.TokenStatus;
 import google.registry.model.domain.token.AllocationToken.TokenType;
@@ -45,11 +48,11 @@ public class AllocationTokenTest extends EntityTestCase {
 
   @Before
   public void setup() {
-    createTlds("foo");
+    createTld("foo");
   }
 
   @Test
-  public void testPersistence() {
+  public void testPersistence() throws EppException {
     AllocationToken unlimitedUseToken =
         persistResource(
             new AllocationToken.Builder()
@@ -137,95 +140,29 @@ public class AllocationTokenTest extends EntityTestCase {
   }
 
   @Test
-  public void testSetDomainName_IllegalCharacters() {
-    IllegalArgumentException thrown =
-        assertThrows(
-            IllegalArgumentException.class,
-            () -> new AllocationToken.Builder().setDomainName("$.foo"));
-    assertThat(thrown).hasMessageThat().isEqualTo("Name contains invalid characters");
-  }
-
-  @Test
-  public void testSetDomainName_DomainNameWithEmptyParts() {
-    IllegalArgumentException thrown =
-        assertThrows(
-            IllegalArgumentException.class,
-            () -> new AllocationToken.Builder().setDomainName("example."));
-    assertThat(thrown).hasMessageThat().isEqualTo("Domain name can't have any empty parts");
-  }
-
-  @Test
   public void testSetDomainName_DomainNameWithLessThanTwoParts() {
-    IllegalArgumentException thrown =
+    BadDomainNamePartsCountException thrown =
         assertThrows(
-            IllegalArgumentException.class,
+            BadDomainNamePartsCountException.class,
             () -> new AllocationToken.Builder().setDomainName("example"));
-    assertThat(thrown).hasMessageThat().isEqualTo("Domain name doesn't have enough parts");
+    assertThat(thrown)
+        .hasMessageThat()
+        .isEqualTo("Domain name must have exactly one part above the TLD");
   }
 
   @Test
   public void testSetDomainName_invalidTLD() {
-    IllegalArgumentException thrown =
+    TldDoesNotExistException thrown =
         assertThrows(
-            IllegalArgumentException.class,
+            TldDoesNotExistException.class,
             () -> new AllocationToken.Builder().setDomainName("example.nosuchtld"));
-    assertThat(thrown).hasMessageThat().isEqualTo("TLD does not exist");
-  }
-
-  @Test
-  public void testSetDomainName_DomainNameIsTooLong() {
-    IllegalArgumentException thrown =
-        assertThrows(
-            IllegalArgumentException.class,
-            () ->
-                new AllocationToken.Builder()
-                    .setDomainName(
-                        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.foo"));
-    assertThat(thrown).hasMessageThat().isEqualTo("Domain name is too long");
-  }
-
-  @Test
-  public void testSetDomainName_leadingDash() {
-    IllegalArgumentException thrown =
-        assertThrows(
-            IllegalArgumentException.class,
-            () -> new AllocationToken.Builder().setDomainName("-example.foo"));
-    assertThat(thrown).hasMessageThat().isEqualTo("Domain name has a leading dash");
-  }
-
-  @Test
-  public void testSetDomainName_trailingDash() {
-    IllegalArgumentException thrown =
-        assertThrows(
-            IllegalArgumentException.class,
-            () -> new AllocationToken.Builder().setDomainName("example-.foo"));
-    assertThat(thrown).hasMessageThat().isEqualTo("Domain name has a trailing dash");
-  }
-
-  @Test
-  public void testSetDomainName_invalidIDN() {
-    IllegalArgumentException thrown =
-        assertThrows(
-            IllegalArgumentException.class,
-            () -> new AllocationToken.Builder().setDomainName("xn--abcd.foo"));
     assertThat(thrown)
         .hasMessageThat()
-        .isEqualTo("Domain name starts with xn-- but is not a valid IDN");
+        .isEqualTo("Domain name is under tld nosuchtld which doesn't exist");
   }
 
   @Test
-  public void testSetDomainName_containsInvalidDashes() {
-    IllegalArgumentException thrown =
-        assertThrows(
-            IllegalArgumentException.class,
-            () -> new AllocationToken.Builder().setDomainName("ab--cd.foo"));
-    assertThat(thrown)
-        .hasMessageThat()
-        .isEqualTo("Non-IDN domain names cannot contain dashes in the third or fourth position");
-  }
-
-  @Test
-  public void testBuild_domainNameOnlyOnSingleUse() {
+  public void testBuild_domainNameOnlyOnSingleUse() throws EppException {
     AllocationToken.Builder builder =
         new AllocationToken.Builder()
             .setToken("foobar")
