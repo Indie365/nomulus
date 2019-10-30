@@ -203,6 +203,13 @@ public class AllocationToken extends BackupGroupRoot implements Buildable {
           getInstance().redemptionHistoryEntry == null
               || TokenType.SINGLE_USE.equals(getInstance().tokenType),
           "Redemption history entry can only be specified for SINGLE_USE tokens");
+      if (getInstance().domainName != null) {
+        try {
+          DomainFlowUtils.validateDomainName(getInstance().domainName);
+        } catch (EppException e) {
+          throw new IllegalArgumentException(e.getMessage());
+        }
+      }
       return super.build();
     }
 
@@ -220,10 +227,7 @@ public class AllocationToken extends BackupGroupRoot implements Buildable {
       return this;
     }
 
-    public Builder setDomainName(@Nullable String domainName) throws EppException {
-      if (domainName != null) {
-        DomainFlowUtils.validateDomainName(domainName);
-      }
+    public Builder setDomainName(@Nullable String domainName) {
       getInstance().domainName = domainName;
       return this;
     }

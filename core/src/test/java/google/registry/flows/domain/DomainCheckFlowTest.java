@@ -84,7 +84,7 @@ public class DomainCheckFlowTest
     setEppInput("domain_check_one_tld.xml");
   }
 
-  private ReservedList createReservedList() throws EppException {
+  private ReservedList createReservedList() {
     persistResource(
         new AllocationToken.Builder()
             .setDomainName("anchor.tld")
@@ -101,7 +101,7 @@ public class DomainCheckFlowTest
   }
 
   @Before
-  public void initCheckTest() throws EppException {
+  public void initCheckTest() {
     createTld("tld", TldState.QUIET_PERIOD);
     persistResource(Registry.get("tld").asBuilder().setReservedLists(createReservedList()).build());
   }

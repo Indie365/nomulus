@@ -17,6 +17,7 @@ package google.registry.flows.domain;
 import static com.google.common.truth.Truth.assertThat;
 import static google.registry.testing.DatastoreHelper.createTld;
 import static google.registry.testing.DatastoreHelper.persistResource;
+import static google.registry.testing.EppExceptionSubject.assertAboutEppExceptions;
 import static google.registry.testing.JUnitBackports.assertThrows;
 
 import google.registry.flows.EppException;
@@ -59,6 +60,7 @@ public class DomainFlowUtilsTest extends ResourceFlowTestCase<DomainInfoFlow, Do
     assertThat(thrown)
         .hasMessageThat()
         .isEqualTo("Domain names can only contain a-z, 0-9, '.' and '-'");
+    assertAboutEppExceptions().that(thrown).marshalsToXml();
   }
 
   @Test
@@ -68,6 +70,7 @@ public class DomainFlowUtilsTest extends ResourceFlowTestCase<DomainInfoFlow, Do
             EmptyDomainNamePartException.class,
             () -> DomainFlowUtils.validateDomainName("example."));
     assertThat(thrown).hasMessageThat().isEqualTo("No part of a domain name can be empty");
+    assertAboutEppExceptions().that(thrown).marshalsToXml();
   }
 
   @Test
@@ -79,6 +82,7 @@ public class DomainFlowUtilsTest extends ResourceFlowTestCase<DomainInfoFlow, Do
     assertThat(thrown)
         .hasMessageThat()
         .isEqualTo("Domain name must have exactly one part above the TLD");
+    assertAboutEppExceptions().that(thrown).marshalsToXml();
   }
 
   @Test
@@ -90,6 +94,7 @@ public class DomainFlowUtilsTest extends ResourceFlowTestCase<DomainInfoFlow, Do
     assertThat(thrown)
         .hasMessageThat()
         .isEqualTo("Domain name is under tld nosuchtld which doesn't exist");
+    assertAboutEppExceptions().that(thrown).marshalsToXml();
   }
 
   @Test
@@ -103,6 +108,7 @@ public class DomainFlowUtilsTest extends ResourceFlowTestCase<DomainInfoFlow, Do
     assertThat(thrown)
         .hasMessageThat()
         .isEqualTo("Domain labels cannot be longer than 63 characters");
+    assertAboutEppExceptions().that(thrown).marshalsToXml();
   }
 
   @Test
@@ -111,6 +117,7 @@ public class DomainFlowUtilsTest extends ResourceFlowTestCase<DomainInfoFlow, Do
         assertThrows(
             LeadingDashException.class, () -> DomainFlowUtils.validateDomainName("-example.foo"));
     assertThat(thrown).hasMessageThat().isEqualTo("Domain labels cannot begin with a dash");
+    assertAboutEppExceptions().that(thrown).marshalsToXml();
   }
 
   @Test
@@ -119,6 +126,7 @@ public class DomainFlowUtilsTest extends ResourceFlowTestCase<DomainInfoFlow, Do
         assertThrows(
             TrailingDashException.class, () -> DomainFlowUtils.validateDomainName("example-.foo"));
     assertThat(thrown).hasMessageThat().isEqualTo("Domain labels cannot end with a dash");
+    assertAboutEppExceptions().that(thrown).marshalsToXml();
   }
 
   @Test
@@ -130,6 +138,7 @@ public class DomainFlowUtilsTest extends ResourceFlowTestCase<DomainInfoFlow, Do
     assertThat(thrown)
         .hasMessageThat()
         .isEqualTo("Domain name starts with xn-- but is not a valid IDN");
+    assertAboutEppExceptions().that(thrown).marshalsToXml();
   }
 
   @Test
@@ -141,5 +150,6 @@ public class DomainFlowUtilsTest extends ResourceFlowTestCase<DomainInfoFlow, Do
     assertThat(thrown)
         .hasMessageThat()
         .isEqualTo("Non-IDN domain names cannot contain dashes in the third or fourth position");
+    assertAboutEppExceptions().that(thrown).marshalsToXml();
   }
 }

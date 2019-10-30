@@ -181,7 +181,7 @@ public class DomainCreateFlowTest extends ResourceFlowTestCase<DomainCreateFlow,
   }
 
   @Before
-  public void initCreateTest() throws EppException {
+  public void initCreateTest() {
     createTld("tld");
     allocationToken =
         persistResource(

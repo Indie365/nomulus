@@ -36,7 +36,6 @@ import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
 import com.google.common.io.Files;
 import com.googlecode.objectify.Key;
-import google.registry.flows.EppException;
 import google.registry.model.domain.token.AllocationToken;
 import google.registry.model.domain.token.AllocationToken.TokenStatus;
 import google.registry.model.reporting.HistoryEntry;
@@ -330,8 +329,9 @@ public class GenerateAllocationTokensCommandTest
   }
 
   private AllocationToken createToken(
-      String token, @Nullable Key<HistoryEntry> redemptionHistoryEntry, @Nullable String domainName)
-      throws EppException {
+      String token,
+      @Nullable Key<HistoryEntry> redemptionHistoryEntry,
+      @Nullable String domainName) {
     AllocationToken.Builder builder =
         new AllocationToken.Builder().setToken(token).setTokenType(SINGLE_USE);
     if (redemptionHistoryEntry != null) {

@@ -17,12 +17,11 @@ package google.registry.tools;
 import static com.google.common.truth.Truth.assertThat;
 import static google.registry.model.domain.token.AllocationToken.TokenType.SINGLE_USE;
 import static google.registry.model.ofy.ObjectifyService.ofy;
-import static google.registry.testing.DatastoreHelper.createTld;
+import static google.registry.testing.DatastoreHelper.createTlds;
 import static google.registry.testing.DatastoreHelper.persistResource;
 import static google.registry.testing.JUnitBackports.assertThrows;
 
 import com.googlecode.objectify.Key;
-import google.registry.flows.EppException;
 import google.registry.model.domain.token.AllocationToken;
 import google.registry.model.domain.token.AllocationToken.TokenType;
 import google.registry.model.reporting.HistoryEntry;
@@ -43,8 +42,8 @@ public class DeleteAllocationTokensCommandTest
   private AllocationToken othrNot;
 
   @Before
-  public void init() throws EppException {
-    createTld("foo");
+  public void init() {
+    createTlds("foo", "bar");
     preRed1 = persistToken("prefix12345AA", null, true);
     preRed2 = persistToken("prefixgh8907a", null, true);
     preNot1 = persistToken("prefix2978204", null, false);
@@ -94,7 +93,6 @@ public class DeleteAllocationTokensCommandTest
 
   @Test
   public void test_defaultOptions_doesntDeletePerDomainTokens() throws Exception {
-    createTld("bar");
     AllocationToken preDom1 = persistToken("prefixasdfg897as", "foo.bar", false);
     AllocationToken preDom2 = persistToken("prefix98HAZXadbn", "foo.bar", true);
     runCommandForced("--prefix", "prefix");
@@ -105,7 +103,6 @@ public class DeleteAllocationTokensCommandTest
 
   @Test
   public void test_withDomains_doesDeletePerDomainTokens() throws Exception {
-    createTld("bar");
     AllocationToken preDom1 = persistToken("prefixasdfg897as", "foo.bar", false);
     AllocationToken preDom2 = persistToken("prefix98HAZXadbn", "foo.bar", true);
     runCommandForced("--prefix", "prefix", "--with_domains");
@@ -164,7 +161,7 @@ public class DeleteAllocationTokensCommandTest
   }
 
   private static AllocationToken persistToken(
-      String token, @Nullable String domainName, boolean redeemed) throws EppException {
+      String token, @Nullable String domainName, boolean redeemed) {
     AllocationToken.Builder builder =
         new AllocationToken.Builder()
             .setToken(token)

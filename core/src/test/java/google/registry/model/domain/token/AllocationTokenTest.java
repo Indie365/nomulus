@@ -32,9 +32,6 @@ import static org.joda.time.DateTimeZone.UTC;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
 import com.googlecode.objectify.Key;
-import google.registry.flows.EppException;
-import google.registry.flows.domain.DomainFlowUtils.BadDomainNamePartsCountException;
-import google.registry.flows.domain.DomainFlowUtils.TldDoesNotExistException;
 import google.registry.model.EntityTestCase;
 import google.registry.model.domain.token.AllocationToken.TokenStatus;
 import google.registry.model.domain.token.AllocationToken.TokenType;
@@ -52,7 +49,7 @@ public class AllocationTokenTest extends EntityTestCase {
   }
 
   @Test
-  public void testPersistence() throws EppException {
+  public void testPersistence() {
     AllocationToken unlimitedUseToken =
         persistResource(
             new AllocationToken.Builder()
@@ -140,29 +137,39 @@ public class AllocationTokenTest extends EntityTestCase {
   }
 
   @Test
-  public void testSetDomainName_DomainNameWithLessThanTwoParts() {
-    BadDomainNamePartsCountException thrown =
+  public void testBuild_DomainNameWithLessThanTwoParts() {
+    IllegalArgumentException thrown =
         assertThrows(
-            BadDomainNamePartsCountException.class,
-            () -> new AllocationToken.Builder().setDomainName("example"));
+            IllegalArgumentException.class,
+            () ->
+                new AllocationToken.Builder()
+                    .setDomainName("example")
+                    .setTokenType(SINGLE_USE)
+                    .setToken("barfoo")
+                    .build());
     assertThat(thrown)
         .hasMessageThat()
         .isEqualTo("Domain name must have exactly one part above the TLD");
   }
 
   @Test
-  public void testSetDomainName_invalidTLD() {
-    TldDoesNotExistException thrown =
+  public void testBuild_invalidTLD() {
+    IllegalArgumentException thrown =
         assertThrows(
-            TldDoesNotExistException.class,
-            () -> new AllocationToken.Builder().setDomainName("example.nosuchtld"));
+            IllegalArgumentException.class,
+            () ->
+                new AllocationToken.Builder()
+                    .setDomainName("example.nosuchtld")
+                    .setTokenType(SINGLE_USE)
+                    .setToken("barfoo")
+                    .build());
     assertThat(thrown)
         .hasMessageThat()
         .isEqualTo("Domain name is under tld nosuchtld which doesn't exist");
   }
 
   @Test
-  public void testBuild_domainNameOnlyOnSingleUse() throws EppException {
+  public void testBuild_domainNameOnlyOnSingleUse() {
     AllocationToken.Builder builder =
         new AllocationToken.Builder()
             .setToken("foobar")
