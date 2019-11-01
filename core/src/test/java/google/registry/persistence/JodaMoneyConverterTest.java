@@ -40,7 +40,7 @@ import org.junit.runners.JUnit4;
  * <p>{@link Money} is a wrapper around {@link org.joda.money.BigMoney} which itself contains two
  * fields: a {@link BigDecimal} {@code amount} and a {@link CurrencyUnit} {@code currency}. When we
  * store an entity with a {@link Money} field, we would like to store it in two columns, for the
- * amount and the currency separately, so that it is easily querable. This requires that we make
+ * amount and the currency separately, so that it is easily queryable. This requires that we make
  * {@link Money} a nested embeddable object.
  *
  * <p>However becaues {@link Money} is not a class that we control, we cannot use annotation-based
@@ -102,6 +102,7 @@ public class JodaMoneyConverterTest {
         .containsExactly(
             200, BigDecimal.valueOf(100).setScale(CurrencyUnit.USD.getDecimalPlaces()), "USD")
         .inOrder();
+    // Make sure that the column names do not collide.
     TestEntityWithOtherAmount persisted =
         jpaTm()
             .transact(() -> jpaTm().getEntityManager().find(TestEntityWithOtherAmount.class, "id"));
