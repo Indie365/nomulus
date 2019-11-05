@@ -81,10 +81,13 @@ public class Cursor extends ImmutableObject {
      */
     SYNC_REGISTRAR_SHEET(EntityGroupRoot.class),
 
-    /** Cursor for tracking monthly uploads of Icann report. */
-    ICANN_UPLOAD(Registry.class),
+    /** Cursor for tracking monthly uploads of ICANN transaction reports. */
+    ICANN_UPLOAD_TX(Registry.class),
 
-    /** Cursor for tracking monthly upload of MANIFEST.txt to Icann. */
+    /** Cursor for tracking monthly uploads of ICANN activity reports. */
+    ICANN_UPLOAD_ACTIVITY(Registry.class),
+
+    /** Cursor for tracking monthly upload of MANIFEST.txt to ICANN. */
     ICANN_UPLOAD_MANIFEST(EntityGroupRoot.class);
 
     /** See the definition of scope on {@link #getScopeClass}. */
