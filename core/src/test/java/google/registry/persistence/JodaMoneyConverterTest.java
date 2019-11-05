@@ -16,16 +16,23 @@ package google.registry.persistence;
 import static com.google.common.truth.Truth.assertThat;
 import static google.registry.model.transaction.TransactionManagerFactory.jpaTm;
 
+import com.google.common.collect.ImmutableMap;
 import google.registry.model.ImmutableObject;
 import google.registry.model.transaction.JpaTransactionManagerRule;
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import javax.persistence.AttributeOverride;
 import javax.persistence.AttributeOverrides;
+import javax.persistence.CollectionTable;
 import javax.persistence.Column;
+import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.MapKeyColumn;
 import org.hibernate.cfg.Environment;
 import org.joda.money.CurrencyUnit;
 import org.joda.money.Money;
@@ -53,8 +60,7 @@ public class JodaMoneyConverterTest {
   @Rule
   public final JpaTransactionManagerRule jpaTmRule =
       new JpaTransactionManagerRule.Builder()
-          .withEntityClass(TestEntity.class)
-          .withEntityClass(TestEntityWithOtherAmount.class)
+          .withEntityClass(TestEntity.class, ComplexTestEntity.class)
           .withProperty(Environment.HBM2DDL_AUTO, "update")
           .build();
 
@@ -70,7 +76,7 @@ public class JodaMoneyConverterTest {
                     jpaTm()
                         .getEntityManager()
                         .createNativeQuery(
-                            "SELECT amount, currency FROM TestEntity WHERE name =" + " 'id'")
+                            "SELECT amount, currency FROM TestEntity WHERE name = 'id'")
                         .getResultList());
     assertThat(result.size()).isEqualTo(1);
     assertThat(Arrays.asList((Object[]) result.get(0)))
@@ -83,9 +89,15 @@ public class JodaMoneyConverterTest {
   }
 
   @Test
-  public void roundTripConversionWithOtherAmount() {
-    Money money = Money.of(CurrencyUnit.USD, 100);
-    TestEntityWithOtherAmount entity = new TestEntityWithOtherAmount(200, money);
+  public void roundTripConversionWithComplexEntity() {
+    Money myMoney = Money.of(CurrencyUnit.USD, 100);
+    Money yourMoney = Money.of(CurrencyUnit.GBP, 80);
+    ImmutableMap<String, Money> moneyMap =
+        ImmutableMap.of(
+            "uno", Money.of(CurrencyUnit.EUR, 500),
+            "dos", Money.of(CurrencyUnit.EUR, 200),
+            "tres", Money.of(CurrencyUnit.GBP, 20));
+    ComplexTestEntity entity = new ComplexTestEntity(moneyMap, myMoney, yourMoney);
     jpaTm().transact(() -> jpaTm().getEntityManager().persist(entity));
     List<?> result =
         jpaTm()
@@ -94,20 +106,37 @@ public class JodaMoneyConverterTest {
                     jpaTm()
                         .getEntityManager()
                         .createNativeQuery(
-                            "SELECT amount, money_amount, currency FROM TestEntityWithOtherAmount"
-                                + " WHERE name = 'id'")
+                            "SELECT my_amount, my_currency, your_amount, your_currency FROM"
+                                + " ComplexTestEntity WHERE name = 'id'")
                         .getResultList());
     assertThat(result.size()).isEqualTo(1);
     assertThat(Arrays.asList((Object[]) result.get(0)))
         .containsExactly(
-            200, BigDecimal.valueOf(100).setScale(CurrencyUnit.USD.getDecimalPlaces()), "USD")
+            BigDecimal.valueOf(100).setScale(CurrencyUnit.USD.getDecimalPlaces()),
+            "USD",
+            BigDecimal.valueOf(80).setScale(CurrencyUnit.GBP.getDecimalPlaces()),
+            "GBP")
         .inOrder();
-    // Make sure that the column names do not collide.
-    TestEntityWithOtherAmount persisted =
+    result =
         jpaTm()
-            .transact(() -> jpaTm().getEntityManager().find(TestEntityWithOtherAmount.class, "id"));
-    assertThat(persisted.money).isEqualTo(money);
-    assertThat(persisted.amount).isEqualTo(200);
+            .transact(
+                () ->
+                    jpaTm()
+                        .getEntityManager()
+                        .createNativeQuery(
+                            "SELECT map_amount, map_currency FROM MoneyMap"
+                                + " WHERE entity_name = 'id' AND map_key = 'dos'")
+                        .getResultList());
+    ComplexTestEntity persisted =
+        jpaTm().transact(() -> jpaTm().getEntityManager().find(ComplexTestEntity.class, "id"));
+    assertThat(result.size()).isEqualTo(1);
+    assertThat(Arrays.asList((Object[]) result.get(0)))
+        .containsExactly(
+            BigDecimal.valueOf(200).setScale(CurrencyUnit.EUR.getDecimalPlaces()), "EUR")
+        .inOrder();
+    assertThat(persisted.myMoney).isEqualTo(myMoney);
+    assertThat(persisted.yourMoney).isEqualTo(yourMoney);
+    assertThat(persisted.moneyMap).containsExactlyEntriesIn(moneyMap);
   }
 
   @Entity(name = "TestEntity") // Override entity name to avoid the nested class reference.
@@ -124,24 +153,39 @@ public class JodaMoneyConverterTest {
     }
   }
 
-  @Entity(
-      name =
-          "TestEntityWithOtherAmount") // Override entity name to avoid the nested class reference.
-  public static class TestEntityWithOtherAmount extends ImmutableObject {
+  @Entity(name = "ComplexTestEntity") // Override entity name to avoid the nested class reference.
+  // This entity is used to test column override for embedded fields and collections.
+  public static class ComplexTestEntity extends ImmutableObject {
 
     @Id String name = "id";
 
-    int amount;
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "MoneyMap", joinColumns = @JoinColumn(name = "entity_name"))
+    @MapKeyColumn(name = "map_key")
+    @AttributeOverrides({
+      @AttributeOverride(name = "value.money.amount", column = @Column(name = "map_amount")),
+      @AttributeOverride(name = "value.money.currency", column = @Column(name = "map_currency"))
+    })
+    Map<String, Money> moneyMap;
 
-    @AttributeOverrides(
-        @AttributeOverride(name = "money.amount", column = @Column(name = "money_amount")))
-    Money money;
+    @AttributeOverrides({
+      @AttributeOverride(name = "money.amount", column = @Column(name = "my_amount")),
+      @AttributeOverride(name = "money.currency", column = @Column(name = "my_currency"))
+    })
+    Money myMoney;
 
-    public TestEntityWithOtherAmount() {}
+    @AttributeOverrides({
+      @AttributeOverride(name = "money.amount", column = @Column(name = "your_amount")),
+      @AttributeOverride(name = "money.currency", column = @Column(name = "your_currency"))
+    })
+    Money yourMoney;
 
-    TestEntityWithOtherAmount(int amount, Money money) {
-      this.amount = amount;
-      this.money = money;
+    public ComplexTestEntity() {}
+
+    ComplexTestEntity(ImmutableMap<String, Money> moneyMap, Money myMoney, Money yourMoney) {
+      this.moneyMap = moneyMap;
+      this.myMoney = myMoney;
+      this.yourMoney = yourMoney;
     }
   }
 }
