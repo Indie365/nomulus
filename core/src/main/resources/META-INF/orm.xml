@@ -4,15 +4,15 @@
     xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/persistence/orm
           http://xmlns.jcp.org/xml/ns/persistence/orm_2_2.xsd"
     version="2.2">
-  <embeddable class="org.joda.money.Money">
+  <embeddable class="org.joda.money.Money" access="FIELD">
     <attributes>
-      <embedded name="money"/>
+      <embedded name="money" access="FIELD"/>
     </attributes>
   </embeddable>
-  <embeddable class="org.joda.money.BigMoney">
+  <embeddable class="org.joda.money.BigMoney" access="FIELD">
     <attributes>
-      <basic name="amount"/>
-      <basic name="currency"/>
+      <basic name="amount" access="FIELD"/>
+      <basic name="currency" access="FIELD"/>
     </attributes>
   </embeddable>
 </entity-mappings>
