@@ -33,7 +33,7 @@ import javax.persistence.FetchType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.MapKeyColumn;
-import org.hibernate.cfg.Environment;
+import javax.persistence.PostLoad;
 import org.joda.money.CurrencyUnit;
 import org.joda.money.Money;
 import org.junit.Rule;
@@ -53,15 +53,18 @@ import org.junit.runners.JUnit4;
  * <p>However becaues {@link Money} is not a class that we control, we cannot use annotation-based
  * mapping. Therefore there is no {@code JodaMoneyConverter} class. Instead, we define the mapping
  * in {@code META-INF/orm.xml}.
+ *
+ * <p>Also note that any entity that contains a {@link Money} should should implement a
+ * {@link @PostLoad} callback that converts the amount in the {@link Money} to a scale that is
+ * appropriate for the currency. This is espcially necessary for currencies like JPY where the scale
+ * is 0, which is different from the default scale that {@link BigDecimal} is persisted in database.
  */
 @RunWith(JUnit4.class)
 public class JodaMoneyConverterTest {
-
   @Rule
   public final JpaTransactionManagerRule jpaTmRule =
       new JpaTransactionManagerRule.Builder()
           .withEntityClass(TestEntity.class, ComplexTestEntity.class)
-          .withProperty(Environment.HBM2DDL_AUTO, "update")
           .build();
 
   @Test
@@ -95,7 +98,7 @@ public class JodaMoneyConverterTest {
     ImmutableMap<String, Money> moneyMap =
         ImmutableMap.of(
             "uno", Money.of(CurrencyUnit.EUR, 500),
-            "dos", Money.of(CurrencyUnit.EUR, 200),
+            "dos", Money.ofMajor(CurrencyUnit.JPY, 2000),
             "tres", Money.of(CurrencyUnit.GBP, 20));
     ComplexTestEntity entity = new ComplexTestEntity(moneyMap, myMoney, yourMoney);
     jpaTm().transact(() -> jpaTm().getEntityManager().persist(entity));
@@ -112,10 +115,7 @@ public class JodaMoneyConverterTest {
     assertThat(result.size()).isEqualTo(1);
     assertThat(Arrays.asList((Object[]) result.get(0)))
         .containsExactly(
-            BigDecimal.valueOf(100).setScale(CurrencyUnit.USD.getDecimalPlaces()),
-            "USD",
-            BigDecimal.valueOf(80).setScale(CurrencyUnit.GBP.getDecimalPlaces()),
-            "GBP")
+            BigDecimal.valueOf(100).setScale(2), "USD", BigDecimal.valueOf(80).setScale(2), "GBP")
         .inOrder();
     result =
         jpaTm()
@@ -130,10 +130,16 @@ public class JodaMoneyConverterTest {
     ComplexTestEntity persisted =
         jpaTm().transact(() -> jpaTm().getEntityManager().find(ComplexTestEntity.class, "id"));
     assertThat(result.size()).isEqualTo(1);
+
+    // Note that the amount has two decimal places even though JPY is supposed to have scale 0.
+    // This is due to the unfournate fact that we need to accommodate differet currencies stored
+    // in the same table so that the scale has to be set to the largest (2). When a Money field is
+    // persisted in an entity, the entity should always have a @PostLoad callback to convert the
+    // Money to the correct scale.
     assertThat(Arrays.asList((Object[]) result.get(0)))
-        .containsExactly(
-            BigDecimal.valueOf(200).setScale(CurrencyUnit.EUR.getDecimalPlaces()), "EUR")
+        .containsExactly(BigDecimal.valueOf(2000).setScale(2), "JPY")
         .inOrder();
+    // Make sure that the loaded entity contains the fields exactly as they are persisted.
     assertThat(persisted.myMoney).isEqualTo(myMoney);
     assertThat(persisted.yourMoney).isEqualTo(yourMoney);
     assertThat(persisted.moneyMap).containsExactlyEntriesIn(moneyMap);
@@ -156,6 +162,24 @@ public class JodaMoneyConverterTest {
   @Entity(name = "ComplexTestEntity") // Override entity name to avoid the nested class reference.
   // This entity is used to test column override for embedded fields and collections.
   public static class ComplexTestEntity extends ImmutableObject {
+
+    // After the entity is loaded from the database, go through the money map and make sure that
+    // the scale is consistent with the currency. This is necessary for currency like JPY where
+    // the scale is 0 but the amount is persisteted as BigDecimal with scale 2.
+    @PostLoad
+    void setCurrencyScale() {
+      moneyMap
+          .entrySet()
+          .forEach(
+              entry -> {
+                Money money = entry.getValue();
+                if (!money.toBigMoney().isCurrencyScale()) {
+                  CurrencyUnit currency = money.getCurrencyUnit();
+                  BigDecimal amount = money.getAmount().setScale(currency.getDecimalPlaces());
+                  entry.setValue(Money.of(currency, amount));
+                }
+              });
+    }
 
     @Id String name = "id";
 
