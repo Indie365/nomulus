@@ -80,14 +80,14 @@ process has not been set up yet, and new schema may be pushed manually on
 demand.
 
 Presubmit and continuous-integration tests are being implemented to ensure
-server- schema compatibility. Before the tests are activated, please look for
+server/schema compatibility. Before the tests are activated, please look for
 breaking changes before deploying a schema.
 
 Released schema may be deployed using Cloud Build. Use the root project
 directory as working directory, run the following shell snippets:
 
 ```shell
-# Tags exist as folder names under gs://domain-registry-dev-deploly.
+# Tags exist as folder names under gs://domain-registry-dev-deploy.
 SCHEMA_TAG=
 # Recognized environments are alpha, crash, sandbox and production
 SQL_ENV=
