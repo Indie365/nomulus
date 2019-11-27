@@ -117,7 +117,7 @@ make sense. A master enumeration lists all the valid triplets. They are:
     because we don't require a user for internal requests, but the user policy
     is `ADMIN`, meaning that if there *is* a user, it needs to be an admin.
 
-* `AUTH_INTERNAL_ONLY`: Only internal requests are allowed. This is appropriate
+* `AUTH_INTERNAL_OR_ADMIN`: Only internal requests are allowed. This is appropriate
     for actions which are only executed by cron jobs, and therefore have no
     authenticated user. The method is `INTERNAL`, the minimum level is `APP`,
     and the user policy is `IGNORED`.
