@@ -148,7 +148,6 @@
 
     create table "RegistryLock" (
        revision_id  bigserial not null,
-        action text not null,
         completion_timestamp timestamptz,
         creation_timestamp timestamptz not null,
         domain_name text not null,
@@ -156,6 +155,9 @@
         registrar_id text not null,
         registrar_poc_id text,
         repo_id text not null,
+        unlock_completion_timestamp timestamptz,
+        unlock_creation_timestamp timestamptz,
+        unlock_verification_code text,
         verification_code text not null,
         primary key (revision_id)
     );
@@ -186,6 +188,7 @@
        add constraint UK_4ps2u4y8i5r91wu2n1x2xea28 unique (grace_periods_id);
 create index premiumlist_name_idx on "PremiumList" (name);
 create index idx_registry_lock_verification_code on "RegistryLock" (verification_code);
+create index idx_registry_lock_unlock_verification_code on "RegistryLock" (unlock_verification_code);
 create index idx_registry_lock_registrar_id on "RegistryLock" (registrar_id);
 
     alter table if exists "RegistryLock" 

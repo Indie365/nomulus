@@ -122,7 +122,6 @@ ALTER SEQUENCE public."PremiumList_revision_id_seq" OWNED BY public."PremiumList
 
 CREATE TABLE public."RegistryLock" (
     revision_id bigint NOT NULL,
-    action text NOT NULL,
     completion_timestamp timestamp with time zone,
     creation_timestamp timestamp with time zone NOT NULL,
     domain_name text NOT NULL,
@@ -130,7 +129,10 @@ CREATE TABLE public."RegistryLock" (
     registrar_id text NOT NULL,
     registrar_poc_id text,
     repo_id text NOT NULL,
-    verification_code text NOT NULL
+    verification_code text NOT NULL,
+    unlock_creation_timestamp timestamp with time zone,
+    unlock_completion_timestamp timestamp with time zone,
+    unlock_verification_code text
 );
 
 
@@ -301,6 +303,13 @@ ALTER TABLE ONLY public."RegistryLock"
 --
 
 CREATE INDEX idx_registry_lock_registrar_id ON public."RegistryLock" USING btree (registrar_id);
+
+
+--
+-- Name: idx_registry_lock_unlock_verification_code; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_registry_lock_unlock_verification_code ON public."RegistryLock" USING btree (unlock_verification_code);
 
 
 --

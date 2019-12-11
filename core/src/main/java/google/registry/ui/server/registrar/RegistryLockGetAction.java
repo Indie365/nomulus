@@ -151,7 +151,8 @@ public final class RegistryLockGetAction implements JsonGetAction {
   private ImmutableList<ImmutableMap<String, ?>> getLockedDomains(String clientId) {
     ImmutableList<RegistryLock> locks =
         RegistryLockDao.getByRegistrarId(clientId).stream()
-            .filter(RegistryLock::isVerified)
+            .filter(RegistryLock::isLockVerified)
+            .filter(lock -> !lock.isUnlockVerified())
             .collect(toImmutableList());
     return locks.stream().map(this::lockToMap).collect(toImmutableList());
   }

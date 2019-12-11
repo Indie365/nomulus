@@ -21,7 +21,6 @@ import static google.registry.testing.JUnitBackports.assertThrows;
 
 import google.registry.model.transaction.JpaTransactionManagerRule;
 import google.registry.schema.domain.RegistryLock;
-import google.registry.schema.domain.RegistryLock.Action;
 import google.registry.testing.AppEngineRule;
 import java.util.Optional;
 import java.util.UUID;
@@ -47,6 +46,18 @@ public final class RegistryLockDaoTest {
     RegistryLock fromDatabase = RegistryLockDao.getByVerificationCode(lock.getVerificationCode());
     assertThat(fromDatabase.getDomainName()).isEqualTo(lock.getDomainName());
     assertThat(fromDatabase.getVerificationCode()).isEqualTo(lock.getVerificationCode());
+  }
+
+  @Test
+  public void testSaveAndLoad_unlockCode() {
+    String unlockCode = UUID.randomUUID().toString();
+    RegistryLock lock = createLock().asBuilder()
+        .setUnlockVerificationCode(unlockCode)
+        .setCompletionTimestamp(jpaTmRule.getTxnClock().nowUtc())
+        .build();
+    RegistryLockDao.save(lock);
+    RegistryLock fromDatabase = RegistryLockDao.getByVerificationCode(unlockCode);
+    assertThat(fromDatabase.getDomainName()).isEqualTo(lock.getDomainName());
   }
 
   @Test
@@ -132,7 +143,7 @@ public final class RegistryLockDaoTest {
 
     Optional<RegistryLock> mostRecent = RegistryLockDao.getMostRecentByRepoId("repoId");
     assertThat(mostRecent.isPresent()).isTrue();
-    assertThat(mostRecent.get().isVerified()).isFalse();
+    assertThat(mostRecent.get().isLockVerified()).isFalse();
   }
 
   @Test
@@ -145,7 +156,6 @@ public final class RegistryLockDaoTest {
         .setRepoId("repoId")
         .setDomainName("example.test")
         .setRegistrarId("TheRegistrar")
-        .setAction(Action.LOCK)
         .setVerificationCode(UUID.randomUUID().toString())
         .isSuperuser(true)
         .build();

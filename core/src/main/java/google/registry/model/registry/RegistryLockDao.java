@@ -38,7 +38,7 @@ public final class RegistryLockDao {
               Long revisionId =
                   em.createQuery(
                           "SELECT MAX(revisionId) FROM RegistryLock WHERE verificationCode ="
-                              + " :verificationCode",
+                              + " :verificationCode OR unlockVerificationCode = :verificationCode",
                           Long.class)
                       .setParameter("verificationCode", verificationCode)
                       .getSingleResult();
