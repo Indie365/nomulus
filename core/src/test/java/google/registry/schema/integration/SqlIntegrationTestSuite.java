@@ -14,6 +14,7 @@
 
 package google.registry.schema.integration;
 
+import google.registry.model.domain.DomainBaseSqlTest;
 import google.registry.model.registry.RegistryLockDaoTest;
 import google.registry.model.transaction.JpaTestRules.JpaIntegrationTestRule;
 import google.registry.persistence.MapUserTypeTest;
@@ -46,6 +47,7 @@ import org.junit.runners.Suite.SuiteClasses;
   CreateReservedListCommandTest.class,
   CursorDaoTest.class,
   CreatePremiumListActionTest.class,
+  DomainBaseSqlTest.class,
   MapUserTypeTest.class,
   PremiumListDaoTest.class,
   PremiumListUtilsTest.class,
