@@ -79,7 +79,7 @@ public abstract class GenericCollectionUserType<T extends Collection> implements
     if (rs.getArray(names[0]) != null) {
       T result = getNewCollection();
       for (Object element : (Object[]) rs.getArray(names[0]).getArray()) {
-        result.add(element);
+        result.add(convertToElem(element));
       }
       return result;
     }
@@ -97,6 +97,16 @@ public abstract class GenericCollectionUserType<T extends Collection> implements
     T list = (T) value;
     Array arr = st.getConnection().createArrayOf(getColumnType().getTypeName(), list.toArray());
     st.setArray(index, arr);
+  }
+
+  /**
+   * Override this to convert an element value retrieved from the database to a different type.
+   *
+   * <p>This method is useful when encoding a java type to one of the types that can be used as an
+   * array element.
+   */
+  protected Object convertToElem(Object columnValue) {
+    return columnValue;
   }
 
   // TODO(b/147489651): Investigate how to properly implement the below methods.
