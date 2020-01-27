@@ -88,6 +88,19 @@ CREATE TABLE public."Cursor" (
 
 
 --
+-- Name: Lock; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public."Lock" (
+    resource_name text NOT NULL,
+    tld text NOT NULL,
+    acquired_time timestamp with time zone NOT NULL,
+    expiration_time timestamp with time zone NOT NULL,
+    request_log_id text NOT NULL
+);
+
+
+--
 -- Name: PremiumEntry; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -262,6 +275,14 @@ ALTER TABLE ONLY public."ClaimsList"
 
 ALTER TABLE ONLY public."Cursor"
     ADD CONSTRAINT "Cursor_pkey" PRIMARY KEY (scope, type);
+
+
+--
+-- Name: Lock Lock_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."Lock"
+    ADD CONSTRAINT "Lock_pkey" PRIMARY KEY (resource_name, tld);
 
 
 --
