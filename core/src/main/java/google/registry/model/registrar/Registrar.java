@@ -259,15 +259,12 @@ public class Registrar extends ImmutableObject implements Buildable, Jsonifiable
   State state;
 
   /** The set of TLDs which this registrar is allowed to access. */
-  // TODO(b/147908600): Investigate how to automatically apply user type
-  @org.hibernate.annotations.Type(type = "google.registry.persistence.StringSetUserType")
   Set<String> allowedTlds;
 
   /** Host name of WHOIS server. */
   String whoisServer;
 
   /** Base URLs for the registrar's RDAP servers. */
-  @org.hibernate.annotations.Type(type = "google.registry.persistence.StringSetUserType")
   Set<String> rdapBaseUrls;
 
   /**
@@ -295,7 +292,6 @@ public class Registrar extends ImmutableObject implements Buildable, Jsonifiable
   String failoverClientCertificateHash;
 
   /** A whitelist of netmasks (in CIDR notation) which the client is allowed to connect from. */
-  @org.hibernate.annotations.Type(type = "google.registry.persistence.CidrAddressBlockListUserType")
   List<CidrAddressBlock> ipAddressWhitelist;
 
   /** A hashed password for EPP access. The hash is a base64 encoded SHA256 string. */
