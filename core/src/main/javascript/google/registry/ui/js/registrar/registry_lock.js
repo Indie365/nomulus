@@ -153,6 +153,7 @@ registry.registrar.RegistryLock.prototype.lockOrUnlockDomain_ = function(domain,
       'clientId': this.clientId,
       "fullyQualifiedDomainName": domain,
       "isLock": isLock,
+      "pocId": goog.dom.getRequiredElement('domain-lock-poc-id').value,
       "password": goog.dom.getRequiredElement('domain-lock-password').value
     }), {
       'X-CSRF-Token': this.xsrfToken,

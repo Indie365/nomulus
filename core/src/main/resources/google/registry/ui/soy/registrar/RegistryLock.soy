@@ -102,6 +102,9 @@
     <div class="modal-content">
       <p>Are you sure you want to {if not $isLock}un{/if}lock the domain {$domain}? We will send
         an email to the email address on file to confirm the {if not $isLock}un{/if}lock.</p>
+      <label for="domain-lock-poc-id">Registry lock email address: </label>
+      <input type="email" id="domain-lock-poc-id">
+      <br>
       <label for="domain-lock-password">Registry lock password: </label>
       <input type="password" id="domain-lock-password">
       <br>
