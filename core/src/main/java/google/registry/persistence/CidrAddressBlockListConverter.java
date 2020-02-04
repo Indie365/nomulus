@@ -14,9 +14,6 @@
 
 package google.registry.persistence;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
-
-import google.registry.persistence.StringCollectionDescriptor.StringCollection;
 import google.registry.util.CidrAddressBlock;
 import java.util.List;
 import javax.persistence.AttributeConverter;
@@ -24,21 +21,16 @@ import javax.persistence.Converter;
 
 /** JPA {@link AttributeConverter} for storing/retrieving {@link List<CidrAddressBlock>} objects. */
 @Converter(autoApply = true)
-public class CidrAddressBlockListConverter
-    implements AttributeConverter<List<CidrAddressBlock>, StringCollection> {
+public class CidrAddressBlockListConverter extends StringListConverterBase<CidrAddressBlock> {
 
   @Override
-  public StringCollection convertToDatabaseColumn(List<CidrAddressBlock> attribute) {
-    return attribute == null
-        ? null
-        : StringCollection.create(
-            attribute.stream().map(CidrAddressBlock::toString).collect(toImmutableList()));
+  String toString(CidrAddressBlock element) {
+    return element.toString();
   }
 
   @Override
-  public List<CidrAddressBlock> convertToEntityAttribute(StringCollection dbData) {
-    return dbData == null || dbData.getCollection() == null
-        ? null
-        : dbData.getCollection().stream().map(CidrAddressBlock::create).collect(toImmutableList());
+  CidrAddressBlock fromString(String value) {
+    return CidrAddressBlock.create(value);
   }
+
 }
