@@ -15,6 +15,7 @@
 package google.registry.schema.integration;
 
 import com.google.common.truth.Expect;
+import google.registry.model.common.CursorTest;
 import google.registry.model.domain.DomainBaseSqlTest;
 import google.registry.model.registry.RegistryLockDaoTest;
 import google.registry.persistence.transaction.JpaEntityCoverage;
@@ -55,6 +56,7 @@ import org.junit.runners.Suite.SuiteClasses;
   CreatePremiumListActionTest.class,
   CreateReservedListCommandTest.class,
   CursorDaoTest.class,
+  CursorTest.class,
   DomainLockUtilsTest.class,
   LockDomainCommandTest.class,
   DomainBaseSqlTest.class,
