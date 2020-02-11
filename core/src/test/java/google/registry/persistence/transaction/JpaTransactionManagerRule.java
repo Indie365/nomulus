@@ -243,7 +243,7 @@ abstract class JpaTransactionManagerRule extends ExternalResource {
         PersistenceXmlUtility.getParsedPersistenceXmlDescriptor();
 
     if (!addNomulusEntityClasses) {
-      // descriptor doesn't provide an method to set the managed classes, so we have to modify the
+      // descriptor doesn't provide a method to set the managed classes, so we have to modify the
       // existing list in place.
       Iterator<String> ite = descriptor.getManagedClassNames().iterator();
       while (ite.hasNext()) {
