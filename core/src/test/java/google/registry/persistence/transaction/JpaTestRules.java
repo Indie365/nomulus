@@ -51,7 +51,7 @@ public class JpaTestRules {
         Clock clock,
         ImmutableList<Class> extraEntityClasses,
         ImmutableMap<String, String> userProperties) {
-      super(clock, Optional.of(GOLDEN_SCHEMA_SQL_PATH), extraEntityClasses, userProperties);
+      super(clock, Optional.of(GOLDEN_SCHEMA_SQL_PATH), extraEntityClasses, userProperties, true);
     }
   }
 
@@ -66,7 +66,7 @@ public class JpaTestRules {
         Optional<String> initScriptPath,
         ImmutableList<Class> extraEntityClasses,
         ImmutableMap<String, String> userProperties) {
-      super(clock, initScriptPath, extraEntityClasses, userProperties);
+      super(clock, initScriptPath, extraEntityClasses, userProperties, false);
     }
   }
 

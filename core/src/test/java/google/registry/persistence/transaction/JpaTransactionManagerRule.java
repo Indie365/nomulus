@@ -38,8 +38,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Optional;
 import java.util.Properties;
+import javax.persistence.Entity;
 import javax.persistence.EntityManagerFactory;
 import org.hibernate.cfg.Environment;
 import org.hibernate.jpa.boot.internal.ParsedPersistenceXmlDescriptor;
@@ -73,6 +75,11 @@ abstract class JpaTransactionManagerRule extends ExternalResource {
   private final Optional<String> initScriptPath;
   private final ImmutableList<Class> extraEntityClasses;
   private final ImmutableMap userProperties;
+  // Flag to control if we want to add entity classes defined in persistent.xml to initialize
+  // EntityManagerFactory. If an entity class is added to the factory, its corresponding database
+  // table will be created as well. So, this flag is set to false in JpaUnitTestRule as the test
+  // using this rule is not supposed to access the tables from the Nomulus schema.
+  private final boolean addNomulusEntityClasses;
 
   private static final JdbcDatabaseContainer database = create();
   private static final HibernateSchemaExporter exporter =
@@ -85,11 +92,13 @@ abstract class JpaTransactionManagerRule extends ExternalResource {
       Clock clock,
       Optional<String> initScriptPath,
       ImmutableList<Class> extraEntityClasses,
-      ImmutableMap<String, String> userProperties) {
+      ImmutableMap<String, String> userProperties,
+      boolean addNomulusEntityClasses) {
     this.clock = clock;
     this.initScriptPath = initScriptPath;
     this.extraEntityClasses = extraEntityClasses;
     this.userProperties = userProperties;
+    this.addNomulusEntityClasses = addNomulusEntityClasses;
   }
 
   private static JdbcDatabaseContainer create() {
@@ -219,7 +228,7 @@ abstract class JpaTransactionManagerRule extends ExternalResource {
   }
 
   /** Constructs the {@link EntityManagerFactory} instance. */
-  private static EntityManagerFactory createEntityManagerFactory(
+  private EntityManagerFactory createEntityManagerFactory(
       String jdbcUrl,
       String username,
       String password,
@@ -232,6 +241,22 @@ abstract class JpaTransactionManagerRule extends ExternalResource {
 
     ParsedPersistenceXmlDescriptor descriptor =
         PersistenceXmlUtility.getParsedPersistenceXmlDescriptor();
+
+    if (!addNomulusEntityClasses) {
+      // descriptor doesn't provide an method to set the managed classes, so we have to modify the
+      // existing list in place.
+      Iterator<String> ite = descriptor.getManagedClassNames().iterator();
+      while (ite.hasNext()) {
+        String className = ite.next();
+        try {
+          if (Class.forName(className).isAnnotationPresent(Entity.class)) {
+            ite.remove();
+          }
+        } catch (ClassNotFoundException e) {
+          throw new IllegalArgumentException(e);
+        }
+      }
+    }
 
     extraEntityClasses.stream().map(Class::getName).forEach(descriptor::addClasses);
     return Bootstrap.getEntityManagerFactoryBuilder(descriptor, properties).build();
