@@ -19,6 +19,11 @@
   </queue>
 
   <queue>
+    <name>relock-domain</name>
+    <rate>1/m</rate>
+  </queue>
+
+  <queue>
     <name>async-delete-pull</name>
     <mode>pull</mode>
   </queue>

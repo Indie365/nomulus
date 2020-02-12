@@ -51,6 +51,8 @@ import google.registry.export.UpdateSnapshotViewAction;
 import google.registry.export.UploadDatastoreBackupAction;
 import google.registry.export.sheet.SheetModule;
 import google.registry.export.sheet.SyncRegistrarsSheetAction;
+import google.registry.locks.LocksModule;
+import google.registry.locks.RelockDomainAction;
 import google.registry.mapreduce.MapreduceModule;
 import google.registry.monitoring.whitebox.WhiteboxModule;
 import google.registry.rdap.UpdateRegistrarRdapBaseUrlsAction;
@@ -98,6 +100,7 @@ import google.registry.tmch.TmchSmdrlAction;
         DnsUpdateWriterModule.class,
         ExportRequestModule.class,
         IcannReportingModule.class,
+        LocksModule.class,
         MapreduceModule.class,
         RdeModule.class,
         ReportingModule.class,
@@ -140,6 +143,7 @@ interface BackendRequestComponent {
   RdeReporter rdeReporter();
   RefreshDnsAction refreshDnsAction();
   RefreshDnsOnHostRenameAction refreshDnsOnHostRenameAction();
+  RelockDomainAction relockDomainAction();
   ResaveAllEppResourcesAction resaveAllEppResourcesAction();
   ResaveEntityAction resaveEntityAction();
   SyncGroupMembersAction syncGroupMembersAction();

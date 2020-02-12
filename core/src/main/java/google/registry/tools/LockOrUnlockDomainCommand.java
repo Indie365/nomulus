@@ -58,8 +58,7 @@ public abstract class LockOrUnlockDomainCommand extends ConfirmingCommand
 
   @Inject Clock clock;
 
-  @Inject
-  DomainLockUtils domainLockUtils;
+  @Inject DomainLockUtils domainLockUtils;
 
   protected ImmutableSet<String> relevantDomains = ImmutableSet.of();
 

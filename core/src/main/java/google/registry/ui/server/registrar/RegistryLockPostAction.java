@@ -29,6 +29,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.gson.Gson;
 import google.registry.config.RegistryConfig;
 import google.registry.config.RegistryConfig.Config;
+import google.registry.locks.DomainLockUtils;
 import google.registry.model.registrar.Registrar;
 import google.registry.model.registrar.RegistrarContact;
 import google.registry.request.Action;
@@ -42,7 +43,6 @@ import google.registry.request.auth.AuthenticatedRegistrarAccessor.RegistrarAcce
 import google.registry.request.auth.UserAuthInfo;
 import google.registry.schema.domain.RegistryLock;
 import google.registry.security.JsonResponseHelper;
-import google.registry.locks.DomainLockUtils;
 import google.registry.util.Clock;
 import google.registry.util.EmailMessage;
 import google.registry.util.SendEmailService;
