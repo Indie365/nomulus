@@ -26,6 +26,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import google.registry.config.RegistryConfig.Config;
+import google.registry.locks.DomainLockUtils;
 import google.registry.model.eppcommon.StatusValue;
 import google.registry.schema.domain.RegistryLock;
 import google.registry.util.Clock;
@@ -57,7 +58,8 @@ public abstract class LockOrUnlockDomainCommand extends ConfirmingCommand
 
   @Inject Clock clock;
 
-  @Inject DomainLockUtils domainLockUtils;
+  @Inject
+  DomainLockUtils domainLockUtils;
 
   protected ImmutableSet<String> relevantDomains = ImmutableSet.of();
 

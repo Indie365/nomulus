@@ -42,7 +42,7 @@ import google.registry.request.auth.AuthenticatedRegistrarAccessor.RegistrarAcce
 import google.registry.request.auth.UserAuthInfo;
 import google.registry.schema.domain.RegistryLock;
 import google.registry.security.JsonResponseHelper;
-import google.registry.tools.DomainLockUtils;
+import google.registry.locks.DomainLockUtils;
 import google.registry.util.Clock;
 import google.registry.util.EmailMessage;
 import google.registry.util.SendEmailService;

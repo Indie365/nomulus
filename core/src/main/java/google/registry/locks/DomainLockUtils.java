@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package google.registry.tools;
+package google.registry.locks;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static google.registry.model.EppResourceUtils.loadByForeignKeyCached;

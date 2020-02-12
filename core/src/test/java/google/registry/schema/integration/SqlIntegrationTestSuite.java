@@ -23,7 +23,7 @@ import google.registry.schema.tld.PremiumListDaoTest;
 import google.registry.schema.tld.ReservedListDaoTest;
 import google.registry.schema.tmch.ClaimsListDaoTest;
 import google.registry.tools.CreateReservedListCommandTest;
-import google.registry.tools.DomainLockUtilsTest;
+import google.registry.locks.DomainLockUtilsTest;
 import google.registry.tools.LockDomainCommandTest;
 import google.registry.tools.UnlockDomainCommandTest;
 import google.registry.tools.UpdateReservedListCommandTest;

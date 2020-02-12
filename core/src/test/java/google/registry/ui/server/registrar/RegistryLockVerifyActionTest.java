@@ -52,7 +52,7 @@ import google.registry.testing.FakeClock;
 import google.registry.testing.FakeResponse;
 import google.registry.testing.InjectRule;
 import google.registry.testing.UserInfo;
-import google.registry.tools.DomainLockUtils;
+import google.registry.locks.DomainLockUtils;
 import google.registry.util.StringGenerator;
 import google.registry.util.StringGenerator.Alphabets;
 import javax.servlet.http.HttpServletRequest;

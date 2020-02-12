@@ -44,7 +44,7 @@ import google.registry.schema.domain.RegistryLock;
 import google.registry.testing.AppEngineRule;
 import google.registry.testing.DeterministicStringGenerator;
 import google.registry.testing.FakeClock;
-import google.registry.tools.DomainLockUtils;
+import google.registry.locks.DomainLockUtils;
 import google.registry.util.EmailMessage;
 import google.registry.util.SendEmailService;
 import google.registry.util.StringGenerator.Alphabets;

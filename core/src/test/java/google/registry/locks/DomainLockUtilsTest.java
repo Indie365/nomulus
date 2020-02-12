@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package google.registry.tools;
+package google.registry.locks;
 
 import static com.google.common.truth.Truth.assertThat;
 import static google.registry.model.ofy.ObjectifyService.ofy;
@@ -51,7 +51,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-/** Unit tests for {@link google.registry.tools.DomainLockUtils}. */
+/** Unit tests for {@link DomainLockUtils}. */
 @RunWith(JUnit4.class)
 public final class DomainLockUtilsTest {
 

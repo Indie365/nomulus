@@ -24,7 +24,7 @@ import google.registry.request.Action;
 import google.registry.request.Parameter;
 import google.registry.request.auth.Auth;
 import google.registry.schema.domain.RegistryLock;
-import google.registry.tools.DomainLockUtils;
+import google.registry.locks.DomainLockUtils;
 import google.registry.ui.server.SoyTemplateUtils;
 import google.registry.ui.soy.registrar.RegistryLockVerificationSoyInfo;
 import google.registry.util.Clock;
