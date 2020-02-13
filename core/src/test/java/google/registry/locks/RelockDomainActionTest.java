@@ -16,25 +16,25 @@ package google.registry.locks;
 
 import static com.google.common.truth.Truth.assertThat;
 import static google.registry.model.ofy.ObjectifyService.ofy;
+import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 import static google.registry.testing.DatastoreHelper.createTlds;
 import static google.registry.testing.DatastoreHelper.newDomainBase;
 import static google.registry.testing.DatastoreHelper.persistActiveHost;
 import static google.registry.testing.DatastoreHelper.persistResource;
 import static google.registry.tools.LockOrUnlockDomainCommand.REGISTRY_LOCK_STATUSES;
-import static javax.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
 import static javax.servlet.http.HttpServletResponse.SC_NO_CONTENT;
 
 import google.registry.model.domain.DomainBase;
 import google.registry.model.host.HostResource;
 import google.registry.persistence.transaction.JpaTestRules;
 import google.registry.persistence.transaction.JpaTestRules.JpaIntegrationWithCoverageRule;
+import google.registry.schema.domain.RegistryLock;
 import google.registry.testing.AppEngineRule;
 import google.registry.testing.DeterministicStringGenerator;
 import google.registry.testing.FakeClock;
 import google.registry.testing.FakeResponse;
 import google.registry.testing.UserInfo;
 import google.registry.util.StringGenerator.Alphabets;
-import java.util.Optional;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -66,6 +66,7 @@ public class RelockDomainActionTest {
       new JpaTestRules.Builder().withClock(clock).buildIntegrationWithCoverageRule();
 
   private DomainBase domain;
+  private RegistryLock oldLock;
   private RelockDomainAction action;
 
   @Before
@@ -73,66 +74,46 @@ public class RelockDomainActionTest {
     createTlds("tld", "net");
     HostResource host = persistActiveHost("ns1.example.net");
     domain = persistResource(newDomainBase(DOMAIN_NAME, host));
+
+    oldLock =
+        domainLockUtils.createRegistryLockRequest(DOMAIN_NAME, CLIENT_ID, POC_ID, false, clock);
+    domainLockUtils.verifyAndApplyLock(oldLock.getVerificationCode(), false, clock);
   }
 
   @Test
   public void testLock() {
-    action = createAction(DOMAIN_NAME, CLIENT_ID, Optional.of(POC_ID), false);
+    action = createAction(oldLock.getVerificationCode());
     action.run();
     assertThat(reloadDomain(domain).getStatusValues())
         .containsAtLeastElementsIn(REGISTRY_LOCK_STATUSES);
   }
 
   @Test
-  public void testSuccess_isAdmin_noPocId() {
-    action = createAction(DOMAIN_NAME, CLIENT_ID, Optional.empty(), true);
+  public void testFailure_unknownCode() {
+    action = createAction("foo");
     action.run();
-    assertThat(reloadDomain(domain).getStatusValues())
-        .containsAtLeastElementsIn(REGISTRY_LOCK_STATUSES);
+    assertThat(response.getStatus()).isEqualTo(SC_NO_CONTENT);
+    assertThat(response.getPayload()).isEqualTo("Relock failed: Unknown verification code foo");
   }
 
   @Test
-  public void testFailure_missingDomainName() {
-    action = createAction(null, CLIENT_ID, Optional.of(POC_ID), false);
+  public void testFailure_domainDeleted() {
+    tm().transact(() -> ofy().delete().entity(domain).now());
+    action = createAction(oldLock.getVerificationCode());
     action.run();
     assertThat(response.getStatus()).isEqualTo(SC_NO_CONTENT);
     assertThat(response.getPayload())
-        .isEqualTo("Relock failed: fullyQualifiedDomainName cannot be null");
-  }
-
-  @Test
-  public void testFailure_nonexistentDomainName() {
-    action = createAction("nonexistent.tld", CLIENT_ID, Optional.of(POC_ID), false);
-    action.run();
-    assertThat(response.getStatus()).isEqualTo(SC_INTERNAL_SERVER_ERROR);
-    assertThat(response.getPayload())
-        .isEqualTo("Relock failed: Domain 'nonexistent.tld' does not exist or is deleted");
-  }
-
-  @Test
-  public void testFailure_missingClientId() {
-    action = createAction(DOMAIN_NAME, null, Optional.of(POC_ID), false);
-    action.run();
-    assertThat(response.getStatus()).isEqualTo(SC_NO_CONTENT);
-    assertThat(response.getPayload()).isEqualTo("Relock failed: clientId cannot be null");
-  }
-
-  @Test
-  public void testFailure_missingRegistrarPoc_notAdmin() {
-    action = createAction(DOMAIN_NAME, CLIENT_ID, Optional.empty(), false);
-    action.run();
-    assertThat(response.getStatus()).isEqualTo(SC_NO_CONTENT);
-    assertThat(response.getPayload())
-        .isEqualTo("Relock failed: registrarPocId cannot be null if not isAdmin");
+        .isEqualTo(
+            String.format(
+                "Relock failed: Domain has been deleted for lock with identification code %s",
+                oldLock.getVerificationCode()));
   }
 
   private DomainBase reloadDomain(DomainBase domain) {
     return ofy().load().entity(domain).now();
   }
 
-  private RelockDomainAction createAction(
-      String domainName, String clientId, Optional<String> registrarPocId, boolean isAdmin) {
-    return new RelockDomainAction(
-        domainName, clientId, registrarPocId, isAdmin, domainLockUtils, response, clock);
+  private RelockDomainAction createAction(String oldUnlockVerificationCode) {
+    return new RelockDomainAction(oldUnlockVerificationCode, domainLockUtils, response, clock);
   }
 }

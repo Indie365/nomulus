@@ -33,6 +33,7 @@ public class LocksModule {
 
   public static final String RELOCK_DOMAIN_QUEUE_NAME = "relock-domain"; // See queue.xml.
 
+  public static final String PARAM_OLD_UNLOCK_VERIFICATION_CODE = "oldUnlockVerificationCode";
   public static final String PARAM_FULLY_QUALIFIED_DOMAIN_NAME = "fullyQualifiedDomainName";
   public static final String PARAM_CLIENT_ID = "clientId";
   public static final String PARAM_REGISTRAR_POC_ID = "registrarPocId";
@@ -42,6 +43,12 @@ public class LocksModule {
   @Named(RELOCK_DOMAIN_QUEUE_NAME)
   static Queue provideRelockDomainQueue() {
     return QueueFactory.getQueue(RELOCK_DOMAIN_QUEUE_NAME);
+  }
+
+  @Provides
+  @Parameter(PARAM_OLD_UNLOCK_VERIFICATION_CODE)
+  static String provideOldUnlockVerificationCode(HttpServletRequest req) {
+    return extractRequiredParameter(req, PARAM_OLD_UNLOCK_VERIFICATION_CODE);
   }
 
   @Provides
