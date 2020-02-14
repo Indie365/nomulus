@@ -86,6 +86,11 @@ public class RelockDomainAction implements Runnable {
           "Domain has been deleted for lock with identification code %s",
           oldUnlockVerificationCode);
     } catch (Exception e) {
+      /* If there's a bad verification code or the domain has been deleted, we won't want to retry.
+      AppEngine will retry on non-2xx error codes, so we return SC_NO_CONTENT (204) to avoid it.
+
+      See https://cloud.google.com/appengine/docs/standard/java/taskqueue/push/retrying-tasks
+      for more details. */
       logger.atSevere().withCause(e).log(
           "Exception when attempting to re-lock domain with old verification code %s",
           oldUnlockVerificationCode);
@@ -112,6 +117,8 @@ public class RelockDomainAction implements Runnable {
       }
       response.setStatus(SC_OK);
     } catch (Throwable e) {
+      // Any errors that occur here are unexpected, so we should retry. Return a non-2xx error code
+      // to get AppEngine to retry
       logger.atSevere().withCause(e).log(
           "Exception when attempting to re-lock domain %s", domain.getFullyQualifiedDomainName());
       response.setStatus(SC_INTERNAL_SERVER_ERROR);
