@@ -33,6 +33,8 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Index;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToOne;
 import javax.persistence.Table;
 import org.joda.time.DateTime;
 
@@ -124,6 +126,10 @@ public final class RegistryLock extends ImmutableObject implements Buildable {
   @Column(nullable = false)
   private boolean isSuperuser;
 
+  @OneToOne
+  @JoinColumn(name = "relockRevisionId", referencedColumnName = "revisionId")
+  private RegistryLock relock;
+
   /** Time that this entity was last updated. */
   private UpdateAutoTimestamp lastUpdateTimestamp;
 
@@ -178,6 +184,10 @@ public final class RegistryLock extends ImmutableObject implements Buildable {
 
   public Long getRevisionId() {
     return revisionId;
+  }
+
+  public RegistryLock getRelock() {
+    return relock;
   }
 
   public boolean isLocked() {
@@ -265,6 +275,11 @@ public final class RegistryLock extends ImmutableObject implements Buildable {
 
     public Builder isSuperuser(boolean isSuperuser) {
       getInstance().isSuperuser = isSuperuser;
+      return this;
+    }
+
+    public Builder setRelock(RegistryLock relock) {
+      getInstance().relock = relock;
       return this;
     }
   }

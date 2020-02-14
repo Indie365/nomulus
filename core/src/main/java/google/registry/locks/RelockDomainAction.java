@@ -111,8 +111,11 @@ public class RelockDomainAction implements Runnable {
                 oldLock.getRegistrarPocId(),
                 oldLock.isSuperuser(),
                 clock);
-        domainLockUtils.verifyAndApplyLock(
-            registryLock.getVerificationCode(), oldLock.isSuperuser(), clock);
+        registryLock =
+            domainLockUtils.verifyAndApplyLock(
+                registryLock.getVerificationCode(), oldLock.isSuperuser(), clock);
+        // The old lock object should have a reference to the relock
+        RegistryLockDao.save(oldLock.asBuilder().setRelock(registryLock).build());
         logger.atInfo().log("Re-locked domain %s", registryLock.getDomainName());
       }
       response.setStatus(SC_OK);

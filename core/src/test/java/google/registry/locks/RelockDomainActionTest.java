@@ -26,6 +26,7 @@ import static javax.servlet.http.HttpServletResponse.SC_NO_CONTENT;
 
 import google.registry.model.domain.DomainBase;
 import google.registry.model.host.HostResource;
+import google.registry.model.registry.RegistryLockDao;
 import google.registry.persistence.transaction.JpaTestRules;
 import google.registry.persistence.transaction.JpaTestRules.JpaIntegrationWithCoverageRule;
 import google.registry.schema.domain.RegistryLock;
@@ -78,6 +79,11 @@ public class RelockDomainActionTest {
     oldLock =
         domainLockUtils.createRegistryLockRequest(DOMAIN_NAME, CLIENT_ID, POC_ID, false, clock);
     domainLockUtils.verifyAndApplyLock(oldLock.getVerificationCode(), false, clock);
+    assertThat(reloadDomain(domain).getStatusValues())
+        .containsAtLeastElementsIn(REGISTRY_LOCK_STATUSES);
+    oldLock = domainLockUtils.createRegistryUnlockRequest(DOMAIN_NAME, CLIENT_ID, false, clock);
+    oldLock = domainLockUtils.verifyAndApplyUnlock(oldLock.getVerificationCode(), false, clock);
+    assertThat(reloadDomain(domain).getStatusValues()).containsNoneIn(REGISTRY_LOCK_STATUSES);
   }
 
   @Test
@@ -86,6 +92,13 @@ public class RelockDomainActionTest {
     action.run();
     assertThat(reloadDomain(domain).getStatusValues())
         .containsAtLeastElementsIn(REGISTRY_LOCK_STATUSES);
+
+    // the old lock should have a reference to the relock
+    RegistryLock newLock =
+        RegistryLockDao.getMostRecentVerifiedLockByRepoId(domain.getRepoId()).get();
+    assertThat(
+            RegistryLockDao.getByVerificationCode(oldLock.getVerificationCode()).get().getRelock())
+        .isEqualTo(newLock);
   }
 
   @Test
