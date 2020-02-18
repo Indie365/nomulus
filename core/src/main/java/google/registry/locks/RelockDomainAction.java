@@ -14,7 +14,7 @@
 
 package google.registry.locks;
 
-import static google.registry.locks.LocksModule.PARAM_OLD_UNLOCK_VERIFICATION_CODE;
+import static google.registry.locks.LocksModule.PARAM_OLD_UNLOCK_REVISION_ID;
 import static google.registry.model.ofy.ObjectifyService.ofy;
 import static google.registry.request.Action.Method.POST;
 import static google.registry.tools.LockOrUnlockDomainCommand.REGISTRY_LOCK_STATUSES;
@@ -50,18 +50,18 @@ public class RelockDomainAction implements Runnable {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private final String oldUnlockVerificationCode;
+  private final Long oldUnlockRevisionId;
   private final DomainLockUtils domainLockUtils;
   private final Response response;
   private final Clock clock;
 
   @Inject
   public RelockDomainAction(
-      @Parameter(PARAM_OLD_UNLOCK_VERIFICATION_CODE) String oldUnlockVerificationCode,
+      @Parameter(PARAM_OLD_UNLOCK_REVISION_ID) Long oldUnlockRevisionId,
       DomainLockUtils domainLockUtils,
       Response response,
       Clock clock) {
-    this.oldUnlockVerificationCode = oldUnlockVerificationCode;
+    this.oldUnlockRevisionId = oldUnlockRevisionId;
     this.domainLockUtils = domainLockUtils;
     this.response = response;
     this.clock = clock;
@@ -72,19 +72,15 @@ public class RelockDomainAction implements Runnable {
     DomainBase domain;
     RegistryLock oldLock;
     try {
-      checkArgumentNotNull(oldUnlockVerificationCode, "oldUnlockVerificationCode cannot be null");
       oldLock =
-          RegistryLockDao.getByVerificationCode(oldUnlockVerificationCode)
+          RegistryLockDao.getByRevisionId(oldUnlockRevisionId)
               .orElseThrow(
                   () ->
                       new IllegalArgumentException(
-                          String.format(
-                              "Unknown verification code %s", oldUnlockVerificationCode)));
+                          String.format("Unknown revision ID %d", oldUnlockRevisionId)));
       domain = ofy().load().type(DomainBase.class).id(oldLock.getRepoId()).now();
       checkArgumentNotNull(
-          domain,
-          "Domain has been deleted for lock with identification code %s",
-          oldUnlockVerificationCode);
+          domain, "Domain has been deleted for lock with revision ID %s", oldUnlockRevisionId);
     } catch (Exception e) {
       /* If there's a bad verification code or the domain has been deleted, we won't want to retry.
       AppEngine will retry on non-2xx error codes, so we return SC_NO_CONTENT (204) to avoid it.
@@ -92,8 +88,8 @@ public class RelockDomainAction implements Runnable {
       See https://cloud.google.com/appengine/docs/standard/java/taskqueue/push/retrying-tasks
       for more details. */
       logger.atSevere().withCause(e).log(
-          "Exception when attempting to re-lock domain with old verification code %s",
-          oldUnlockVerificationCode);
+          "Exception when attempting to re-lock domain with old revision ID %d",
+          oldUnlockRevisionId);
       response.setStatus(SC_NO_CONTENT);
       response.setContentType(MediaType.PLAIN_TEXT_UTF_8);
       response.setPayload(String.format("Relock failed: %s", e.getMessage()));

@@ -88,7 +88,7 @@ public class RelockDomainActionTest {
 
   @Test
   public void testLock() {
-    action = createAction(oldLock.getVerificationCode());
+    action = createAction(oldLock.getRevisionId());
     action.run();
     assertThat(reloadDomain(domain).getStatusValues())
         .containsAtLeastElementsIn(REGISTRY_LOCK_STATUSES);
@@ -103,30 +103,30 @@ public class RelockDomainActionTest {
 
   @Test
   public void testFailure_unknownCode() {
-    action = createAction("foo");
+    action = createAction(838567827L);
     action.run();
     assertThat(response.getStatus()).isEqualTo(SC_NO_CONTENT);
-    assertThat(response.getPayload()).isEqualTo("Relock failed: Unknown verification code foo");
+    assertThat(response.getPayload()).isEqualTo("Relock failed: Unknown revision ID 838567827");
   }
 
   @Test
   public void testFailure_domainDeleted() {
     tm().transact(() -> ofy().delete().entity(domain).now());
-    action = createAction(oldLock.getVerificationCode());
+    action = createAction(oldLock.getRevisionId());
     action.run();
     assertThat(response.getStatus()).isEqualTo(SC_NO_CONTENT);
     assertThat(response.getPayload())
         .isEqualTo(
             String.format(
-                "Relock failed: Domain has been deleted for lock with identification code %s",
-                oldLock.getVerificationCode()));
+                "Relock failed: Domain has been deleted for lock with revision ID %d",
+                oldLock.getRevisionId()));
   }
 
   private DomainBase reloadDomain(DomainBase domain) {
     return ofy().load().entity(domain).now();
   }
 
-  private RelockDomainAction createAction(String oldUnlockVerificationCode) {
-    return new RelockDomainAction(oldUnlockVerificationCode, domainLockUtils, response, clock);
+  private RelockDomainAction createAction(Long oldUnlockRevisionId) {
+    return new RelockDomainAction(oldUnlockRevisionId, domainLockUtils, response, clock);
   }
 }

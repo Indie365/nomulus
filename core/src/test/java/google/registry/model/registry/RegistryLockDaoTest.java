@@ -55,8 +55,7 @@ public final class RegistryLockDaoTest {
 
   @Test
   public void testSaveTwiceAndLoad_returnsLatest() {
-    RegistryLock lock = createLock();
-    jpaTm().transact(() -> RegistryLockDao.save(lock));
+    RegistryLock lock = jpaTm().transact(() -> RegistryLockDao.save(createLock()));
     fakeClock.advanceOneMilli();
     jpaTm()
         .transact(
@@ -121,6 +120,20 @@ public final class RegistryLockDaoTest {
   @Test
   public void getLock_unknownCode() {
     assertThat(RegistryLockDao.getByVerificationCode("hi").isPresent()).isFalse();
+  }
+
+  @Test
+  public void testByRevisionId_valid() {
+    RegistryLock lock = RegistryLockDao.save(createLock());
+    RegistryLock otherLock = RegistryLockDao.getByRevisionId(lock.getRevisionId()).get();
+    // can't do direct comparison due to update time
+    assertThat(lock.getDomainName()).isEqualTo(otherLock.getDomainName());
+    assertThat(lock.getVerificationCode()).isEqualTo(otherLock.getVerificationCode());
+  }
+
+  @Test
+  public void testByRevisionId_invalid() {
+    assertThat(RegistryLockDao.getByRevisionId(8675309L).isPresent()).isFalse();
   }
 
   @Test
