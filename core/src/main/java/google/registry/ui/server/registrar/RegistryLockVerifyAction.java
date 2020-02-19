@@ -20,7 +20,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.flogger.FluentLogger;
 import com.google.template.soy.tofu.SoyTofu;
-import google.registry.locks.DomainLockUtils;
+import google.registry.tools.DomainLockUtils;
 import google.registry.request.Action;
 import google.registry.request.Parameter;
 import google.registry.request.auth.Auth;

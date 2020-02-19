@@ -28,7 +28,7 @@ import com.google.appengine.api.users.User;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSetMultimap;
-import google.registry.locks.DomainLockUtils;
+import google.registry.tools.DomainLockUtils;
 import google.registry.model.domain.DomainBase;
 import google.registry.model.registry.RegistryLockDao;
 import google.registry.persistence.transaction.JpaTestRules;

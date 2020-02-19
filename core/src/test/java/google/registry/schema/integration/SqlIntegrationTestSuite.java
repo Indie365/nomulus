@@ -15,8 +15,8 @@
 package google.registry.schema.integration;
 
 import com.google.common.truth.Expect;
-import google.registry.locks.DomainLockUtilsTest;
-import google.registry.locks.RelockDomainActionTest;
+import google.registry.tools.DomainLockUtilsTest;
+import google.registry.batch.RelockDomainActionTest;
 import google.registry.model.domain.DomainBaseSqlTest;
 import google.registry.model.registry.RegistryLockDaoTest;
 import google.registry.persistence.transaction.JpaEntityCoverage;

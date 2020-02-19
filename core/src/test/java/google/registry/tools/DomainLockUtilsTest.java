@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package google.registry.locks;
+package google.registry.tools;
 
 import static com.google.common.truth.Truth.assertThat;
 import static google.registry.model.ofy.ObjectifyService.ofy;
@@ -41,6 +41,7 @@ import google.registry.testing.DatastoreHelper;
 import google.registry.testing.DeterministicStringGenerator;
 import google.registry.testing.FakeClock;
 import google.registry.testing.UserInfo;
+import google.registry.tools.DomainLockUtils;
 import google.registry.util.StringGenerator.Alphabets;
 import java.util.Set;
 import java.util.stream.Collectors;

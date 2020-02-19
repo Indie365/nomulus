@@ -29,7 +29,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.gson.Gson;
 import google.registry.config.RegistryConfig;
 import google.registry.config.RegistryConfig.Config;
-import google.registry.locks.DomainLockUtils;
+import google.registry.tools.DomainLockUtils;
 import google.registry.model.registrar.Registrar;
 import google.registry.model.registrar.RegistrarContact;
 import google.registry.request.Action;

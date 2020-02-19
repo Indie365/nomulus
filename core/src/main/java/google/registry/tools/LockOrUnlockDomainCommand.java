@@ -26,7 +26,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import google.registry.config.RegistryConfig.Config;
-import google.registry.locks.DomainLockUtils;
 import google.registry.model.eppcommon.StatusValue;
 import google.registry.schema.domain.RegistryLock;
 import google.registry.util.Clock;

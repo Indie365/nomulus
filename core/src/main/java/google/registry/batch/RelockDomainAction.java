@@ -12,9 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package google.registry.locks;
+package google.registry.batch;
 
-import static google.registry.locks.LocksModule.PARAM_OLD_UNLOCK_REVISION_ID;
 import static google.registry.model.ofy.ObjectifyService.ofy;
 import static google.registry.request.Action.Method.POST;
 import static google.registry.tools.LockOrUnlockDomainCommand.REGISTRY_LOCK_STATUSES;
@@ -32,6 +31,7 @@ import google.registry.request.Parameter;
 import google.registry.request.Response;
 import google.registry.request.auth.Auth;
 import google.registry.schema.domain.RegistryLock;
+import google.registry.tools.DomainLockUtils;
 import google.registry.util.Clock;
 import javax.inject.Inject;
 
@@ -57,7 +57,7 @@ public class RelockDomainAction implements Runnable {
 
   @Inject
   public RelockDomainAction(
-      @Parameter(PARAM_OLD_UNLOCK_REVISION_ID) Long oldUnlockRevisionId,
+      @Parameter("oldUnlockRevisionId") Long oldUnlockRevisionId,
       DomainLockUtils domainLockUtils,
       Response response,
       Clock clock) {

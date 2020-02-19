@@ -25,7 +25,6 @@ import static google.registry.tools.LockOrUnlockDomainCommand.REGISTRY_LOCK_STAT
 import static org.junit.Assert.assertThrows;
 
 import com.google.common.collect.ImmutableList;
-import google.registry.locks.DomainLockUtils;
 import google.registry.model.domain.DomainBase;
 import google.registry.model.registrar.Registrar.Type;
 import google.registry.model.registry.RegistryLockDao;
