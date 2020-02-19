@@ -15,15 +15,18 @@
 package google.registry.batch;
 
 import static com.google.common.truth.Truth.assertThat;
+import static google.registry.model.eppcommon.StatusValue.PENDING_DELETE;
+import static google.registry.model.eppcommon.StatusValue.PENDING_TRANSFER;
 import static google.registry.model.ofy.ObjectifyService.ofy;
-import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 import static google.registry.testing.DatastoreHelper.createTlds;
 import static google.registry.testing.DatastoreHelper.newDomainBase;
 import static google.registry.testing.DatastoreHelper.persistActiveHost;
+import static google.registry.testing.DatastoreHelper.persistDomainAsDeleted;
 import static google.registry.testing.DatastoreHelper.persistResource;
 import static google.registry.tools.LockOrUnlockDomainCommand.REGISTRY_LOCK_STATUSES;
 import static javax.servlet.http.HttpServletResponse.SC_NO_CONTENT;
 
+import com.google.common.collect.ImmutableSet;
 import google.registry.model.domain.DomainBase;
 import google.registry.model.host.HostResource;
 import google.registry.model.registry.RegistryLockDao;
@@ -85,11 +88,11 @@ public class RelockDomainActionTest {
     oldLock = domainLockUtils.createRegistryUnlockRequest(DOMAIN_NAME, CLIENT_ID, false, clock);
     oldLock = domainLockUtils.verifyAndApplyUnlock(oldLock.getVerificationCode(), false, clock);
     assertThat(reloadDomain(domain).getStatusValues()).containsNoneIn(REGISTRY_LOCK_STATUSES);
+    action = createAction(oldLock.getRevisionId());
   }
 
   @Test
   public void testLock() {
-    action = createAction(oldLock.getRevisionId());
     action.run();
     assertThat(reloadDomain(domain).getStatusValues())
         .containsAtLeastElementsIn(REGISTRY_LOCK_STATUSES);
@@ -111,15 +114,57 @@ public class RelockDomainActionTest {
   }
 
   @Test
+  public void testFailure_pendingDelete() {
+    persistResource(domain.asBuilder().setStatusValues(ImmutableSet.of(PENDING_DELETE)).build());
+    action.run();
+    assertThat(response.getStatus()).isEqualTo(SC_NO_CONTENT);
+    assertThat(response.getPayload())
+        .isEqualTo(String.format("Relock failed: Domain %s has a pending delete", DOMAIN_NAME));
+  }
+
+  @Test
+  public void testFailure_pendingTransfer() {
+    persistResource(domain.asBuilder().setStatusValues(ImmutableSet.of(PENDING_TRANSFER)).build());
+    action.run();
+    assertThat(response.getStatus()).isEqualTo(SC_NO_CONTENT);
+    assertThat(response.getPayload())
+        .isEqualTo(String.format("Relock failed: Domain %s has a pending transfer", DOMAIN_NAME));
+  }
+
+  @Test
   public void testFailure_domainDeleted() {
-    tm().transact(() -> ofy().delete().entity(domain).now());
-    action = createAction(oldLock.getRevisionId());
+    persistDomainAsDeleted(domain, clock.nowUtc());
+    action.run();
+    assertThat(response.getStatus()).isEqualTo(SC_NO_CONTENT);
+    assertThat(response.getPayload())
+        .isEqualTo(String.format("Relock failed: Domain %s has been deleted", DOMAIN_NAME));
+  }
+
+  @Test
+  public void testFailure_domainTransferred() {
+    persistResource(domain.asBuilder().setPersistedCurrentSponsorClientId("NewRegistrar").build());
     action.run();
     assertThat(response.getStatus()).isEqualTo(SC_NO_CONTENT);
     assertThat(response.getPayload())
         .isEqualTo(
             String.format(
-                "Relock failed: Domain has been deleted for lock with revision ID %d",
+                "Relock failed: Domain %s has been transferred from registrar %s to registrar "
+                    + "%s since the unlock",
+                DOMAIN_NAME, CLIENT_ID, "NewRegistrar"));
+  }
+
+  @Test
+  public void testFailure_relockSetAlready() {
+    RegistryLock newLock =
+        domainLockUtils.createRegistryLockRequest(DOMAIN_NAME, CLIENT_ID, POC_ID, false, clock);
+    newLock = domainLockUtils.verifyAndApplyLock(newLock.getVerificationCode(), false, clock);
+    RegistryLockDao.save(oldLock.asBuilder().setRelock(newLock).build());
+    action.run();
+    assertThat(response.getStatus()).isEqualTo(SC_NO_CONTENT);
+    assertThat(response.getPayload())
+        .isEqualTo(
+            String.format(
+                "Relock failed: Relock already set on old lock with revision ID %s",
                 oldLock.getRevisionId()));
   }
 

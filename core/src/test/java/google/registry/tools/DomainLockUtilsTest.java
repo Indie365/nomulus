@@ -41,7 +41,6 @@ import google.registry.testing.DatastoreHelper;
 import google.registry.testing.DeterministicStringGenerator;
 import google.registry.testing.FakeClock;
 import google.registry.testing.UserInfo;
-import google.registry.tools.DomainLockUtils;
 import google.registry.util.StringGenerator.Alphabets;
 import java.util.Set;
 import java.util.stream.Collectors;
