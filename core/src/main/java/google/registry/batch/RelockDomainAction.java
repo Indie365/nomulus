@@ -75,7 +75,7 @@ public class RelockDomainAction implements Runnable {
   public void run() {
     RegistryLock relock = jpaTm().transact(this::validateAndCreateRelock);
     if (relock != null) {
-      applyRelock(relock);
+      jpaTm().transact(() -> applyRelock(relock));
     }
   }
 
