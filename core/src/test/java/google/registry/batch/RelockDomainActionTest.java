@@ -40,6 +40,7 @@ import google.registry.testing.FakeResponse;
 import google.registry.testing.UserInfo;
 import google.registry.tools.DomainLockUtils;
 import google.registry.util.StringGenerator.Alphabets;
+import org.joda.time.DateTime;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -56,6 +57,7 @@ public class RelockDomainActionTest {
 
   private final FakeResponse response = new FakeResponse();
   private final FakeClock clock = new FakeClock();
+  private final DateTime now = clock.nowUtc();
   private final DomainLockUtils domainLockUtils =
       new DomainLockUtils(new DeterministicStringGenerator(Alphabets.BASE_58));
 
@@ -80,13 +82,12 @@ public class RelockDomainActionTest {
     HostResource host = persistActiveHost("ns1.example.net");
     domain = persistResource(newDomainBase(DOMAIN_NAME, host));
 
-    oldLock =
-        domainLockUtils.createRegistryLockRequest(DOMAIN_NAME, CLIENT_ID, POC_ID, false, clock);
-    domainLockUtils.verifyAndApplyLock(oldLock.getVerificationCode(), false, clock);
+    oldLock = domainLockUtils.createRegistryLockRequest(DOMAIN_NAME, CLIENT_ID, POC_ID, false, now);
+    domainLockUtils.verifyAndApplyLock(oldLock.getVerificationCode(), false, now);
     assertThat(reloadDomain(domain).getStatusValues())
         .containsAtLeastElementsIn(REGISTRY_LOCK_STATUSES);
-    oldLock = domainLockUtils.createRegistryUnlockRequest(DOMAIN_NAME, CLIENT_ID, false, clock);
-    oldLock = domainLockUtils.verifyAndApplyUnlock(oldLock.getVerificationCode(), false, clock);
+    oldLock = domainLockUtils.createRegistryUnlockRequest(DOMAIN_NAME, CLIENT_ID, false, now);
+    oldLock = domainLockUtils.verifyAndApplyUnlock(oldLock.getVerificationCode(), false, now);
     assertThat(reloadDomain(domain).getStatusValues()).containsNoneIn(REGISTRY_LOCK_STATUSES);
     action = createAction(oldLock.getRevisionId());
   }
@@ -156,8 +157,8 @@ public class RelockDomainActionTest {
   @Test
   public void testFailure_relockSetAlready() {
     RegistryLock newLock =
-        domainLockUtils.createRegistryLockRequest(DOMAIN_NAME, CLIENT_ID, POC_ID, false, clock);
-    newLock = domainLockUtils.verifyAndApplyLock(newLock.getVerificationCode(), false, clock);
+        domainLockUtils.createRegistryLockRequest(DOMAIN_NAME, CLIENT_ID, POC_ID, false, now);
+    newLock = domainLockUtils.verifyAndApplyLock(newLock.getVerificationCode(), false, now);
     RegistryLockDao.save(oldLock.asBuilder().setRelock(newLock).build());
     action.run();
     assertThat(response.getStatus()).isEqualTo(SC_NO_CONTENT);

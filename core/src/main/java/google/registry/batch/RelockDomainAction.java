@@ -127,7 +127,7 @@ public class RelockDomainAction implements Runnable {
                 oldLock.getRegistrarId(),
                 oldLock.getRegistrarPocId(),
                 oldLock.isSuperuser(),
-                clock);
+                jpaTm().getTransactionTime());
         // The old lock object should have a reference to the relock
         RegistryLockDao.save(oldLock.asBuilder().setRelock(registryLock).build());
         return registryLock;
@@ -140,7 +140,8 @@ public class RelockDomainAction implements Runnable {
 
   private void applyRelock(RegistryLock relock) {
     try {
-      domainLockUtils.verifyAndApplyLock(relock.getVerificationCode(), relock.isSuperuser(), clock);
+      domainLockUtils.verifyAndApplyLock(
+          relock.getVerificationCode(), relock.isSuperuser(), jpaTm().getTransactionTime());
       logger.atInfo().log("Re-locked domain %s.", relock.getDomainName());
       response.setStatus(SC_OK);
     } catch (Throwable t) {
