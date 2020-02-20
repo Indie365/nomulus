@@ -21,7 +21,7 @@ import static google.registry.batch.AsyncTaskEnqueuer.PARAM_RESOURCE_KEY;
 import static google.registry.batch.AsyncTaskEnqueuer.QUEUE_ASYNC_ACTIONS;
 import static google.registry.batch.AsyncTaskEnqueuer.QUEUE_ASYNC_DELETE;
 import static google.registry.batch.AsyncTaskEnqueuer.QUEUE_ASYNC_HOST_RENAME;
-import static google.registry.request.RequestParameters.extractIntParameter;
+import static google.registry.request.RequestParameters.extractLongParameter;
 import static google.registry.request.RequestParameters.extractOptionalBooleanParameter;
 import static google.registry.request.RequestParameters.extractOptionalIntParameter;
 import static google.registry.request.RequestParameters.extractOptionalParameter;
@@ -96,13 +96,7 @@ public class BatchModule {
   @Provides
   @Parameter("oldUnlockRevisionId")
   static Long provideOldUnlockRevisionId(HttpServletRequest req) {
-    return (long) extractIntParameter(req, "oldUnlockRevisionId");
-  }
-
-  @Provides
-  @Named("relock-domain")
-  static Queue provideRelockDomainQueue() {
-    return getQueue("relock-domain");
+    return extractLongParameter(req, "oldUnlockRevisionId");
   }
 
   @Provides

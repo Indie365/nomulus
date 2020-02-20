@@ -29,8 +29,7 @@ public final class RegistryLockDao {
    * Returns the {@link RegistryLock} referred to by this (unique) revision ID, or empty if none
    * exists
    */
-  public static Optional<RegistryLock> getByRevisionId(Long revisionId) {
-    checkNotNull(revisionId, "revisionId cannot be null");
+  public static Optional<RegistryLock> getByRevisionId(long revisionId) {
     return Optional.ofNullable(
         jpaTm().transact(() -> jpaTm().getEntityManager().find(RegistryLock.class, revisionId)));
   }

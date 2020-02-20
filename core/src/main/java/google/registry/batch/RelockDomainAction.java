@@ -54,14 +54,14 @@ public class RelockDomainAction implements Runnable {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private final Long oldUnlockRevisionId;
+  private final long oldUnlockRevisionId;
   private final DomainLockUtils domainLockUtils;
   private final Response response;
   private final Clock clock;
 
   @Inject
   public RelockDomainAction(
-      @Parameter("oldUnlockRevisionId") Long oldUnlockRevisionId,
+      @Parameter("oldUnlockRevisionId") long oldUnlockRevisionId,
       DomainLockUtils domainLockUtils,
       Response response,
       Clock clock) {
@@ -95,7 +95,7 @@ public class RelockDomainAction implements Runnable {
               .type(DomainBase.class)
               .id(oldLock.getRepoId())
               .now()
-              .cloneProjectedAtTime(clock.nowUtc());
+              .cloneProjectedAtTime(jpaTm().getTransactionTime());
       verifyDomainAndLockState(oldLock, domain);
     } catch (Throwable t) {
       /* If there's a bad verification code or the domain is in a bad state, we won't want to retry.
