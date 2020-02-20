@@ -32,7 +32,7 @@ final class ListDomainsCommand extends ListObjectsCommand {
 
   @Parameter(
       names = {"-t", "--tld", "--tlds"},
-      description = "Comma-delimited list of TLDs to list domains on; defaults to all REAL TLDs.")
+      description = "Space-delimited list of TLDs to list domains on; defaults to all REAL TLDs.")
   private List<String> tlds;
 
   @Parameter(
