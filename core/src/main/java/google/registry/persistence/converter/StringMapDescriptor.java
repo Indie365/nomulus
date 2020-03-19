@@ -109,31 +109,23 @@ public class StringMapDescriptor extends AbstractTypeDescriptor<StringMap>
       @Override
       protected void doBind(PreparedStatement st, X value, int index, WrapperOptions options)
           throws SQLException {
-        if (value == null) {
-          st.setObject(index, null);
-          return;
-        }
-        if (value instanceof StringMap) {
-          StringMap stringMap = (StringMap) value;
-          st.setObject(index, stringMap.getMap());
-        } else {
-          throw new UnsupportedOperationException(
-              String.format(
-                  "Binding type %s is not supported by StringMapDescriptor",
-                  value.getClass().getName()));
-        }
+        executeBind(value, stringMap -> st.setObject(index, stringMap));
       }
 
       @Override
       protected void doBind(CallableStatement st, X value, String name, WrapperOptions options)
           throws SQLException {
+        executeBind(value, stringMap -> st.setObject(name, stringMap));
+      }
+
+      private void executeBind(X value, CheckedConsumer<StringMap> consumer) throws SQLException {
         if (value == null) {
-          st.setObject(name, null);
+          consumer.accept(null);
           return;
         }
         if (value instanceof StringMap) {
           StringMap stringMap = (StringMap) value;
-          st.setObject(name, stringMap.getMap());
+          consumer.accept(stringMap);
         } else {
           throw new UnsupportedOperationException(
               String.format(
@@ -183,5 +175,10 @@ public class StringMapDescriptor extends AbstractTypeDescriptor<StringMap>
     public Map<String, String> getMap() {
       return map;
     }
+  }
+
+  @FunctionalInterface
+  private interface CheckedConsumer<T> {
+    void accept(T t) throws SQLException;
   }
 }
