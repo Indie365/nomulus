@@ -17,6 +17,7 @@ package google.registry.model.domain;
 import static com.google.common.truth.Truth.assertThat;
 import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
 import static google.registry.util.DateTimeUtils.START_OF_TIME;
+import static org.junit.Assert.assertThrows;
 
 import com.google.common.collect.ImmutableSet;
 import com.googlecode.objectify.Key;
@@ -27,7 +28,11 @@ import google.registry.model.domain.launch.LaunchNotice;
 import google.registry.model.domain.secdns.DelegationSignerData;
 import google.registry.model.eppcommon.AuthInfo.PasswordAuth;
 import google.registry.model.eppcommon.StatusValue;
+import google.registry.model.host.HostResource;
+import google.registry.persistence.VKey;
+import java.sql.SQLException;
 import javax.persistence.EntityManager;
+import javax.persistence.RollbackException;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -40,11 +45,15 @@ public class DomainBaseSqlTest extends EntityTestCase {
   DomainBase domain;
   Key<ContactResource> contactKey;
   Key<ContactResource> contact2Key;
+  VKey<HostResource> host1VKey;
+  HostResource host;
 
   @Before
   public void setUp() {
     contactKey = Key.create(ContactResource.class, "contact_id1");
     contact2Key = Key.create(ContactResource.class, "contact_id2");
+
+    host1VKey = VKey.createSql(HostResource.class, "host1");
 
     domain =
         new DomainBase.Builder()
@@ -54,6 +63,7 @@ public class DomainBaseSqlTest extends EntityTestCase {
             .setLastEppUpdateTime(fakeClock.nowUtc())
             .setLastEppUpdateClientId("AnotherRegistrar")
             .setLastTransferTime(fakeClock.nowUtc())
+            .setNameservers(host1VKey)
             .setStatusValues(
                 ImmutableSet.of(
                     StatusValue.CLIENT_DELETE_PROHIBITED,
@@ -73,6 +83,12 @@ public class DomainBaseSqlTest extends EntityTestCase {
                 LaunchNotice.create("tcnid", "validatorId", START_OF_TIME, START_OF_TIME))
             .setSmdId("smdid")
             .build();
+
+    host =
+        new HostResource.Builder()
+            .setRepoId("host1")
+            .setFullyQualifiedHostName("ns1.example.com")
+            .build();
   }
 
   @Test
@@ -83,6 +99,9 @@ public class DomainBaseSqlTest extends EntityTestCase {
               // Persist the domain.
               EntityManager em = jpaTm().getEntityManager();
               em.persist(domain);
+
+              // Persist the host.
+              em.persist(host);
             });
 
     jpaTm()
@@ -110,5 +129,33 @@ public class DomainBaseSqlTest extends EntityTestCase {
               // Note that the equality comparison forces a lazy load of all fields.
               assertThat(result).isEqualTo(org);
             });
+  }
+
+  @Test
+  public void testForeignKeyConstraints() {
+    Exception e =
+        assertThrows(
+            RollbackException.class,
+            () -> {
+              jpaTm()
+                  .transact(
+                      () -> {
+                        // Persist the domain without the associated host object.
+                        EntityManager em = jpaTm().getEntityManager();
+                        em.persist(domain);
+                      });
+            });
+    assertThat(e)
+        .hasCauseThat() // ConstraintViolationException
+        .hasCauseThat() // ConstraintViolationException
+        .hasCauseThat()
+        .isInstanceOf(SQLException.class);
+    assertThat(e)
+        .hasCauseThat() // ConstraintViolationException
+        .hasCauseThat() // ConstraintViolationException
+        .hasCauseThat()
+        .hasMessageThat()
+        .contains(
+            "\"Domain_nsHostVKeys\" violates foreign key constraint \"fk_domain_nshostvkeys_host");
   }
 }
