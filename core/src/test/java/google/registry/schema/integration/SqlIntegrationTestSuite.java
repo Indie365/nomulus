@@ -15,6 +15,7 @@
 package google.registry.schema.integration;
 
 import com.google.common.truth.Expect;
+import google.registry.model.contact.ContactResourceTest;
 import google.registry.model.domain.DomainBaseSqlTest;
 import google.registry.model.registry.RegistryLockDaoTest;
 import google.registry.persistence.transaction.JpaEntityCoverage;
@@ -51,6 +52,7 @@ import org.junit.runner.RunWith;
 @RunWith(JUnitPlatform.class)
 @SelectClasses({
   ClaimsListDaoTest.class,
+  ContactResourceTest.class,
   CursorDaoTest.class,
   DomainBaseSqlTest.class,
   LockDaoTest.class,
