@@ -16,6 +16,7 @@ package google.registry.model.domain;
 
 import static com.google.common.truth.Truth.assertThat;
 import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
+import static google.registry.testing.SqlHelper.saveRegistrar;
 import static google.registry.util.DateTimeUtils.START_OF_TIME;
 import static org.joda.time.DateTimeZone.UTC;
 
@@ -64,9 +65,9 @@ public class DomainBaseSqlTest {
         new DomainBase.Builder()
             .setFullyQualifiedDomainName("example.com")
             .setRepoId("4-COM")
-            .setCreationClientId("a registrar")
+            .setCreationClientId("registrar1")
             .setLastEppUpdateTime(fakeClock.nowUtc())
-            .setLastEppUpdateClientId("AnotherRegistrar")
+            .setLastEppUpdateClientId("registrar2")
             .setLastTransferTime(fakeClock.nowUtc())
             .setStatusValues(
                 ImmutableSet.of(
@@ -79,7 +80,7 @@ public class DomainBaseSqlTest {
             .setRegistrant(contactKey)
             .setContacts(ImmutableSet.of(DesignatedContact.create(Type.ADMIN, contact2Key)))
             .setSubordinateHosts(ImmutableSet.of("ns1.example.com"))
-            .setPersistedCurrentSponsorClientId("losing")
+            .setPersistedCurrentSponsorClientId("registrar3")
             .setRegistrationExpirationTime(fakeClock.nowUtc().plusYears(1))
             .setAuthInfo(DomainAuthInfo.create(PasswordAuth.create("password")))
             .setDsData(ImmutableSet.of(DelegationSignerData.create(1, 2, 3, new byte[] {0, 1, 2})))
@@ -91,6 +92,10 @@ public class DomainBaseSqlTest {
 
   @Test
   public void testDomainBasePersistence() {
+    saveRegistrar("registrar1");
+    saveRegistrar("registrar2");
+    saveRegistrar("registrar3");
+
     jpaTm()
         .transact(
             () -> {
