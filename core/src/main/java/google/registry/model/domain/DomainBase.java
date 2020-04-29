@@ -65,6 +65,7 @@ import google.registry.model.poll.PollMessage;
 import google.registry.model.registry.Registry;
 import google.registry.model.transfer.TransferData;
 import google.registry.model.transfer.TransferStatus;
+import google.registry.persistence.StringVKey;
 import google.registry.persistence.VKey;
 import google.registry.schema.replay.DatastoreAndSqlEntity;
 import google.registry.util.CollectionUtils;
@@ -147,7 +148,8 @@ public class DomainBase extends EppResource
   @Ignore
   @ElementCollection
   @JoinTable(name = "DomainHost")
-  @Convert(converter = HostResource.VKeyHostResourceConverter.class)
+  @StringVKey
+  @Convert(converter = VKeyConverter_HostResource.class)
   Set<VKey<HostResource>> nsHostVKeys;
 
   /**
