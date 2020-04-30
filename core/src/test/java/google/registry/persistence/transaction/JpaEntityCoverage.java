@@ -40,7 +40,11 @@ public class JpaEntityCoverage extends ExternalResource {
   // TODO(weiminyu): update this set when entities written to Cloud SQL and tests are added.
   private static final ImmutableSet<String> IGNORE_ENTITIES =
       ImmutableSet.of(
-          "DelegationSignerData", "DesignatedContact", "GracePeriod", "RegistrarContact");
+          "AllocationToken",
+          "DelegationSignerData",
+          "DesignatedContact",
+          "GracePeriod",
+          "RegistrarContact");
 
   private static final ImmutableSet<Class> ALL_JPA_ENTITIES =
       PersistenceXmlUtility.getManagedClasses().stream()

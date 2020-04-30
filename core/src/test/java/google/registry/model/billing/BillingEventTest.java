@@ -44,7 +44,11 @@ import org.junit.Before;
 import org.junit.Test;
 
 /** Unit tests for {@link BillingEvent}. */
-public class BillingEventTest extends EntityTestCase {
+public class
+
+
+
+BillingEventTest extends EntityTestCase {
   private final DateTime now = DateTime.now(UTC);
 
   HistoryEntry historyEntry;
