@@ -43,6 +43,7 @@ import google.registry.model.domain.rgp.GracePeriodStatus;
 import google.registry.model.domain.token.AllocationToken;
 import google.registry.model.reporting.HistoryEntry;
 import google.registry.model.transfer.TransferData.TransferServerApproveEntity;
+import google.registry.persistence.WithLongVKey;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -51,6 +52,7 @@ import org.joda.money.Money;
 import org.joda.time.DateTime;
 
 /** A billable event in a domain's lifecycle. */
+@WithLongVKey
 public abstract class BillingEvent extends ImmutableObject
     implements Buildable, TransferServerApproveEntity {
 
