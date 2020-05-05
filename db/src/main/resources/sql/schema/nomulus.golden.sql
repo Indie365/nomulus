@@ -776,6 +776,38 @@ ALTER TABLE ONLY public."Contact"
 
 
 --
+-- Name: Contact fk_contact_transfer_gaining_client_id; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."Contact"
+    ADD CONSTRAINT fk_contact_transfer_gaining_client_id FOREIGN KEY (transfer_gaining_client_id) REFERENCES public."Registrar"(client_id);
+
+
+--
+-- Name: Contact fk_contact_transfer_losing_client_id; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."Contact"
+    ADD CONSTRAINT fk_contact_transfer_losing_client_id FOREIGN KEY (transfer_losing_client_id) REFERENCES public."Registrar"(client_id);
+
+
+--
+-- Name: Domain fk_domain_transfer_gaining_client_id; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."Domain"
+    ADD CONSTRAINT fk_domain_transfer_gaining_client_id FOREIGN KEY (transfer_gaining_client_id) REFERENCES public."Registrar"(client_id);
+
+
+--
+-- Name: Domain fk_domain_transfer_losing_client_id; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."Domain"
+    ADD CONSTRAINT fk_domain_transfer_losing_client_id FOREIGN KEY (transfer_losing_client_id) REFERENCES public."Registrar"(client_id);
+
+
+--
 -- Name: DomainHost fk_domainhost_host_valid; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -821,38 +853,6 @@ ALTER TABLE ONLY public."Contact"
 
 ALTER TABLE ONLY public."PremiumEntry"
     ADD CONSTRAINT fko0gw90lpo1tuee56l0nb6y6g5 FOREIGN KEY (revision_id) REFERENCES public."PremiumList"(revision_id);
-
-
---
--- Name: Contact foreign_key_contact_transfer_gaining_client_id; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public."Contact"
-    ADD CONSTRAINT foreign_key_contact_transfer_gaining_client_id FOREIGN KEY (transfer_gaining_client_id) REFERENCES public."Registrar"(client_id);
-
-
---
--- Name: Contact foreign_key_contact_transfer_losing_client_id; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public."Contact"
-    ADD CONSTRAINT foreign_key_contact_transfer_losing_client_id FOREIGN KEY (transfer_losing_client_id) REFERENCES public."Registrar"(client_id);
-
-
---
--- Name: Domain foreign_key_domain_transfer_gaining_client_id; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public."Domain"
-    ADD CONSTRAINT foreign_key_domain_transfer_gaining_client_id FOREIGN KEY (transfer_gaining_client_id) REFERENCES public."Registrar"(client_id);
-
-
---
--- Name: Domain foreign_key_domain_transfer_losing_client_id; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public."Domain"
-    ADD CONSTRAINT foreign_key_domain_transfer_losing_client_id FOREIGN KEY (transfer_losing_client_id) REFERENCES public."Registrar"(client_id);
 
 
 --
