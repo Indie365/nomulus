@@ -41,6 +41,7 @@ import google.registry.model.reporting.HistoryEntry;
 import google.registry.model.transfer.TransferData.TransferServerApproveEntity;
 import google.registry.model.transfer.TransferResponse.ContactTransferResponse;
 import google.registry.model.transfer.TransferResponse.DomainTransferResponse;
+import google.registry.persistence.WithLongVKey;
 import java.util.List;
 import java.util.Optional;
 import org.joda.time.DateTime;
@@ -68,6 +69,7 @@ import org.joda.time.DateTime;
 @Entity
 @ReportedOn
 @ExternalMessagingName("message")
+@WithLongVKey
 public abstract class PollMessage extends ImmutableObject
     implements Buildable, TransferServerApproveEntity {
 
