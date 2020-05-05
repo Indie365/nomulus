@@ -124,7 +124,21 @@ CREATE TABLE public."Contact" (
     addr_local_type text,
     search_name text,
     voice_phone_extension text,
-    voice_phone_number text
+    voice_phone_number text,
+    transfer_server_approve_autorenew_event_id bigint,
+    transfer_server_approve_autorenew_poll_message_id bigint,
+    transfer_server_approve_billing_event_id bigint,
+    transfer_server_approve_entity_ids text[],
+    transfer_period_unit integer,
+    transfer_period_value integer,
+    transfer_client_txn_id text,
+    transfer_server_txn_id text,
+    transfer_registration_expiration_time timestamp with time zone,
+    transfer_gaining_client_id text,
+    transfer_losing_client_id text,
+    transfer_pending_expiration_time timestamp with time zone,
+    transfer_request_time timestamp with time zone,
+    transfer_status integer
 );
 
 
@@ -169,7 +183,21 @@ CREATE TABLE public."Domain" (
     admin_contact text,
     billing_contact text,
     registrant_contact text,
-    tech_contact text
+    tech_contact text,
+    transfer_server_approve_autorenew_event_id bigint,
+    transfer_server_approve_autorenew_poll_message_id bigint,
+    transfer_server_approve_billing_event_id bigint,
+    transfer_server_approve_entity_ids text[],
+    transfer_period_unit integer,
+    transfer_period_value integer,
+    transfer_client_txn_id text,
+    transfer_server_txn_id text,
+    transfer_registration_expiration_time timestamp with time zone,
+    transfer_gaining_client_id text,
+    transfer_losing_client_id text,
+    transfer_pending_expiration_time timestamp with time zone,
+    transfer_request_time timestamp with time zone,
+    transfer_status integer
 );
 
 
@@ -752,6 +780,22 @@ ALTER TABLE ONLY public."Contact"
 
 
 --
+-- Name: Contact fk_contact_transfer_gaining_client_id; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."Contact"
+    ADD CONSTRAINT fk_contact_transfer_gaining_client_id FOREIGN KEY (transfer_gaining_client_id) REFERENCES public."Registrar"(client_id);
+
+
+--
+-- Name: Contact fk_contact_transfer_losing_client_id; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."Contact"
+    ADD CONSTRAINT fk_contact_transfer_losing_client_id FOREIGN KEY (transfer_losing_client_id) REFERENCES public."Registrar"(client_id);
+
+
+--
 -- Name: Domain fk_domain_admin_contact; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -781,6 +825,22 @@ ALTER TABLE ONLY public."Domain"
 
 ALTER TABLE ONLY public."Domain"
     ADD CONSTRAINT fk_domain_tech_contact FOREIGN KEY (tech_contact) REFERENCES public."Contact"(repo_id);
+
+
+--
+-- Name: Domain fk_domain_transfer_gaining_client_id; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."Domain"
+    ADD CONSTRAINT fk_domain_transfer_gaining_client_id FOREIGN KEY (transfer_gaining_client_id) REFERENCES public."Registrar"(client_id);
+
+
+--
+-- Name: Domain fk_domain_transfer_losing_client_id; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."Domain"
+    ADD CONSTRAINT fk_domain_transfer_losing_client_id FOREIGN KEY (transfer_losing_client_id) REFERENCES public."Registrar"(client_id);
 
 
 --
