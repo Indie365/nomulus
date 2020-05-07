@@ -129,16 +129,16 @@ CREATE TABLE public."Contact" (
     transfer_server_approve_autorenew_poll_message_id bigint,
     transfer_server_approve_billing_event_id bigint,
     transfer_server_approve_entity_ids text[],
-    transfer_period_unit integer,
+    transfer_period_unit text,
     transfer_period_value integer,
-    transfer_client_txn_id text,
-    transfer_server_txn_id text,
+    transfer_txn_client_id text,
+    transfer_txn_server_id text,
     transfer_registration_expiration_time timestamp with time zone,
     transfer_gaining_client_id text,
     transfer_losing_client_id text,
     transfer_pending_expiration_time timestamp with time zone,
     transfer_request_time timestamp with time zone,
-    transfer_status integer
+    transfer_status text
 );
 
 
@@ -188,16 +188,16 @@ CREATE TABLE public."Domain" (
     transfer_server_approve_autorenew_poll_message_id bigint,
     transfer_server_approve_billing_event_id bigint,
     transfer_server_approve_entity_ids text[],
-    transfer_period_unit integer,
+    transfer_period_unit text,
     transfer_period_value integer,
-    transfer_client_txn_id text,
-    transfer_server_txn_id text,
+    transfer_txn_client_id text,
+    transfer_txn_server_id text,
     transfer_registration_expiration_time timestamp with time zone,
     transfer_gaining_client_id text,
     transfer_losing_client_id text,
     transfer_pending_expiration_time timestamp with time zone,
     transfer_request_time timestamp with time zone,
-    transfer_status integer
+    transfer_status text
 );
 
 

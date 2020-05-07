@@ -56,10 +56,10 @@ public class TransferData extends BaseTransferObject implements Buildable {
   @AttributeOverrides({
     @AttributeOverride(
         name = "serverTransactionId",
-        column = @Column(name = "transfer_server_txn_id")),
+        column = @Column(name = "transfer_txn_server_id")),
     @AttributeOverride(
         name = "clientTransactionId",
-        column = @Column(name = "transfer_client_txn_id"))
+        column = @Column(name = "transfer_txn_client_id"))
   })
   Trid transferRequestTrid;
 
