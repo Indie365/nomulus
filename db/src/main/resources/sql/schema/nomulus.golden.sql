@@ -227,6 +227,21 @@ CREATE TABLE public."Lock" (
 
 
 --
+-- Name: PollMessage; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public."PollMessage" (
+    type text NOT NULL,
+    id bigint NOT NULL,
+    client_id text NOT NULL,
+    event_time timestamp with time zone NOT NULL,
+    msg text,
+    autorenew_end_time timestamp with time zone,
+    autorenew_target_id text
+);
+
+
+--
 -- Name: PremiumEntry; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -428,6 +443,18 @@ ALTER SEQUENCE public."ReservedList_revision_id_seq" OWNED BY public."ReservedLi
 
 
 --
+-- Name: hibernate_sequence; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.hibernate_sequence
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
 -- Name: ClaimsList revision_id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -509,6 +536,14 @@ ALTER TABLE ONLY public."HostResource"
 
 ALTER TABLE ONLY public."Lock"
     ADD CONSTRAINT "Lock_pkey" PRIMARY KEY (resource_name, tld);
+
+
+--
+-- Name: PollMessage PollMessage_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."PollMessage"
+    ADD CONSTRAINT "PollMessage_pkey" PRIMARY KEY (id);
 
 
 --
