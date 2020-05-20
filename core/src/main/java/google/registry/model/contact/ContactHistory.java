@@ -14,11 +14,14 @@
 
 package google.registry.model.contact;
 
+import com.google.common.collect.ImmutableList;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.EntitySubclass;
 import google.registry.model.EppResource;
 import google.registry.model.reporting.HistoryEntry;
 import google.registry.persistence.VKey;
+import google.registry.schema.replay.DatastoreEntity;
+import google.registry.schema.replay.SqlEntity;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 
@@ -38,7 +41,7 @@ import javax.persistence.Entity;
       @javax.persistence.Index(columnList = "historyModificationTime")
     })
 @EntitySubclass
-public class ContactHistory extends HistoryEntry {
+public class ContactHistory extends HistoryEntry implements SqlEntity {
   // Store ContactBase instead of ContactResource so we don't pick up its @Id
   ContactBase contactBase;
 
@@ -58,6 +61,12 @@ public class ContactHistory extends HistoryEntry {
   @Override
   public Builder asBuilder() {
     return new Builder(clone(this));
+  }
+
+  // In Datastore, save as a HistoryEntry object
+  @Override
+  public ImmutableList<DatastoreEntity> toDatastoreEntities() {
+    return ImmutableList.of(asHistoryEntry());
   }
 
   public static class Builder extends HistoryEntry.Builder<ContactHistory, ContactHistory.Builder> {

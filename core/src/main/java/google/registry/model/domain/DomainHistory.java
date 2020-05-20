@@ -14,6 +14,7 @@
 
 package google.registry.model.domain;
 
+import com.google.common.collect.ImmutableList;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.EntitySubclass;
 import google.registry.model.EppResource;
@@ -21,6 +22,8 @@ import google.registry.model.contact.ContactResource;
 import google.registry.model.host.HostResource;
 import google.registry.model.reporting.HistoryEntry;
 import google.registry.persistence.VKey;
+import google.registry.schema.replay.DatastoreEntity;
+import google.registry.schema.replay.SqlEntity;
 import java.util.Set;
 import javax.persistence.Access;
 import javax.persistence.AccessType;
@@ -45,7 +48,7 @@ import javax.persistence.JoinTable;
       @javax.persistence.Index(columnList = "historyModificationTime")
     })
 @EntitySubclass
-public class DomainHistory extends HistoryEntry {
+public class DomainHistory extends HistoryEntry implements SqlEntity {
   // Store DomainContent instead of DomainBase so we don't pick up its @Id
   DomainContent domainContent;
 
@@ -76,6 +79,12 @@ public class DomainHistory extends HistoryEntry {
     if (domainContent != null) {
       domainContent.nsHosts = nsHosts;
     }
+  }
+
+  // In Datastore, save as a HistoryEntry object
+  @Override
+  public ImmutableList<DatastoreEntity> toDatastoreEntities() {
+    return ImmutableList.of(asHistoryEntry());
   }
 
   @Override
