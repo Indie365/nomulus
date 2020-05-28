@@ -41,6 +41,7 @@ import google.registry.model.reporting.HistoryEntry;
 import google.registry.model.transfer.TransferData.TransferServerApproveEntity;
 import google.registry.model.transfer.TransferResponse.ContactTransferResponse;
 import google.registry.model.transfer.TransferResponse.DomainTransferResponse;
+import google.registry.persistence.VKey;
 import google.registry.persistence.WithLongVKey;
 import java.util.List;
 import java.util.Optional;
@@ -282,6 +283,10 @@ public abstract class PollMessage extends ImmutableObject
 
     public DateTime getAutorenewEndTime() {
       return autorenewEndTime;
+    }
+
+    public VKey<Autorenew> createVKey() {
+      return VKey.createOfy(Autorenew.class, Key.create(this));
     }
 
     @Override
