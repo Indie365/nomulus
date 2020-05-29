@@ -70,7 +70,6 @@ import org.joda.time.DateTime;
 @Entity
 @ReportedOn
 @ExternalMessagingName("message")
-@WithLongVKey
 public abstract class PollMessage extends ImmutableObject
     implements Buildable, TransferServerApproveEntity {
 
@@ -114,6 +113,9 @@ public abstract class PollMessage extends ImmutableObject
   }
 
   public abstract ImmutableList<ResponseData> getResponseData();
+
+  @Override
+  public abstract VKey<? extends PollMessage> createVKey();
 
   /** Override Buildable.asBuilder() to give this method stronger typing. */
   @Override
@@ -183,6 +185,7 @@ public abstract class PollMessage extends ImmutableObject
    * <p>One-time poll messages are deleted from Datastore once they have been delivered and ACKed.
    */
   @EntitySubclass(index = false)
+  @WithLongVKey
   public static class OneTime extends PollMessage {
 
     // Response data. Objectify cannot persist a base class type, so we must have a separate field
@@ -192,6 +195,11 @@ public abstract class PollMessage extends ImmutableObject
     List<DomainPendingActionNotificationResponse> domainPendingActionNotificationResponses;
     List<DomainTransferResponse> domainTransferResponses;
     List<HostPendingActionNotificationResponse> hostPendingActionNotificationResponses;
+
+    @Override
+    public VKey<OneTime> createVKey() {
+      return VKey.createOfy(this.getClass(), Key.create(this));
+    }
 
     @Override
     public Builder asBuilder() {
@@ -268,6 +276,7 @@ public abstract class PollMessage extends ImmutableObject
    * happens.
    */
   @EntitySubclass(index = false)
+  @WithLongVKey
   public static class Autorenew extends PollMessage {
 
     /** The target id of the autorenew event. */
@@ -285,8 +294,9 @@ public abstract class PollMessage extends ImmutableObject
       return autorenewEndTime;
     }
 
+    @Override
     public VKey<Autorenew> createVKey() {
-      return VKey.createOfy(Autorenew.class, Key.create(this));
+      return VKey.createOfy(this.getClass(), Key.create(this));
     }
 
     @Override
