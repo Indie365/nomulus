@@ -1,19 +1,45 @@
+// Copyright 2017 The Nomulus Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package google.registry.reporting.spec11;
 
-import com.googlecode.objectify.annotation.Index;
 import google.registry.model.Buildable;
 import google.registry.model.ImmutableObject;
-import org.joda.time.DateTime;
+import google.registry.schema.replay.DatastoreEntity;
+import org.joda.time.LocalDate;
+import com.google.common.collect.ImmutableList;
 import google.registry.schema.replay.SqlEntity;
-
-import javax.persistence.*;
+import javax.persistence.Entity;
+import javax.persistence.Table;
+import javax.persistence.Index;
+import javax.persistence.Column;
+import javax.persistence.Enumerated;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.GeneratedValue;
+import javax.persistence.EnumType;
 
 import static google.registry.util.PreconditionsUtils.checkArgumentNotNull;
 
 @Entity
-@Table(name = "safebrowsing_threats")
-// TODO(legina): DATABASE INDEXES
-public class SafeBrowsing_Threats extends ImmutableObject implements Buildable {
+@Table(
+    indexes = {
+      @Index(name = "registrar_id_idx", columnList = "registrarId"),
+      @Index(name = "tld_idx", columnList = "tld"),
+      @Index(name = "check_date_idx", columnList = "checkDate")
+    })
+public class SafeBrowsingThreats extends ImmutableObject implements Buildable, SqlEntity {
 
   /** The type of threat detected. */
   public enum ThreatType {
@@ -26,35 +52,34 @@ public class SafeBrowsing_Threats extends ImmutableObject implements Buildable {
   /** An auto-generated identifier and unique primary key for this entity. */
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
-  @Column(name = "id", nullable = false)
   Long id;
 
   /** The name of the offending domain */
-  @Column(name = "domain_name", nullable = false)
+  @Column(nullable = false)
   String domainName;
 
   /** The type of threat detected. */
-  @Column(name = "threat_type", nullable = false)
+  @Column(nullable = false)
   @Enumerated(EnumType.STRING)
   ThreatType threatType;
 
   /** Primary key of the domain table and unique identifier for all EPP resources. */
-  @Column(name = "repo_id", nullable = false)
+  @Column(nullable = false)
   String repoId;
 
   /** ID of the registrar. */
-  @Column(name = "registrar_id", nullable = false)
+  @Column(nullable = false)
   String registrarId;
 
   /** Date of run. */
-  @Column(name = "check_date", nullable = false)
-  DateTime checkDate;
+  @Column(nullable = false)
+  LocalDate checkDate;
 
   /** The domain's top-level domain. */
-  @Column(name = "tld", nullable = false)
+  @Column(nullable = false)
   String tld;
 
-  public Long getID() {
+  public Long getId() {
     return id;
   }
 
@@ -74,7 +99,7 @@ public class SafeBrowsing_Threats extends ImmutableObject implements Buildable {
     return registrarId;
   }
 
-  public DateTime getCheckDate() {
+  public LocalDate getCheckDate() {
     return checkDate;
   }
 
@@ -83,23 +108,28 @@ public class SafeBrowsing_Threats extends ImmutableObject implements Buildable {
   }
 
   @Override
+  public ImmutableList<DatastoreEntity> toDatastoreEntities() {
+    return ImmutableList.of(); // not stored in Datastore
+  }
+
+  @Override
   public Builder asBuilder() {
     return new Builder(clone(this));
   }
 
   /**
-   * A builder for constructing {@link google.registry.reporting.spec11.SafeBrowsing_Threats}, since
+   * A builder for constructing {@link google.registry.reporting.spec11.SafeBrowsingThreats}, since
    * it is immutable.
    */
-  public static class Builder extends Buildable.Builder<SafeBrowsing_Threats> {
+  public static class Builder extends Buildable.Builder<SafeBrowsingThreats> {
     public Builder() {}
 
-    private Builder(SafeBrowsing_Threats instance) {
+    private Builder(SafeBrowsingThreats instance) {
       super(instance);
     }
 
     @Override
-    public SafeBrowsing_Threats build() {
+    public SafeBrowsingThreats build() {
       checkArgumentNotNull(getInstance().id, "ID cannot be null");
       checkArgumentNotNull(getInstance().domainName, "Domain name cannot be null");
       checkArgumentNotNull(getInstance().threatType, "Threat type cannot be null");
@@ -136,7 +166,7 @@ public class SafeBrowsing_Threats extends ImmutableObject implements Buildable {
       return this;
     }
 
-    public Builder setCheckDate(DateTime checkDate) {
+    public Builder setCheckDate(LocalDate checkDate) {
       getInstance().checkDate = checkDate;
       return this;
     }
