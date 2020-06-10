@@ -19,6 +19,7 @@
       *  Move tests to another (sub)project. This is not a big problem, but feels unnatural.
       *  Use Hibernate's ServiceRegistry for bootstrapping (not JPA-compliant)
     -->
+    <class>google.registry.model.reporting.SafeBrowsingThreat</class>
     <class>google.registry.model.billing.BillingEvent$Cancellation</class>
     <class>google.registry.model.billing.BillingEvent$OneTime</class>
     <class>google.registry.model.billing.BillingEvent$Recurring</class>
@@ -51,6 +52,7 @@
     <class>google.registry.persistence.converter.DateTimeConverter</class>
     <class>google.registry.persistence.converter.DurationConverter</class>
     <class>google.registry.persistence.converter.InetAddressSetConverter</class>
+    <class>google.registry.persistence.converter.LocalDateConverter</class>
     <class>google.registry.persistence.converter.PostalInfoChoiceListConverter</class>
     <class>google.registry.persistence.converter.RegistrarPocSetConverter</class>
     <class>google.registry.persistence.converter.StatusValueSetConverter</class>

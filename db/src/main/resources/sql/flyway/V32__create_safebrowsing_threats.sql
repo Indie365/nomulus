@@ -12,8 +12,9 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
-create table "SafeBrowsing_Threats" (
-    check_date date,
+create table "SafeBrowsingThreat" (
+    id  bigserial not null,
+    check_date text not null,
     domain_name text not null,
     registrar_id text not null,
     repo_id text not null,
@@ -21,3 +22,7 @@ create table "SafeBrowsing_Threats" (
     tld text not null,
     primary key (id)
 );
+
+create index safebrowsing_threat_registrar_id_idx on "SafeBrowsingThreat" (registrar_id);
+create index safebrowsing_threat_tld_idx on "SafeBrowsingThreat" (tld);
+create index safebrowsing_threat_check_date_idx on "SafeBrowsingThreat" (check_date);
