@@ -598,6 +598,40 @@ ALTER SEQUENCE public."ReservedList_revision_id_seq" OWNED BY public."ReservedLi
 
 
 --
+-- Name: SafeBrowsingThreat; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public."SafeBrowsingThreat" (
+    id bigint NOT NULL,
+    check_date text NOT NULL,
+    domain_name text NOT NULL,
+    registrar_id text NOT NULL,
+    repo_id text NOT NULL,
+    threat_type text NOT NULL,
+    tld text NOT NULL
+);
+
+
+--
+-- Name: SafeBrowsingThreat_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public."SafeBrowsingThreat_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: SafeBrowsingThreat_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public."SafeBrowsingThreat_id_seq" OWNED BY public."SafeBrowsingThreat".id;
+
+
+--
 -- Name: BillingCancellation billing_cancellation_id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -651,6 +685,13 @@ ALTER TABLE ONLY public."RegistryLock" ALTER COLUMN revision_id SET DEFAULT next
 --
 
 ALTER TABLE ONLY public."ReservedList" ALTER COLUMN revision_id SET DEFAULT nextval('public."ReservedList_revision_id_seq"'::regclass);
+
+
+--
+-- Name: SafeBrowsingThreat id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."SafeBrowsingThreat" ALTER COLUMN id SET DEFAULT nextval('public."SafeBrowsingThreat_id_seq"'::regclass);
 
 
 --
@@ -795,6 +836,14 @@ ALTER TABLE ONLY public."ReservedEntry"
 
 ALTER TABLE ONLY public."ReservedList"
     ADD CONSTRAINT "ReservedList_pkey" PRIMARY KEY (revision_id);
+
+
+--
+-- Name: SafeBrowsingThreat SafeBrowsingThreat_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."SafeBrowsingThreat"
+    ADD CONSTRAINT "SafeBrowsingThreat_pkey" PRIMARY KEY (id);
 
 
 --
@@ -1021,6 +1070,27 @@ CREATE INDEX registrarpoc_gae_user_id_idx ON public."RegistrarPoc" USING btree (
 --
 
 CREATE INDEX reservedlist_name_idx ON public."ReservedList" USING btree (name);
+
+
+--
+-- Name: safebrowsing_threat_check_date_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX safebrowsing_threat_check_date_idx ON public."SafeBrowsingThreat" USING btree (check_date);
+
+
+--
+-- Name: safebrowsing_threat_registrar_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX safebrowsing_threat_registrar_id_idx ON public."SafeBrowsingThreat" USING btree (registrar_id);
+
+
+--
+-- Name: safebrowsing_threat_tld_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX safebrowsing_threat_tld_idx ON public."SafeBrowsingThreat" USING btree (tld);
 
 
 --

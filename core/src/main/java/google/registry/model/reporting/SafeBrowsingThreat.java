@@ -1,4 +1,4 @@
-// Copyright 2017 The Nomulus Authors. All Rights Reserved.
+// Copyright 2020 The Nomulus Authors. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,34 +12,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package google.registry.reporting.spec11;
+package google.registry.model.reporting;
 
+import static google.registry.util.PreconditionsUtils.checkArgumentNotNull;
+
+import com.google.common.collect.ImmutableList;
 import google.registry.model.Buildable;
 import google.registry.model.ImmutableObject;
 import google.registry.schema.replay.DatastoreEntity;
-import org.joda.time.LocalDate;
-import com.google.common.collect.ImmutableList;
 import google.registry.schema.replay.SqlEntity;
-import javax.persistence.Entity;
-import javax.persistence.Table;
-import javax.persistence.Index;
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.Enumerated;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.GeneratedValue;
 import javax.persistence.EnumType;
-
-import static google.registry.util.PreconditionsUtils.checkArgumentNotNull;
+import javax.persistence.GenerationType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.Index;
+import javax.persistence.Table;
+import org.joda.time.LocalDate;
 
 @Entity
 @Table(
     indexes = {
-      @Index(name = "registrar_id_idx", columnList = "registrarId"),
-      @Index(name = "tld_idx", columnList = "tld"),
-      @Index(name = "check_date_idx", columnList = "checkDate")
+      @Index(name = "safebrowsing_threat_registrar_id_idx", columnList = "registrarId"),
+      @Index(name = "safebrowsing_threat_tld_idx", columnList = "tld"),
+      @Index(name = "safebrowsing_threat_check_date_idx", columnList = "checkDate")
     })
-public class SafeBrowsingThreats extends ImmutableObject implements Buildable, SqlEntity {
+public class SafeBrowsingThreat extends ImmutableObject implements Buildable, SqlEntity {
 
   /** The type of threat detected. */
   public enum ThreatType {
@@ -117,20 +117,16 @@ public class SafeBrowsingThreats extends ImmutableObject implements Buildable, S
     return new Builder(clone(this));
   }
 
-  /**
-   * A builder for constructing {@link google.registry.reporting.spec11.SafeBrowsingThreats}, since
-   * it is immutable.
-   */
-  public static class Builder extends Buildable.Builder<SafeBrowsingThreats> {
+  /** A builder for constructing {@link SafeBrowsingThreat}, since it is immutable. */
+  public static class Builder extends Buildable.Builder<SafeBrowsingThreat> {
     public Builder() {}
 
-    private Builder(SafeBrowsingThreats instance) {
+    private Builder(SafeBrowsingThreat instance) {
       super(instance);
     }
 
     @Override
-    public SafeBrowsingThreats build() {
-      checkArgumentNotNull(getInstance().id, "ID cannot be null");
+    public SafeBrowsingThreat build() {
       checkArgumentNotNull(getInstance().domainName, "Domain name cannot be null");
       checkArgumentNotNull(getInstance().threatType, "Threat type cannot be null");
       checkArgumentNotNull(getInstance().repoId, "Repo ID cannot be null");
