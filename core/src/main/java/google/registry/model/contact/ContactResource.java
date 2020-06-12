@@ -197,8 +197,11 @@ public class ContactResource extends EppResource
 
   @Override
   public VKey<ContactResource> createVKey() {
-    // TODO(mmuller): create symmetric keys if we can ever reload both sides.
-    return VKey.createOfy(ContactResource.class, Key.create(this));
+    return VKey.create(ContactResource.class, getRepoId(), Key.create(this));
+  }
+
+  public static VKey<ContactResource> createVKey(Key<ContactResource> key) {
+    return VKey.create(ContactResource.class, key.getName(), key);
   }
 
   public String getContactId() {
