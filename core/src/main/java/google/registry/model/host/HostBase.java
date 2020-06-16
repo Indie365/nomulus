@@ -125,7 +125,7 @@ public class HostBase extends EppResource {
   }
 
   @Override
-  public VKey<? extends EppResource> createVKey() {
+  public VKey<? extends HostBase> createVKey() {
     return VKey.createOfy(HostBase.class, Key.create(this));
   }
 

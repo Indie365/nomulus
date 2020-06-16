@@ -184,6 +184,10 @@ public class HistoryEntry extends ImmutableObject implements Buildable {
   @Transient // domain-specific
   Set<DomainTransactionRecord> domainTransactionRecords;
 
+  public Long getId() {
+    return id;
+  }
+
   public Key<? extends EppResource> getParent() {
     return parent;
   }
