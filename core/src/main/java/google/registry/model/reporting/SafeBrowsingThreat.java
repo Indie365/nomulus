@@ -14,13 +14,13 @@
 
 package google.registry.model.reporting;
 
-import static google.registry.util.PreconditionsUtils.checkArgumentNotNull;
-
 import com.google.common.collect.ImmutableList;
 import google.registry.model.Buildable;
 import google.registry.model.ImmutableObject;
 import google.registry.schema.replay.DatastoreEntity;
 import google.registry.schema.replay.SqlEntity;
+import org.joda.time.LocalDate;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Enumerated;
@@ -30,7 +30,8 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.Index;
 import javax.persistence.Table;
-import org.joda.time.LocalDate;
+
+import static google.registry.util.PreconditionsUtils.checkArgumentNotNull;
 
 @Entity
 @Table(
@@ -66,7 +67,7 @@ public class SafeBrowsingThreat extends ImmutableObject implements Buildable, Sq
 
   /** Primary key of the domain table and unique identifier for all EPP resources. */
   @Column(nullable = false)
-  String repoId;
+  String domainRepoId;
 
   /** ID of the registrar at the moment of the scan. Domains may change registrars over time */
   @Column(nullable = false)
@@ -92,8 +93,8 @@ public class SafeBrowsingThreat extends ImmutableObject implements Buildable, Sq
     return threatType;
   }
 
-  public String getRepoId() {
-    return repoId;
+  public String getDomainRepoId() {
+    return domainRepoId;
   }
 
   public String getRegistrarId() {
@@ -130,7 +131,7 @@ public class SafeBrowsingThreat extends ImmutableObject implements Buildable, Sq
     public SafeBrowsingThreat build() {
       checkArgumentNotNull(getInstance().domainName, "Domain name cannot be null");
       checkArgumentNotNull(getInstance().threatType, "Threat type cannot be null");
-      checkArgumentNotNull(getInstance().repoId, "Repo ID cannot be null");
+      checkArgumentNotNull(getInstance().domainRepoId, "Repo ID cannot be null");
       checkArgumentNotNull(getInstance().registrarId, "Registrar ID cannot be null");
       checkArgumentNotNull(getInstance().checkDate, "Check date cannot be null");
       checkArgumentNotNull(getInstance().tld, "TLD cannot be null");
@@ -153,8 +154,8 @@ public class SafeBrowsingThreat extends ImmutableObject implements Buildable, Sq
       return this;
     }
 
-    public Builder setRepoId(String repoId) {
-      getInstance().repoId = repoId;
+    public Builder setDomainRepoId(String domainRepoId) {
+      getInstance().domainRepoId = domainRepoId;
       return this;
     }
 

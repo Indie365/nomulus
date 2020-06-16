@@ -14,20 +14,21 @@
 
 package google.registry.persistence.converter;
 
-import static com.google.common.truth.Truth.assertThat;
-import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
-
 import google.registry.model.ImmutableObject;
 import google.registry.persistence.VKey;
 import google.registry.persistence.transaction.JpaTestRules;
 import google.registry.persistence.transaction.JpaTestRules.JpaUnitTestRule;
 import google.registry.schema.replay.EntityTest;
-import javax.persistence.Entity;
-import javax.persistence.Id;
 import org.joda.time.LocalDate;
 import org.joda.time.format.ISODateTimeFormat;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+
+import javax.persistence.Entity;
+import javax.persistence.Id;
+
+import static com.google.common.truth.Truth.assertThat;
+import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
 
 /** Unit tests for {@link LocalDateConverter}. */
 public class LocalDateConverterTest {
@@ -38,59 +39,27 @@ public class LocalDateConverterTest {
           .withEntityClass(LocalDateConverterTestEntity.class)
           .buildUnitTestRule();
 
-  private final LocalDateConverter converter = new LocalDateConverter();
-
-  private final LocalDate date = LocalDate.parse("2020-06-10", ISODateTimeFormat.date());
+  private final LocalDate exampleDate = LocalDate.parse("2020-06-10", ISODateTimeFormat.date());
 
   @Test
-  public void convertToDatabaseColumn_returnsNullIfInputIsNull() {
-    assertThat(converter.convertToDatabaseColumn(null)).isNull();
-  }
-
-  @Test
-  public void convertToDatabaseColumn_convertsCorrectly() {
-    assertThat(converter.convertToDatabaseColumn(date)).isEqualTo("2020-06-10");
-  }
-
-  @Test
-  public void convertToEntityAttribute_returnsNullIfInputIsNull() {
-    assertThat(converter.convertToEntityAttribute(null)).isNull();
-  }
-
-  @Test
-  public void convertToEntityAttribute_convertsCorrectly() {
-    assertThat(converter.convertToEntityAttribute("2020-06-10")).isEqualTo(date);
+  public void testNullInput() {
+    LocalDateConverterTestEntity retrievedEntity = persistAndLoadTestEntity(null);
+    assertThat(retrievedEntity.date).isNull();
   }
 
   @Test
   public void testSaveAndLoad_success() {
-    instantiateAndPersistTestEntity();
+    LocalDateConverterTestEntity retrievedEntity = persistAndLoadTestEntity(exampleDate);
+    assertThat(retrievedEntity.date).isEqualTo(exampleDate);
+  }
+
+  private LocalDateConverterTestEntity persistAndLoadTestEntity(LocalDate date) {
+    LocalDateConverterTestEntity entity = new LocalDateConverterTestEntity(date);
+    jpaTm().transact(() -> jpaTm().saveNew(entity));
     LocalDateConverterTestEntity retrievedEntity =
         jpaTm()
             .transact(() -> jpaTm().load(VKey.createSql(LocalDateConverterTestEntity.class, "id")));
-    assertThat(retrievedEntity.date.toString()).isEqualTo("2020-06-10");
-  }
-
-  @Test
-  public void roundTripConversion() {
-    instantiateAndPersistTestEntity();
-    jpaTm()
-        .transact(
-            () ->
-                jpaTm()
-                    .getEntityManager()
-                    .createNativeQuery(
-                        "SELECT date FROM \"LocalDateConverterTestEntity\" WHERE name = 'id'"));
-    LocalDateConverterTestEntity persisted =
-        jpaTm()
-            .transact(
-                () -> jpaTm().getEntityManager().find(LocalDateConverterTestEntity.class, "id"));
-    assertThat(persisted.date).isEqualTo(date);
-  }
-
-  private void instantiateAndPersistTestEntity() {
-    LocalDateConverterTestEntity entity = new LocalDateConverterTestEntity(date);
-    jpaTm().transact(() -> jpaTm().saveNew(entity));
+    return retrievedEntity;
   }
 
   /** Override entity name to avoid the nested class reference. */

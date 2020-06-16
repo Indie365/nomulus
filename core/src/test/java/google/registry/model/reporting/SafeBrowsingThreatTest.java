@@ -16,13 +16,13 @@ package google.registry.model.reporting;
 
 import google.registry.model.EntityTestCase;
 import google.registry.persistence.VKey;
+import google.registry.testing.DatastoreHelper;
 import org.joda.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static com.google.common.truth.Truth.assertThat;
 import static google.registry.model.reporting.SafeBrowsingThreat.ThreatType.MALWARE;
-import static google.registry.model.reporting.SafeBrowsingThreat.ThreatType.UNWANTED_SOFTWARE;
 import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
 import static google.registry.testing.SqlHelper.saveRegistrar;
 import static org.junit.Assert.assertThrows;
@@ -30,8 +30,7 @@ import static org.junit.Assert.assertThrows;
 /** Unit tests for {@link SafeBrowsingThreat}. */
 public class SafeBrowsingThreatTest extends EntityTestCase {
 
-  private SafeBrowsingThreat threat1;
-  private SafeBrowsingThreat threat2;
+  private SafeBrowsingThreat threatOrg;
   private final LocalDate date = new LocalDate();
 
   public SafeBrowsingThreatTest() {
@@ -40,80 +39,72 @@ public class SafeBrowsingThreatTest extends EntityTestCase {
 
   @BeforeEach
   public void setUp() {
-    saveRegistrar("registrar1");
-    saveRegistrar("registrar2");
+    String domainForeignKey = DatastoreHelper.persistActiveDomain("foo.tld").getForeignKey();
+    String registrarForeignKey = "registrar";
+    saveRegistrar(registrarForeignKey);
 
-    threat1 =
+    threatOrg =
         new SafeBrowsingThreat.Builder()
             .setThreatType(MALWARE)
             .setCheckDate(date)
             .setDomainName("threat.org")
             .setTld("org")
-            .setRepoId("threat1")
-            .setRegistrarId("registrar1")
+            .setDomainRepoId(domainForeignKey)
+            .setRegistrarId(registrarForeignKey)
             .build();
 
-    threat2 =
-        new SafeBrowsingThreat.Builder()
-            .setThreatType(UNWANTED_SOFTWARE)
-            .setCheckDate(date)
-            .setDomainName("threat.com")
-            .setTld("com")
-            .setRepoId("threat2")
-            .setRegistrarId("registrar2")
-            .build();
-
-    jpaTm().transact(() -> jpaTm().saveNew(threat1));
-    jpaTm().transact(() -> jpaTm().saveNew(threat2));
+    jpaTm().transact(() -> jpaTm().saveNew(threatOrg));
   }
 
   @Test
   public void testPersistence() {
-    VKey<SafeBrowsingThreat> threat1VKey = VKey.createSql(SafeBrowsingThreat.class, 1L);
-    SafeBrowsingThreat persistedThreat1 = jpaTm().transact(() -> jpaTm().load(threat1VKey));
-    assertThreatsEqual(threat1, persistedThreat1);
+    VKey<SafeBrowsingThreat> threatOrgVKey = VKey.createSql(SafeBrowsingThreat.class, 1L);
+    SafeBrowsingThreat persistedThreatOrg = jpaTm().transact(() -> jpaTm().load(threatOrgVKey));
+    assertThreatsEqual(threatOrg, persistedThreatOrg);
   }
 
   @Test
   public void testFailure_threatsWithNullFields() {
     assertThrows(
         IllegalArgumentException.class,
-        () ->
-            new SafeBrowsingThreat.Builder()
-                .setThreatType(null)
-                .setCheckDate(date)
-                .setDomainName("threat.com")
-                .setTld("com")
-                .setRepoId("threat2")
-                .setRegistrarId("registrar2")
-                .build());
+        () -> commonInit(new SafeBrowsingThreat.Builder()).setTld(null).build());
 
     assertThrows(
         IllegalArgumentException.class,
-        () -> new SafeBrowsingThreat.Builder().setTld(null).build());
+        () -> commonInit(new SafeBrowsingThreat.Builder()).setRegistrarId(null).build());
 
     assertThrows(
         IllegalArgumentException.class,
-        () -> new SafeBrowsingThreat.Builder().setCheckDate(null).build());
+        () -> commonInit(new SafeBrowsingThreat.Builder()).setDomainName(null).build());
 
     assertThrows(
         IllegalArgumentException.class,
-        () -> new SafeBrowsingThreat.Builder().setDomainName(null).build());
+        () -> commonInit(new SafeBrowsingThreat.Builder()).setCheckDate(null).build());
 
     assertThrows(
         IllegalArgumentException.class,
-        () -> new SafeBrowsingThreat.Builder().setRepoId(null).build());
+        () -> commonInit(new SafeBrowsingThreat.Builder()).setThreatType(null).build());
 
     assertThrows(
         IllegalArgumentException.class,
-        () -> new SafeBrowsingThreat.Builder().setRegistrarId(null).build());
+        () -> commonInit(new SafeBrowsingThreat.Builder()).setDomainRepoId(null).build());
+  }
+
+  private SafeBrowsingThreat.Builder commonInit(SafeBrowsingThreat.Builder builder) {
+    return builder
+        .setTld("com")
+        .setRegistrarId("testRegistrar")
+        .setDomainName("threat.com")
+        .setCheckDate(date)
+        .setThreatType(MALWARE)
+        .setDomainRepoId("testDomain");
   }
 
   private void assertThreatsEqual(SafeBrowsingThreat threat1, SafeBrowsingThreat threat2) {
     assertThat(threat1.getCheckDate()).isEqualTo(threat2.getCheckDate());
     assertThat(threat1.getTld()).isEqualTo(threat2.getTld());
     assertThat(threat1.getThreatType()).isEqualTo(threat2.getThreatType());
-    assertThat(threat1.getRepoId()).isEqualTo(threat2.getRepoId());
+    assertThat(threat1.getDomainRepoId()).isEqualTo(threat2.getDomainRepoId());
     assertThat(threat1.getRegistrarId()).isEqualTo(threat2.getRegistrarId());
     assertThat(threat1.getDomainName()).isEqualTo(threat2.getDomainName());
   }

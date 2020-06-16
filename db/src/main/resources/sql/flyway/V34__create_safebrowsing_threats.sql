@@ -17,7 +17,7 @@ create table "SafeBrowsingThreat" (
     check_date text not null,
     domain_name text not null,
     registrar_id text not null,
-    repo_id text not null,
+    domain_repo_id text not null,
     threat_type text not null,
     tld text not null,
     primary key (id)
@@ -26,3 +26,13 @@ create table "SafeBrowsingThreat" (
 create index safebrowsing_threat_registrar_id_idx on "SafeBrowsingThreat" (registrar_id);
 create index safebrowsing_threat_tld_idx on "SafeBrowsingThreat" (tld);
 create index safebrowsing_threat_check_date_idx on "SafeBrowsingThreat" (check_date);
+
+alter table if exists "SafeBrowsingThreat"
+    add constraint fk_safebrowsing_threat_registrar_id
+    foreign key (registrar_id)
+    references "Registrar";
+
+alter table if exists "SafeBrowsingThreat"
+    add constraint fk_safebrowsing_threat_domain_repo_id
+    foreign key (domain_repo_id)
+    references "Domain";
