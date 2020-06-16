@@ -629,7 +629,7 @@ CREATE TABLE public."SafeBrowsingThreat" (
     check_date text NOT NULL,
     domain_name text NOT NULL,
     registrar_id text NOT NULL,
-    repo_id text NOT NULL,
+    domain_repo_id text NOT NULL,
     threat_type text NOT NULL,
     tld text NOT NULL
 );
@@ -1362,6 +1362,22 @@ ALTER TABLE ONLY public."PollMessage"
 
 ALTER TABLE ONLY public."PollMessage"
     ADD CONSTRAINT fk_poll_message_transfer_response_losing_registrar_id FOREIGN KEY (transfer_response_losing_registrar_id) REFERENCES public."Registrar"(registrar_id);
+
+
+--
+-- Name: SafeBrowsingThreat fk_safebrowsing_threat_domain_repo_id; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."SafeBrowsingThreat"
+    ADD CONSTRAINT fk_safebrowsing_threat_domain_repo_id FOREIGN KEY (domain_repo_id) REFERENCES public."Domain"(repo_id);
+
+
+--
+-- Name: SafeBrowsingThreat fk_safebrowsing_threat_registrar_id; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."SafeBrowsingThreat"
+    ADD CONSTRAINT fk_safebrowsing_threat_registrar_id FOREIGN KEY (registrar_id) REFERENCES public."Registrar"(registrar_id);
 
 
 --

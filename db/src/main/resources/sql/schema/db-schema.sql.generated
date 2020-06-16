@@ -386,19 +386,18 @@
         should_publish boolean not null,
         primary key (revision_id)
     );
-create index IDXih4b2tea127p5rb61gje6e1y2 on "BillingCancellation" (registrar_id);
 
     create table "SafeBrowsingThreat" (
        id  bigserial not null,
         check_date text not null,
         domain_name text not null,
+        domain_repo_id text not null,
         registrar_id text not null,
-        repo_id text not null,
         threat_type text not null,
         tld text not null,
         primary key (id)
     );
-create index IDXeokttmxtpq2hohcioe5t2242b on "BillingCancellation" (client_id);
+create index IDXih4b2tea127p5rb61gje6e1y2 on "BillingCancellation" (registrar_id);
 create index IDX2exdfbx6oiiwnhr8j6gjpqt2j on "BillingCancellation" (event_time);
 create index IDXqa3g92jc17e8dtiaviy4fet4x on "BillingCancellation" (billing_time);
 create index IDXqspv57gj2led8ly42fq01t7m7 on "BillingEvent" (registrar_id);
