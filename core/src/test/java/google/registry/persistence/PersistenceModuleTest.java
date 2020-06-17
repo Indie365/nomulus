@@ -41,7 +41,7 @@ public class PersistenceModuleTest {
             database.getJdbcUrl(),
             database.getUsername(),
             database.getPassword(),
-            PersistenceModule.providesDefaultDatabaseConfigs());
+            PersistenceModule.provideDefaultDatabaseConfigs());
   }
 
   @After
