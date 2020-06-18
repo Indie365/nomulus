@@ -25,9 +25,10 @@ import com.google.common.collect.ImmutableSet;
 import google.registry.model.EntityTestCase;
 import google.registry.model.contact.ContactResource;
 import google.registry.model.domain.DomainBase;
-import google.registry.model.transfer.TransferData;
+import google.registry.model.transfer.ContactTransferData;
 import google.registry.persistence.VKey;
 import org.joda.time.LocalDate;
+import org.joda.time.format.ISODateTimeFormat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -35,7 +36,7 @@ import org.junit.jupiter.api.Test;
 public class SafeBrowsingThreatTest extends EntityTestCase {
 
   private SafeBrowsingThreat threat;
-  private final LocalDate date = new LocalDate();
+  private static final LocalDate DATE = LocalDate.parse("2020-06-10", ISODateTimeFormat.date());
 
   public SafeBrowsingThreatTest() {
     super(true);
@@ -43,11 +44,9 @@ public class SafeBrowsingThreatTest extends EntityTestCase {
 
   @BeforeEach
   public void setUp() {
-    DomainBase domain;
-    ContactResource registrantContact;
-    VKey<ContactResource> registrantContactKey;
 
-    registrantContactKey = VKey.createSql(ContactResource.class, "contact_id");
+    VKey<ContactResource> registrantContactKey =
+        VKey.createSql(ContactResource.class, "contact_id");
     String domainRepoId = "4-TLD";
     createTld("tld");
 
@@ -56,23 +55,23 @@ public class SafeBrowsingThreatTest extends EntityTestCase {
     saveRegistrar(registrarClientId);
 
     /** Persist a domain for the purpose of testing a foreign key reference. */
-    domain =
+    DomainBase domain =
         new DomainBase()
             .asBuilder()
             .setCreationClientId(registrarClientId)
             .setPersistedCurrentSponsorClientId(registrarClientId)
-            .setFullyQualifiedDomainName("foo.tld")
+            .setDomainName("foo.tld")
             .setRepoId(domainRepoId)
             .setRegistrant(registrantContactKey)
             .setContacts(ImmutableSet.of())
             .build();
 
     /** Persist a contact for the foreign key reference in the Domain table. */
-    registrantContact =
+    ContactResource registrantContact =
         new ContactResource.Builder()
             .setRepoId("contact_id")
             .setCreationClientId(registrarClientId)
-            .setTransferData(new TransferData.Builder().build())
+            .setTransferData(new ContactTransferData.Builder().build())
             .setPersistedCurrentSponsorClientId(registrarClientId)
             .build();
 
@@ -86,7 +85,7 @@ public class SafeBrowsingThreatTest extends EntityTestCase {
     threat =
         new SafeBrowsingThreat.Builder()
             .setThreatType(MALWARE)
-            .setCheckDate(date)
+            .setCheckDate(DATE)
             .setDomainName("foo.tld")
             .setDomainRepoId(domainRepoId)
             .setRegistrarId(registrarClientId)
@@ -97,7 +96,7 @@ public class SafeBrowsingThreatTest extends EntityTestCase {
   public void testPersistence() {
     jpaTm().transact(() -> jpaTm().saveNew(threat));
 
-    VKey<SafeBrowsingThreat> threatVKey = VKey.createSql(SafeBrowsingThreat.class, 1L);
+    VKey<SafeBrowsingThreat> threatVKey = VKey.createSql(SafeBrowsingThreat.class, threat.getId());
     SafeBrowsingThreat persistedThreat = jpaTm().transact(() -> jpaTm().load(threatVKey));
     threat.id = persistedThreat.id;
     assertThat(threat).isEqualTo(persistedThreat);
@@ -106,32 +105,18 @@ public class SafeBrowsingThreatTest extends EntityTestCase {
   @Test
   public void testFailure_threatsWithNullFields() {
     assertThrows(
-        IllegalArgumentException.class,
-        () -> commonInit(new SafeBrowsingThreat.Builder()).setRegistrarId(null).build());
+        IllegalArgumentException.class, () -> threat.asBuilder().setRegistrarId(null).build());
 
     assertThrows(
-        IllegalArgumentException.class,
-        () -> commonInit(new SafeBrowsingThreat.Builder()).setDomainName(null).build());
+        IllegalArgumentException.class, () -> threat.asBuilder().setDomainName(null).build());
 
     assertThrows(
-        IllegalArgumentException.class,
-        () -> commonInit(new SafeBrowsingThreat.Builder()).setCheckDate(null).build());
+        IllegalArgumentException.class, () -> threat.asBuilder().setCheckDate(null).build());
 
     assertThrows(
-        IllegalArgumentException.class,
-        () -> commonInit(new SafeBrowsingThreat.Builder()).setThreatType(null).build());
+        IllegalArgumentException.class, () -> threat.asBuilder().setThreatType(null).build());
 
     assertThrows(
-        IllegalArgumentException.class,
-        () -> commonInit(new SafeBrowsingThreat.Builder()).setDomainRepoId(null).build());
-  }
-
-  private SafeBrowsingThreat.Builder commonInit(SafeBrowsingThreat.Builder builder) {
-    return builder
-        .setRegistrarId("testRegistrar")
-        .setDomainName("threat.com")
-        .setCheckDate(date)
-        .setThreatType(MALWARE)
-        .setDomainRepoId("testDomain");
+        IllegalArgumentException.class, () -> threat.asBuilder().setDomainRepoId(null).build());
   }
 }
