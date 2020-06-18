@@ -28,6 +28,7 @@ import google.registry.model.domain.rgp.GracePeriodStatus;
 import google.registry.model.domain.secdns.DelegationSignerData;
 import google.registry.model.eppcommon.StatusValue;
 import google.registry.model.rde.RdeMode;
+import google.registry.model.transfer.DomainTransferData;
 import google.registry.model.transfer.TransferData;
 import google.registry.persistence.VKey;
 import google.registry.util.Idn;
@@ -61,7 +62,7 @@ final class DomainBaseToXjcConverter {
 
     // o  A <name> element that contains the fully qualified name of the
     //    domain name object.
-    bean.setName(model.getFullyQualifiedDomainName());
+    bean.setName(model.getDomainName());
 
     // o  A <roid> element that contains the repository object identifier
     //    assigned to the domain name object when it was created.
@@ -69,7 +70,7 @@ final class DomainBaseToXjcConverter {
 
     // o  An OPTIONAL <uName> element that contains the name of the domain
     //    name in Unicode character set.  It MUST be provided if available.
-    bean.setUName(Idn.toUnicode(model.getFullyQualifiedDomainName()));
+    bean.setUName(Idn.toUnicode(model.getDomainName()));
 
     // o  An OPTIONAL <idnTableId> element that references the IDN Table
     //    used for the IDN.  This corresponds to the "id" attribute of the
@@ -142,7 +143,7 @@ final class DomainBaseToXjcConverter {
     //    it is that with host attributes, you inline the nameserver data
     //    on each domain; with host objects, you normalize the nameserver
     //    data to a separate EPP object.
-    ImmutableSet<String> linkedNameserverHostNames = model.loadNameserverFullyQualifiedHostNames();
+    ImmutableSet<String> linkedNameserverHostNames = model.loadNameserverHostNames();
     if (!linkedNameserverHostNames.isEmpty()) {
       XjcDomainNsType nameservers = new XjcDomainNsType();
       for (String hostName : linkedNameserverHostNames) {
@@ -153,7 +154,7 @@ final class DomainBaseToXjcConverter {
 
     switch (mode) {
       case FULL:
-        String domainName = model.getFullyQualifiedDomainName();
+        String domainName = model.getDomainName();
 
         // o  Zero or more OPTIONAL <rgpStatus> element to represent
         //    "pendingDelete" sub-statuses, including "redemptionPeriod",
@@ -234,7 +235,7 @@ final class DomainBaseToXjcConverter {
         //    *  An OPTIONAL <exDate> element that contains the end of the
         //       domain name object's validity period (expiry date) if the
         //       transfer caused or causes a change in the validity period.
-        if (!model.getTransferData().equals(TransferData.EMPTY)) {
+        if (!model.getTransferData().isEmpty()) {
           // Temporary check to make sure that there really was a transfer. A bug caused spurious
           // empty transfer records to get generated for deleted domains.
           // TODO(b/33289763): remove the hasGainingAndLosingRegistrars check in February 2017
@@ -258,7 +259,7 @@ final class DomainBaseToXjcConverter {
   }
 
   /** Converts {@link TransferData} to {@link XjcRdeDomainTransferDataType}. */
-  private static XjcRdeDomainTransferDataType convertTransferData(TransferData model) {
+  private static XjcRdeDomainTransferDataType convertTransferData(DomainTransferData model) {
     XjcRdeDomainTransferDataType bean = new XjcRdeDomainTransferDataType();
     bean.setTrStatus(
         XjcEppcomTrStatusType.fromValue(model.getTransferStatus().getXmlName()));

@@ -31,7 +31,7 @@ import google.registry.model.billing.BillingEvent;
 import google.registry.model.domain.DomainBase;
 import google.registry.model.eppcommon.StatusValue;
 import google.registry.model.eppcommon.Trid;
-import google.registry.model.transfer.TransferData;
+import google.registry.model.transfer.DomainTransferData;
 import google.registry.model.transfer.TransferStatus;
 import google.registry.persistence.VKey;
 import org.joda.time.DateTime;
@@ -58,7 +58,7 @@ public class HostResourceTest extends EntityTestCase {
                 .asBuilder()
                 .setRepoId("1-COM")
                 .setTransferData(
-                    new TransferData.Builder()
+                    new DomainTransferData.Builder()
                         .setGainingClientId("gaining")
                         .setLosingClientId("losing")
                         .setPendingTransferExpirationTime(fakeClock.nowUtc())
@@ -74,7 +74,7 @@ public class HostResourceTest extends EntityTestCase {
             cloneAndSetAutoTimestamps(
                 new HostResource.Builder()
                     .setRepoId("DEADBEEF-COM")
-                    .setFullyQualifiedHostName("ns1.example.com")
+                    .setHostName("ns1.example.com")
                     .setCreationClientId("a registrar")
                     .setLastEppUpdateTime(fakeClock.nowUtc())
                     .setLastEppUpdateClientId("another registrar")
@@ -172,7 +172,7 @@ public class HostResourceTest extends EntityTestCase {
     IllegalArgumentException thrown =
         assertThrows(
             IllegalArgumentException.class,
-            () -> host.asBuilder().setFullyQualifiedHostName("AAA.BBB.CCC"));
+            () -> host.asBuilder().setHostName("AAA.BBB.CCC"));
     assertThat(thrown)
         .hasMessageThat()
         .contains("Host name must be in puny-coded, lower-case form");
@@ -183,7 +183,7 @@ public class HostResourceTest extends EntityTestCase {
     IllegalArgumentException thrown =
         assertThrows(
             IllegalArgumentException.class,
-            () -> host.asBuilder().setFullyQualifiedHostName("みんな.みんな.みんな"));
+            () -> host.asBuilder().setHostName("みんな.みんな.みんな"));
     assertThat(thrown)
         .hasMessageThat()
         .contains("Host name must be in puny-coded, lower-case form");
@@ -222,7 +222,7 @@ public class HostResourceTest extends EntityTestCase {
                 new HostResource.Builder()
                     .setCreationTime(day2)
                     .setRepoId("DEADBEEF-COM")
-                    .setFullyQualifiedHostName("ns1.example.com")
+                    .setHostName("ns1.example.com")
                     .setCreationClientId("a registrar")
                     .setLastEppUpdateTime(fakeClock.nowUtc())
                     .setLastEppUpdateClientId("another registrar")

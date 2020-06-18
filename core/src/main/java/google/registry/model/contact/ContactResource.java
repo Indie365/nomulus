@@ -30,13 +30,15 @@ import google.registry.model.EppResource.ResourceWithTransferData;
 import google.registry.model.annotations.ExternalMessagingName;
 import google.registry.model.annotations.ReportedOn;
 import google.registry.model.contact.PostalInfo.Type;
-import google.registry.model.transfer.TransferData;
+import google.registry.model.transfer.ContactTransferData;
 import google.registry.persistence.VKey;
 import google.registry.persistence.WithStringVKey;
 import google.registry.schema.replay.DatastoreAndSqlEntity;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
+import javax.persistence.Access;
+import javax.persistence.AccessType;
 import javax.persistence.AttributeOverride;
 import javax.persistence.AttributeOverrides;
 import javax.persistence.Column;
@@ -63,6 +65,7 @@ import org.joda.time.DateTime;
     })
 @ExternalMessagingName("contact")
 @WithStringVKey
+@Access(AccessType.FIELD)
 public class ContactResource extends EppResource
     implements DatastoreAndSqlEntity, ForeignKeyedEppResource, ResourceWithTransferData {
 
@@ -170,7 +173,7 @@ public class ContactResource extends EppResource
   ContactAuthInfo authInfo;
 
   /** Data about any pending or past transfers on this contact. */
-  TransferData transferData;
+  ContactTransferData transferData;
 
   /**
    * The time that this resource was last transferred.
@@ -199,6 +202,13 @@ public class ContactResource extends EppResource
   public VKey<ContactResource> createVKey() {
     // TODO(mmuller): create symmetric keys if we can ever reload both sides.
     return VKey.createOfy(ContactResource.class, Key.create(this));
+  }
+
+  @Override
+  @javax.persistence.Id
+  @Access(AccessType.PROPERTY)
+  public String getRepoId() {
+    return super.getRepoId();
   }
 
   public String getContactId() {
@@ -242,8 +252,8 @@ public class ContactResource extends EppResource
   }
 
   @Override
-  public final TransferData getTransferData() {
-    return Optional.ofNullable(transferData).orElse(TransferData.EMPTY);
+  public final ContactTransferData getTransferData() {
+    return Optional.ofNullable(transferData).orElse(ContactTransferData.EMPTY);
   }
 
   @Override
@@ -285,7 +295,7 @@ public class ContactResource extends EppResource
 
   /** A builder for constructing {@link ContactResource}, since it is immutable. */
   public static class Builder extends EppResource.Builder<ContactResource, Builder>
-      implements BuilderWithTransferData<Builder> {
+      implements BuilderWithTransferData<ContactTransferData, Builder> {
 
     public Builder() {}
 
@@ -350,7 +360,7 @@ public class ContactResource extends EppResource
     }
 
     @Override
-    public Builder setTransferData(TransferData transferData) {
+    public Builder setTransferData(ContactTransferData transferData) {
       getInstance().transferData = transferData;
       return this;
     }
@@ -380,7 +390,7 @@ public class ContactResource extends EppResource
     public ContactResource build() {
       ContactResource instance = getInstance();
       // If TransferData is totally empty, set it to null.
-      if (TransferData.EMPTY.equals(instance.transferData)) {
+      if (ContactTransferData.EMPTY.equals(instance.transferData)) {
         setTransferData(null);
       }
       // Set the searchName using the internationalized and localized postal info names.

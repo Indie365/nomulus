@@ -52,7 +52,7 @@ import google.registry.model.host.HostResource;
 import google.registry.model.poll.PollMessage;
 import google.registry.model.registry.Registry;
 import google.registry.model.reporting.HistoryEntry;
-import google.registry.model.transfer.TransferData;
+import google.registry.model.transfer.DomainTransferData;
 import google.registry.model.transfer.TransferStatus;
 import google.registry.persistence.VKey;
 import org.joda.money.Money;
@@ -75,7 +75,7 @@ public class DomainBaseTest extends EntityTestCase {
     VKey<HostResource> hostKey =
         persistResource(
                 new HostResource.Builder()
-                    .setFullyQualifiedHostName("ns1.example.com")
+                    .setHostName("ns1.example.com")
                     .setSuperordinateDomain(VKey.createOfy(DomainBase.class, domainKey))
                     .setRepoId("1-COM")
                     .build())
@@ -107,7 +107,7 @@ public class DomainBaseTest extends EntityTestCase {
         persistResource(
             cloneAndSetAutoTimestamps(
                 new DomainBase.Builder()
-                    .setFullyQualifiedDomainName("example.com")
+                    .setDomainName("example.com")
                     .setRepoId("4-COM")
                     .setCreationClientId("a registrar")
                     .setLastEppUpdateTime(fakeClock.nowUtc())
@@ -133,7 +133,7 @@ public class DomainBaseTest extends EntityTestCase {
                     .setLaunchNotice(
                         LaunchNotice.create("tcnid", "validatorId", START_OF_TIME, START_OF_TIME))
                     .setTransferData(
-                        new TransferData.Builder()
+                        new DomainTransferData.Builder()
                             .setGainingClientId("gaining")
                             .setLosingClientId("losing")
                             .setPendingTransferExpirationTime(fakeClock.nowUtc())
@@ -267,7 +267,7 @@ public class DomainBaseTest extends EntityTestCase {
   @Test
   public void testEmptyTransferDataBecomesNull() {
     DomainBase withNull = newDomainBase("example.com").asBuilder().setTransferData(null).build();
-    DomainBase withEmpty = withNull.asBuilder().setTransferData(TransferData.EMPTY).build();
+    DomainBase withEmpty = withNull.asBuilder().setTransferData(DomainTransferData.EMPTY).build();
     assertThat(withNull).isEqualTo(withEmpty);
     assertThat(withEmpty.transferData).isNull();
   }
@@ -478,7 +478,7 @@ public class DomainBaseTest extends EntityTestCase {
         domain
             .asBuilder()
             .setRegistrationExpirationTime(oldExpirationTime)
-            .setTransferData(TransferData.EMPTY)
+            .setTransferData(DomainTransferData.EMPTY)
             .setGracePeriods(ImmutableSet.of())
             .setLastEppUpdateTime(null)
             .setLastEppUpdateClientId(null)
@@ -611,7 +611,7 @@ public class DomainBaseTest extends EntityTestCase {
     IllegalArgumentException thrown =
         assertThrows(
             IllegalArgumentException.class,
-            () -> domain.asBuilder().setFullyQualifiedDomainName("AAA.BBB"));
+            () -> domain.asBuilder().setDomainName("AAA.BBB"));
     assertThat(thrown)
         .hasMessageThat()
         .contains("Domain name must be in puny-coded, lower-case form");
@@ -622,7 +622,7 @@ public class DomainBaseTest extends EntityTestCase {
     IllegalArgumentException thrown =
         assertThrows(
             IllegalArgumentException.class,
-            () -> domain.asBuilder().setFullyQualifiedDomainName("みんな.みんな"));
+            () -> domain.asBuilder().setDomainName("みんな.みんな"));
     assertThat(thrown)
         .hasMessageThat()
         .contains("Domain name must be in puny-coded, lower-case form");
@@ -666,8 +666,8 @@ public class DomainBaseTest extends EntityTestCase {
     DateTime transferExpirationTime = now.minusDays(1);
     DateTime previousExpiration = now.minusDays(2);
 
-    TransferData transferData =
-        new TransferData.Builder()
+    DomainTransferData transferData =
+        new DomainTransferData.Builder()
             .setPendingTransferExpirationTime(transferExpirationTime)
             .setTransferStatus(TransferStatus.PENDING)
             .setGainingClientId("TheRegistrar")
@@ -694,8 +694,8 @@ public class DomainBaseTest extends EntityTestCase {
     DateTime transferExpirationTime = now.minusDays(1);
     DateTime previousExpiration = now.plusWeeks(2);
 
-    TransferData transferData =
-        new TransferData.Builder()
+    DomainTransferData transferData =
+        new DomainTransferData.Builder()
             .setPendingTransferExpirationTime(transferExpirationTime)
             .setTransferStatus(TransferStatus.PENDING)
             .setGainingClientId("TheRegistrar")
@@ -721,8 +721,8 @@ public class DomainBaseTest extends EntityTestCase {
     DateTime transferExpirationTime = now.plusDays(1);
     DateTime previousExpiration = now.plusWeeks(2);
 
-    TransferData transferData =
-        new TransferData.Builder()
+    DomainTransferData transferData =
+        new DomainTransferData.Builder()
             .setPendingTransferExpirationTime(transferExpirationTime)
             .setTransferStatus(TransferStatus.PENDING)
             .setGainingClientId("TheRegistrar")
@@ -747,8 +747,8 @@ public class DomainBaseTest extends EntityTestCase {
     DateTime transferExpirationTime = now.minusDays(1);
     DateTime previousExpiration = now.minusDays(2);
 
-    TransferData transferData =
-        new TransferData.Builder()
+    DomainTransferData transferData =
+        new DomainTransferData.Builder()
             .setPendingTransferExpirationTime(transferExpirationTime)
             .setTransferStatus(TransferStatus.PENDING)
             .setGainingClientId("TheRegistrar")

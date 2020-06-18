@@ -63,7 +63,7 @@ import google.registry.model.eppcommon.StatusValue;
 import google.registry.model.host.HostResource;
 import google.registry.model.poll.PollMessage;
 import google.registry.model.registry.Registry;
-import google.registry.model.transfer.TransferData;
+import google.registry.model.transfer.DomainTransferData;
 import google.registry.model.transfer.TransferStatus;
 import google.registry.persistence.VKey;
 import google.registry.persistence.WithStringVKey;
@@ -75,6 +75,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 import javax.annotation.Nullable;
+import javax.persistence.Access;
+import javax.persistence.AccessType;
 import javax.persistence.AttributeOverride;
 import javax.persistence.AttributeOverrides;
 import javax.persistence.Column;
@@ -104,13 +106,16 @@ import org.joda.time.Interval;
       @javax.persistence.Index(columnList = "creationTime"),
       @javax.persistence.Index(columnList = "currentSponsorRegistrarId"),
       @javax.persistence.Index(columnList = "deletionTime"),
-      @javax.persistence.Index(columnList = "fullyQualifiedDomainName"),
+      @javax.persistence.Index(columnList = "domainName"),
       @javax.persistence.Index(columnList = "tld")
     })
 @WithStringVKey
 @ExternalMessagingName("domain")
+@Access(AccessType.FIELD)
 public class DomainBase extends EppResource
-    implements DatastoreAndSqlEntity, ForeignKeyedEppResource, ResourceWithTransferData {
+    implements DatastoreAndSqlEntity,
+        ForeignKeyedEppResource,
+        ResourceWithTransferData<DomainTransferData> {
 
   /** The max number of years that a domain can be registered for, as set by ICANN policy. */
   public static final int MAX_REGISTRATION_YEARS = 10;
@@ -132,6 +137,8 @@ public class DomainBase extends EppResource
    *
    * @invariant fullyQualifiedDomainName == fullyQualifiedDomainName.toLowerCase(Locale.ENGLISH)
    */
+  // TODO(b/158858642): Rename this to domainName when we are off Datastore
+  @Column(name = "domainName")
   @Index String fullyQualifiedDomainName;
 
   /** The top level domain this is under, dernormalized from {@link #fullyQualifiedDomainName}. */
@@ -253,7 +260,7 @@ public class DomainBase extends EppResource
   String smdId;
 
   /** Data about any pending or past transfers on this domain. */
-  TransferData transferData;
+  DomainTransferData transferData;
 
   /**
    * The time that this resource was last transferred.
@@ -293,6 +300,13 @@ public class DomainBase extends EppResource
     allContacts = contactsBuilder.build();
   }
 
+  @Override
+  @javax.persistence.Id
+  @Access(AccessType.PROPERTY)
+  public String getRepoId() {
+    return super.getRepoId();
+  }
+
   public ImmutableSet<String> getSubordinateHosts() {
     return nullToEmptyImmutableCopy(subordinateHosts);
   }
@@ -322,8 +336,8 @@ public class DomainBase extends EppResource
   }
 
   @Override
-  public TransferData getTransferData() {
-    return Optional.ofNullable(transferData).orElse(TransferData.EMPTY);
+  public DomainTransferData getTransferData() {
+    return Optional.ofNullable(transferData).orElse(DomainTransferData.EMPTY);
   }
 
   @Override
@@ -336,7 +350,7 @@ public class DomainBase extends EppResource
     return fullyQualifiedDomainName;
   }
 
-  public String getFullyQualifiedDomainName() {
+  public String getDomainName() {
     return fullyQualifiedDomainName;
   }
 
@@ -402,7 +416,7 @@ public class DomainBase extends EppResource
   @Override
   public DomainBase cloneProjectedAtTime(final DateTime now) {
 
-    TransferData transferData = getTransferData();
+    DomainTransferData transferData = getTransferData();
     DateTime transferExpirationTime = transferData.getPendingTransferExpirationTime();
 
     // If there's a pending transfer that has expired, handle it.
@@ -540,13 +554,13 @@ public class DomainBase extends EppResource
   }
 
   /** Loads and returns the fully qualified host names of all linked nameservers. */
-  public ImmutableSortedSet<String> loadNameserverFullyQualifiedHostNames() {
+  public ImmutableSortedSet<String> loadNameserverHostNames() {
     return ofy()
         .load()
         .keys(getNameservers().stream().map(VKey::getOfyKey).collect(toImmutableSet()))
         .values()
         .stream()
-        .map(HostResource::getFullyQualifiedHostName)
+        .map(HostResource::getHostName)
         .collect(toImmutableSortedSet(Ordering.natural()));
   }
 
@@ -625,8 +639,11 @@ public class DomainBase extends EppResource
 
   @Override
   public VKey<DomainBase> createVKey() {
-    // TODO(mmuller): create symmetric keys if we can ever reload both sides.
-    return VKey.createOfy(DomainBase.class, Key.create(this));
+    return VKey.create(DomainBase.class, getRepoId(), Key.create(this));
+  }
+
+  public static VKey<DomainBase> createVKey(Key key) {
+    return VKey.create(DomainBase.class, key.getName(), key);
   }
 
   /** Predicate to determine if a given {@link DesignatedContact} is the registrant. */
@@ -641,7 +658,7 @@ public class DomainBase extends EppResource
 
   /** A builder for constructing {@link DomainBase}, since it is immutable. */
   public static class Builder extends EppResource.Builder<DomainBase, Builder>
-      implements BuilderWithTransferData<Builder> {
+      implements BuilderWithTransferData<DomainTransferData, Builder> {
 
     public Builder() {}
 
@@ -653,7 +670,7 @@ public class DomainBase extends EppResource
     public DomainBase build() {
       DomainBase instance = getInstance();
       // If TransferData is totally empty, set it to null.
-      if (TransferData.EMPTY.equals(getInstance().transferData)) {
+      if (DomainTransferData.EMPTY.equals(getInstance().transferData)) {
         setTransferData(null);
       }
       // A DomainBase has status INACTIVE if there are no nameservers.
@@ -664,7 +681,7 @@ public class DomainBase extends EppResource
       }
 
       checkArgumentNotNull(
-          emptyToNull(instance.fullyQualifiedDomainName), "Missing fullyQualifiedDomainName");
+          emptyToNull(instance.fullyQualifiedDomainName), "Missing domainName");
       if (instance.getRegistrant() == null
           && instance.allContacts.stream().anyMatch(IS_REGISTRANT)) {
         throw new IllegalArgumentException("registrant is null but is in allContacts");
@@ -674,11 +691,11 @@ public class DomainBase extends EppResource
       return super.build();
     }
 
-    public Builder setFullyQualifiedDomainName(String fullyQualifiedDomainName) {
+    public Builder setDomainName(String domainName) {
       checkArgument(
-          fullyQualifiedDomainName.equals(canonicalizeDomainName(fullyQualifiedDomainName)),
+          domainName.equals(canonicalizeDomainName(domainName)),
           "Domain name must be in puny-coded, lower-case form");
-      getInstance().fullyQualifiedDomainName = fullyQualifiedDomainName;
+      getInstance().fullyQualifiedDomainName = domainName;
       return thisCastToDerived();
     }
 
@@ -827,7 +844,7 @@ public class DomainBase extends EppResource
     }
 
     @Override
-    public Builder setTransferData(TransferData transferData) {
+    public Builder setTransferData(DomainTransferData transferData) {
       getInstance().transferData = transferData;
       return thisCastToDerived();
     }

@@ -53,7 +53,7 @@ import google.registry.model.poll.PollMessage;
 import google.registry.model.poll.PollMessage.Autorenew;
 import google.registry.model.rde.RdeMode;
 import google.registry.model.reporting.HistoryEntry;
-import google.registry.model.transfer.TransferData;
+import google.registry.model.transfer.DomainTransferData;
 import google.registry.model.transfer.TransferStatus;
 import google.registry.testing.AppEngineRule;
 import google.registry.testing.FakeClock;
@@ -262,7 +262,7 @@ public class DomainBaseToXjcConverterTest {
             .setDsData(
                 ImmutableSet.of(
                     DelegationSignerData.create(123, 200, 230, base16().decode("1234567890"))))
-            .setFullyQualifiedDomainName(Idn.toASCII("love.みんな"))
+            .setDomainName(Idn.toASCII("love.みんな"))
             .setLastTransferTime(DateTime.parse("1910-01-01T00:00:00Z"))
             .setLastEppUpdateClientId("IntoTheTempest")
             .setLastEppUpdateTime(DateTime.parse("1920-01-01T00:00:00Z"))
@@ -328,7 +328,7 @@ public class DomainBaseToXjcConverterTest {
                             .setParent(historyEntry)
                             .build())))
             .setTransferData(
-                new TransferData.Builder()
+                new DomainTransferData.Builder()
                     .setGainingClientId("gaining")
                     .setLosingClientId("losing")
                     .setPendingTransferExpirationTime(DateTime.parse("1925-04-20T00:00:00Z"))
@@ -407,7 +407,7 @@ public class DomainBaseToXjcConverterTest {
             .setCreationClientId("LawyerCat")
             .setCreationTimeForTest(DateTime.parse("1900-01-01T00:00:00Z"))
             .setPersistedCurrentSponsorClientId("BusinessCat")
-            .setFullyQualifiedHostName(Idn.toASCII(fqhn))
+            .setHostName(Idn.toASCII(fqhn))
             .setInetAddresses(ImmutableSet.of(InetAddresses.forString(ip)))
             .setLastTransferTime(DateTime.parse("1910-01-01T00:00:00Z"))
             .setLastEppUpdateClientId("CeilingCat")
