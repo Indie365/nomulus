@@ -628,8 +628,8 @@ CREATE TABLE public."SafeBrowsingThreat" (
     id bigint NOT NULL,
     check_date text NOT NULL,
     domain_name text NOT NULL,
-    registrar_id text NOT NULL,
     domain_repo_id text NOT NULL,
+    registrar_id text NOT NULL,
     threat_type text NOT NULL,
     tld text NOT NULL
 );

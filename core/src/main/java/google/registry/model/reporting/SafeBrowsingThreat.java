@@ -24,13 +24,13 @@ import google.registry.schema.replay.SqlEntity;
 import google.registry.util.DomainNameUtils;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Index;
 import javax.persistence.Table;
-import javax.persistence.EnumType;
-import javax.persistence.GenerationType;
 import org.joda.time.LocalDate;
 
 @Entity

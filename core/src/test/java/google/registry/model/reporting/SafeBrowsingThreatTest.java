@@ -36,9 +36,6 @@ public class SafeBrowsingThreatTest extends EntityTestCase {
 
   private SafeBrowsingThreat threat;
   private final LocalDate date = new LocalDate();
-  DomainBase domain;
-  ContactResource registrantContact;
-  VKey<ContactResource> registrantContactKey;
 
   public SafeBrowsingThreatTest() {
     super(true);
@@ -46,6 +43,10 @@ public class SafeBrowsingThreatTest extends EntityTestCase {
 
   @BeforeEach
   public void setUp() {
+    DomainBase domain;
+    ContactResource registrantContact;
+    VKey<ContactResource> registrantContactKey;
+
     registrantContactKey = VKey.createSql(ContactResource.class, "contact_id");
     String domainRepoId = "4-TLD";
     createTld("tld");
