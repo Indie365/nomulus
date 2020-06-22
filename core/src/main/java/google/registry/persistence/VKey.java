@@ -19,6 +19,7 @@ import static google.registry.util.PreconditionsUtils.checkArgumentNotNull;
 
 import com.googlecode.objectify.Key;
 import google.registry.model.ImmutableObject;
+import google.registry.model.translators.VKeyTranslatorFactory;
 import java.util.Optional;
 
 /**
@@ -114,5 +115,10 @@ public class VKey<T> extends ImmutableObject {
   /** Returns the objectify key if it exists. */
   public Optional<com.googlecode.objectify.Key<T>> maybeGetOfyKey() {
     return Optional.ofNullable(this.ofyKey);
+  }
+
+  /** Convenience method to construct a VKey from an objectify Key. */
+  public static <T> VKey<T> from(Key<T> key) {
+    return VKeyTranslatorFactory.createVKey(key);
   }
 }

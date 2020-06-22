@@ -127,10 +127,6 @@ public class HostResource extends EppResource
     return VKey.create(HostResource.class, getRepoId(), Key.create(this));
   }
 
-  public static VKey<HostResource> createVKey(Key<HostResource> key) {
-    return VKey.create(HostResource.class, key.getName(), key);
-  }
-
   @Deprecated
   @Override
   public HostResource cloneProjectedAtTime(DateTime now) {
