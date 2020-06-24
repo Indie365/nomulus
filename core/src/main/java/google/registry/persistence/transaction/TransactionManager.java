@@ -119,7 +119,7 @@ public interface TransactionManager {
    *
    * @throws NoSuchElementException if any of the keys are not found.
    */
-  <T> ImmutableList<T> load(Iterable<VKey<T>> keys);
+  <T> ImmutableList<T> load(Iterable<? extends VKey<? extends T>> keys);
 
   /** Loads all entities of the given type, returns empty if there is no such entity. */
   <T> ImmutableList<T> loadAll(Class<T> clazz);

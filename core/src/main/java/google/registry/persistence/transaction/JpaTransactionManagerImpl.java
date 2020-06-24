@@ -253,7 +253,7 @@ public class JpaTransactionManagerImpl implements JpaTransactionManager {
   }
 
   @Override
-  public <T> ImmutableList<T> load(Iterable<VKey<T>> keys) {
+  public <T> ImmutableList<T> load(Iterable<? extends VKey<? extends T>> keys) {
     checkArgumentNotNull(keys, "keys must be specified");
     assertInTransaction();
     return StreamSupport.stream(keys.spliterator(), false)

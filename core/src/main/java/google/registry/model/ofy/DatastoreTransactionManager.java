@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.googlecode.objectify.Key;
 import google.registry.persistence.VKey;
 import google.registry.persistence.transaction.TransactionManager;
-import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -156,12 +155,16 @@ public class DatastoreTransactionManager implements TransactionManager {
   }
 
   @Override
-  public <T> ImmutableList<T> load(Iterable<VKey<T>> keys) {
-    Iterator<Key<T>> iter =
-        StreamSupport.stream(keys.spliterator(), false).map(VKey::getOfyKey).iterator();
+  public <T> ImmutableList<T> load(Iterable<? extends VKey<? extends T>> keys) {
+    // We have to create a list to work around the wildcard capture issue here.
+    // See https://docs.oracle.com/javase/tutorial/java/generics/capture.html
+    ImmutableList<Key<T>> list =
+        StreamSupport.stream(keys.spliterator(), false)
+            .map(key -> (Key<T>) key.getOfyKey())
+            .collect(toImmutableList());
 
     // The lambda argument to keys() effectively converts Iterator -> Iterable.
-    return ImmutableList.copyOf(getOfy().load().keys(() -> iter).values());
+    return ImmutableList.copyOf(getOfy().load().keys(list).values());
   }
 
   @Override
