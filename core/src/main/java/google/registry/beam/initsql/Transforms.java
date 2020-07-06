@@ -435,7 +435,7 @@ public final class Transforms {
       }
     }
 
-    // TODO(weiminyu): Enhance Retrier and use it here.
+    // TODO(b/160632289): Enhance Retrier and use it here.
     private void retry(Runnable runnable) {
       int maxAttempts = 5;
       int initialDelayMillis = 100;
@@ -457,7 +457,7 @@ public final class Transforms {
     }
 
     /**
-     * Rethrows {@code throwable} if it is not (and does not have a cause) of {@code causeType},
+     * Rethrows {@code throwable} if it is not (and does not have a cause of) {@code causeType};
      * otherwise returns with no side effects.
      */
     private void throwIfNotCausedBy(Throwable throwable, Class<? extends Throwable> causeType) {
