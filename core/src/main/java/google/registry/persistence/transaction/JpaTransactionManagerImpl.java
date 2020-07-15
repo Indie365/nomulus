@@ -28,6 +28,8 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import google.registry.persistence.VKey;
 import google.registry.util.Clock;
+import google.registry.util.Retrier;
+import google.registry.util.SystemSleeper;
 import java.lang.reflect.Field;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
@@ -37,17 +39,20 @@ import java.util.stream.StreamSupport;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
+import javax.persistence.OptimisticLockException;
 import javax.persistence.PersistenceException;
 import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 import javax.persistence.metamodel.EntityType;
 import javax.persistence.metamodel.SingularAttribute;
+import org.hibernate.exception.JDBCConnectionException;
 import org.joda.time.DateTime;
 
 /** Implementation of {@link JpaTransactionManager} for JPA compatible database. */
 public class JpaTransactionManagerImpl implements JpaTransactionManager {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+  private static final Retrier retrier = new Retrier(new SystemSleeper(), 3);
 
   // EntityManagerFactory is thread safe.
   private final EntityManagerFactory emf;
@@ -122,6 +127,17 @@ public class JpaTransactionManagerImpl implements JpaTransactionManager {
 
   @Override
   public void transact(Runnable work) {
+    retrier.callWithRetry(
+        () ->
+            transact(
+                () -> {
+                  work.run();
+                  return null;
+                }),
+        OptimisticLockException.class);
+  }
+
+  public void transactNoRetry(Runnable work) {
     transact(
         () -> {
           work.run();
@@ -141,11 +157,14 @@ public class JpaTransactionManagerImpl implements JpaTransactionManager {
 
   @Override
   public <T> T transactNewReadOnly(Supplier<T> work) {
-    return transact(
-        () -> {
-          getEntityManager().createNativeQuery("SET TRANSACTION READ ONLY").executeUpdate();
-          return work.get();
-        });
+    return retrier.callWithRetry(
+        () ->
+            transact(
+                () -> {
+                  getEntityManager().createNativeQuery("SET TRANSACTION READ ONLY").executeUpdate();
+                  return work.get();
+                }),
+        JDBCConnectionException.class);
   }
 
   @Override
@@ -159,7 +178,7 @@ public class JpaTransactionManagerImpl implements JpaTransactionManager {
 
   @Override
   public <T> T doTransactionless(Supplier<T> work) {
-    return transact(work);
+    return retrier.callWithRetry(() -> transact(work), JDBCConnectionException.class);
   }
 
   @Override
