@@ -238,6 +238,7 @@ dependencies {
   compile deps['jline:jline']
   compile deps['joda-time:joda-time']
   compile deps['org.apache.avro:avro']
+  testCompile deps['org.apache.beam:beam-runners-core-construction-java']
   testCompile deps['org.apache.beam:beam-runners-direct-java']
   compile deps['org.apache.beam:beam-runners-google-cloud-dataflow-java']
   compile deps['org.apache.beam:beam-sdks-java-core']
@@ -965,6 +966,31 @@ publishing {
 
 task buildToolImage(dependsOn: nomulus, type: Exec) {
   commandLine 'docker', 'build', '-t', 'nomulus-tool', '.'
+}
+
+task updateInitSqlPipelineGraph(type: Test) {
+  include "**/InitSqlPipelineGraphTest.*"
+  testNameIncludePatterns = ["**createPipeline_compareGraph"]
+  ignoreFailures = true
+
+  doLast {
+    def graphRelativePath = 'google/registry/beam/initsql/'
+    def newGraph = "${projectDir}/build/resources/test/${graphRelativePath}/pipeline_curr.dot"
+    def goldenGraph = "${projectDir}/src/test/resources/${graphRelativePath}/pipeline_golden.dot"
+    def cmd = "/bin/cp ${newGraph} ${goldenGraph}"
+    rootProject.ext.execInBash(cmd, rootDir)
+
+    if (com.google.common.base.Strings.isNullOrEmpty(project.dot_path)) {
+      getLogger().info('Property dot_path is null. Not creating image for pipeline graph.')
+    }
+    def dotPath = project.dot_path
+    if (!new File(dotPath).exists()) {
+      getLogger().warn("${dotPath} not found.")
+      return;
+    }
+    def goldenImage = "${projectDir}/src/test/resources/${graphRelativePath}/pipeline_golden.png"
+    rootProject.ext.execInBash("${dotPath} -Tpng -o ${goldenImage} ${goldenGraph}", rootDir)
+  }
 }
 
 // Build the devtool jar.

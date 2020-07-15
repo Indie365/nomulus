@@ -49,7 +49,7 @@ PROPERTIES_HEADER = """\
 # This file defines properties used by the gradle build.  It must be kept in
 # sync with config/nom_build.py.
 #
-# To regenerate, run config/nom_build.py --generate-gradle-properties
+# To regenerate, run nom_build --generate-gradle-properties
 #
 # To view property descriptions (which are command line flags for
 # nom_build), run config/nom_build.py --help.
@@ -114,6 +114,11 @@ PROPERTIES = [
     Property('nomulus_version',
              'The version of nomulus to test against in a database '
              'integration test.'),
+    Property('dot_path',
+             'The path to dot, the tool used to convert a text-based graph of '
+             'a BEAM pipeline to image. Setting this property to empty string '
+             'will disable image generation.',
+             '/usr/bin/dot'),
 ]
 
 GRADLE_FLAGS = [
