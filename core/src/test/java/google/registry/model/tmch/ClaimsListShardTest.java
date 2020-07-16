@@ -75,7 +75,7 @@ public class ClaimsListShardTest {
     DateTime now = DateTime.now(UTC);
     // Save it with sharding, and make sure that reloading it works.
     ClaimsListShard unsharded = ClaimsListShard.create(now, ImmutableMap.copyOf(labelsToKeys));
-    unsharded.save(shardSize);
+    unsharded.saveToDatastore(shardSize);
     assertThat(ClaimsListShard.get().labelsToKeys).isEqualTo(unsharded.labelsToKeys);
     List<ClaimsListShard> shards1 = ofy().load().type(ClaimsListShard.class).list();
     assertThat(shards1).hasSize(4);
@@ -89,7 +89,7 @@ public class ClaimsListShardTest {
       labelsToKeys.put(Integer.toString(i), Integer.toString(i));
     }
     unsharded = ClaimsListShard.create(now.plusDays(1), ImmutableMap.copyOf(labelsToKeys));
-    unsharded.save(shardSize);
+    unsharded.saveToDatastore(shardSize);
     ofy().clearSessionCache();
     assertThat(ClaimsListShard.get().labelsToKeys).hasSize(unsharded.labelsToKeys.size());
     assertThat(ClaimsListShard.get().labelsToKeys).isEqualTo(unsharded.labelsToKeys);
