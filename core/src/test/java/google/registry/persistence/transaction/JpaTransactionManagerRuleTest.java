@@ -20,7 +20,6 @@ import static org.junit.Assert.assertThrows;
 
 import google.registry.model.ImmutableObject;
 import google.registry.persistence.transaction.JpaTestRules.JpaUnitTestExtension;
-import google.registry.schema.tmch.ClaimsList;
 import java.util.List;
 import javax.persistence.Entity;
 import javax.persistence.Id;
@@ -33,9 +32,7 @@ public class JpaTransactionManagerRuleTest {
 
   @RegisterExtension
   public final JpaUnitTestExtension jpaExtension =
-      new JpaTestRules.Builder()
-          .withEntityClass(ClaimsList.class, TestEntity.class)
-          .buildUnitTestRule();
+      new JpaTestRules.Builder().withEntityClass(TestEntity.class).buildUnitTestRule();
 
   @Test
   void verifiesRuleWorks() {
@@ -55,7 +52,7 @@ public class JpaTransactionManagerRuleTest {
               List results =
                   jpaTm()
                       .getEntityManager()
-                      .createNativeQuery("SELECT * FROM \"ClaimsList\"")
+                      .createNativeQuery("SELECT * FROM \"TestEntity\"")
                       .getResultList();
               assertThat(results).isEmpty();
             });
