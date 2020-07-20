@@ -31,6 +31,7 @@ import google.registry.persistence.transaction.JpaTestRules.JpaUnitTestRule;
 import google.registry.testing.FakeClock;
 import java.io.Serializable;
 import java.math.BigInteger;
+import java.sql.SQLException;
 import java.util.NoSuchElementException;
 import javax.persistence.Entity;
 import javax.persistence.EntityManager;
@@ -138,7 +139,21 @@ public class JpaTransactionManagerImplTest {
     doThrow(OptimisticLockException.class).when(spyJpaTm).delete(any(VKey.class));
     spyJpaTm.transact(() -> spyJpaTm.saveNew(theEntity));
     assertThrows(
-        RuntimeException.class, () -> spyJpaTm.transact(() -> spyJpaTm.delete(theEntityKey)));
+        OptimisticLockException.class,
+        () -> spyJpaTm.transact(() -> spyJpaTm.delete(theEntityKey)));
+    verify(spyJpaTm, times(3)).delete(theEntityKey);
+  }
+
+  @Test
+  public void transact_retriesNestedOptimisticLockExceptions() {
+    JpaTransactionManager spyJpaTm = spy(jpaTm());
+    doThrow(new RuntimeException().initCause(new OptimisticLockException()))
+        .when(spyJpaTm)
+        .delete(any(VKey.class));
+    spyJpaTm.transact(() -> spyJpaTm.saveNew(theEntity));
+    assertThrows(
+        OptimisticLockException.class,
+        () -> spyJpaTm.transact(() -> spyJpaTm.delete(theEntityKey)));
     verify(spyJpaTm, times(3)).delete(theEntityKey);
   }
 
@@ -148,7 +163,22 @@ public class JpaTransactionManagerImplTest {
     doThrow(JDBCConnectionException.class).when(spyJpaTm).load(any(VKey.class));
     spyJpaTm.transact(() -> spyJpaTm.saveNew(theEntity));
     assertThrows(
-        RuntimeException.class,
+        JDBCConnectionException.class,
+        () -> spyJpaTm.transactNewReadOnly(() -> spyJpaTm.load(theEntityKey)));
+    verify(spyJpaTm, times(3)).load(theEntityKey);
+  }
+
+  @Test
+  public void transactNewReadOnly_retriesNestedJdbcConnectionExceptions() {
+    JpaTransactionManager spyJpaTm = spy(jpaTm());
+    doThrow(
+            new RuntimeException()
+                .initCause(new JDBCConnectionException("connection exception", new SQLException())))
+        .when(spyJpaTm)
+        .load(any(VKey.class));
+    spyJpaTm.transact(() -> spyJpaTm.saveNew(theEntity));
+    assertThrows(
+        JDBCConnectionException.class,
         () -> spyJpaTm.transactNewReadOnly(() -> spyJpaTm.load(theEntityKey)));
     verify(spyJpaTm, times(3)).load(theEntityKey);
   }
