@@ -398,7 +398,10 @@ CREATE TABLE public."Domain" (
     transfer_pending_expiration_time timestamp with time zone,
     transfer_request_time timestamp with time zone,
     transfer_status text,
-    update_timestamp timestamp with time zone
+    update_timestamp timestamp with time zone,
+    autorenew_billing_event bigint,
+    autorenew_poll_message bigint,
+    delete_poll_message bigint
 );
 
 
@@ -1453,11 +1456,35 @@ ALTER TABLE ONLY public."Domain"
 
 
 --
+-- Name: Domain fk_domain_autorenew_billing_event; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."Domain"
+    ADD CONSTRAINT fk_domain_autorenew_billing_event FOREIGN KEY (autorenew_billing_event) REFERENCES public."BillingEvent"(billing_event_id);
+
+
+--
+-- Name: Domain fk_domain_autorenew_poll_message; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."Domain"
+    ADD CONSTRAINT fk_domain_autorenew_poll_message FOREIGN KEY (autorenew_poll_message) REFERENCES public."PollMessage"(poll_message_id);
+
+
+--
 -- Name: Domain fk_domain_billing_contact; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public."Domain"
     ADD CONSTRAINT fk_domain_billing_contact FOREIGN KEY (billing_contact) REFERENCES public."Contact"(repo_id);
+
+
+--
+-- Name: Domain fk_domain_delete_poll_message; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."Domain"
+    ADD CONSTRAINT fk_domain_delete_poll_message FOREIGN KEY (delete_poll_message) REFERENCES public."PollMessage"(poll_message_id);
 
 
 --
