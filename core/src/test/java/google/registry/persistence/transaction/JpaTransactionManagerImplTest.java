@@ -198,8 +198,6 @@ class JpaTransactionManagerImplTest {
     verify(spyJpaTm, times(3)).load(theEntityKey);
   }
 
-
-
   @Test
   void saveNew_throwsExceptionIfEntityExists() {
     assertThat(jpaTm().transact(() -> jpaTm().checkExists(theEntity))).isFalse();
