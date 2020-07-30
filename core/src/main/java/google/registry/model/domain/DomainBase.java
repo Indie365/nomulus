@@ -286,7 +286,18 @@ public class DomainBase extends EppResource
     setContactFields(allContacts, true);
 
     if (gracePeriods != null) {
-      gracePeriods.forEach(gracePeriod -> gracePeriod.domainRepoId = getRepoId());
+      gracePeriods =
+          gracePeriods.stream()
+              .map(
+                  gracePeriod -> {
+                    gracePeriod.domainRepoId = getRepoId();
+                    // We have to return the cloned object here because the original object's
+                    // hashcode is not correct due to the change to its domainRepoId. The cloned
+                    // object will have a null hashcode so that it can get a recalculated hashcode
+                    // when its hashCode() is invoked.
+                    return GracePeriod.clone(gracePeriod);
+                  })
+              .collect(toImmutableSet());
     }
   }
 
@@ -474,6 +485,7 @@ public class DomainBase extends EppResource
             ImmutableSet.of(
                 GracePeriod.create(
                     GracePeriodStatus.TRANSFER,
+                    getRepoId(),
                     transferExpirationTime.plus(
                         Registry.get(getTld()).getTransferGracePeriodLength()),
                     transferData.getGainingClientId(),
@@ -507,6 +519,7 @@ public class DomainBase extends EppResource
           .addGracePeriod(
               GracePeriod.createForRecurring(
                   GracePeriodStatus.AUTO_RENEW,
+                  getRepoId(),
                   lastAutorenewTime.plus(Registry.get(getTld()).getAutoRenewGracePeriodLength()),
                   getCurrentSponsorClientId(),
                   autorenewBillingEvent));
@@ -689,16 +702,7 @@ public class DomainBase extends EppResource
       checkArgumentNotNull(instance.getRegistrant(), "Missing registrant");
       instance.tld = getTldFromDomainName(instance.fullyQualifiedDomainName);
 
-      DomainBase domain = super.build();
-      if (domain.gracePeriods != null) {
-        domain.gracePeriods.forEach(
-            gracePeriod ->
-                gracePeriod.domainRepoId =
-                    gracePeriod.domainRepoId == null
-                        ? domain.getRepoId()
-                        : gracePeriod.domainRepoId);
-      }
-      return domain;
+      return super.build();
     }
 
     public Builder setDomainName(String domainName) {
