@@ -15,6 +15,7 @@
 package google.registry.testing;
 
 import static com.google.common.io.Files.asCharSink;
+import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static google.registry.util.CollectionUtils.entriesToImmutableMap;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -26,6 +27,7 @@ import com.google.common.collect.MultimapBuilder;
 import com.google.common.collect.Multimaps;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Entity;
+import com.googlecode.objectify.annotation.Id;
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ScanResult;
 import java.io.File;
@@ -99,23 +101,24 @@ class AppEngineExtensionTest {
   }
 
   @Test
-  void testRegisterOfyEntities_failure() throws Exception {
+  void testRegisterOfyEntities_failure() {
     AppEngineExtension appEngineRule =
         AppEngineExtension.builder()
             .withDatastoreAndCloudSql()
             .withOfyTestEntities(
                 google.registry.testing.TestObject.class, AppEngineExtensionTestObject.class)
             .build();
-    String expectedErrorMessage =
-        String.format(
-            "Cannot register %s. The Kind %s is already registered with %s",
-            AppEngineExtensionTestObject.class.getName(),
-            "TestObject",
-            google.registry.testing.TestObject.class.getName());
-    assertThrows(
-        expectedErrorMessage,
-        IllegalStateException.class,
-        () -> appEngineRule.beforeEach(context.getContext()));
+    IllegalStateException thrown =
+        assertThrows(
+            IllegalStateException.class, () -> appEngineRule.beforeEach(context.getContext()));
+    assertThat(thrown)
+        .hasMessageThat()
+        .isEqualTo(
+            String.format(
+                "Cannot register %s. The Kind %s is already registered with %s",
+                AppEngineExtensionTestObject.class.getName(),
+                "TestObject",
+                google.registry.testing.TestObject.class.getName()));
   }
 
   @Test
@@ -153,5 +156,7 @@ class AppEngineExtensionTest {
   }
 
   @Entity
-  private static final class AppEngineExtensionTestObject {}
+  private static final class AppEngineExtensionTestObject {
+    @Id long id;
+  }
 }
