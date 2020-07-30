@@ -406,16 +406,6 @@ CREATE TABLE public."Domain" (
 
 
 --
--- Name: DomainGracePeriod; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public."DomainGracePeriod" (
-    domain_repo_id text NOT NULL,
-    grace_period_id bigint NOT NULL
-);
-
-
---
 -- Name: DomainHost; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -434,6 +424,7 @@ CREATE TABLE public."GracePeriod" (
     billing_event_id bigint,
     billing_recurrence_id bigint,
     registrar_id text NOT NULL,
+    domain_repo_id text NOT NULL,
     expiration_time timestamp with time zone NOT NULL,
     type text NOT NULL
 );
@@ -984,14 +975,6 @@ ALTER TABLE ONLY public."Cursor"
 
 
 --
--- Name: DomainGracePeriod DomainGracePeriod_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public."DomainGracePeriod"
-    ADD CONSTRAINT "DomainGracePeriod_pkey" PRIMARY KEY (domain_repo_id, grace_period_id);
-
-
---
 -- Name: Domain Domain_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1117,14 +1100,6 @@ ALTER TABLE ONLY public."Transaction"
 
 ALTER TABLE ONLY public."RegistryLock"
     ADD CONSTRAINT idx_registry_lock_repo_id_revision_id UNIQUE (repo_id, revision_id);
-
-
---
--- Name: DomainGracePeriod uk_cn4v4atanwosjiksnstk59ghc; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public."DomainGracePeriod"
-    ADD CONSTRAINT uk_cn4v4atanwosjiksnstk59ghc UNIQUE (grace_period_id);
 
 
 --
@@ -1287,6 +1262,13 @@ CREATE INDEX idxhmv411mdqo5ibn4vy7ykxpmlv ON public."BillingEvent" USING btree (
 --
 
 CREATE INDEX idxhp33wybmb6tbpr1bq7ttwk8je ON public."ContactHistory" USING btree (history_registrar_id);
+
+
+--
+-- Name: idxj1mtx98ndgbtb1bkekahms18w; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idxj1mtx98ndgbtb1bkekahms18w ON public."GracePeriod" USING btree (domain_repo_id);
 
 
 --
@@ -1467,22 +1449,6 @@ ALTER TABLE ONLY public."Domain"
 
 ALTER TABLE ONLY public."HostHistory"
     ADD CONSTRAINT fk3d09knnmxrt6iniwnp8j2ykga FOREIGN KEY (history_registrar_id) REFERENCES public."Registrar"(registrar_id);
-
-
---
--- Name: DomainGracePeriod fk66qes7q8o6cnckskb2bxdlw6c; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public."DomainGracePeriod"
-    ADD CONSTRAINT fk66qes7q8o6cnckskb2bxdlw6c FOREIGN KEY (domain_repo_id) REFERENCES public."Domain"(repo_id);
-
-
---
--- Name: DomainGracePeriod fk6csolg92mour3qpgscatqpt50; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public."DomainGracePeriod"
-    ADD CONSTRAINT fk6csolg92mour3qpgscatqpt50 FOREIGN KEY (grace_period_id) REFERENCES public."GracePeriod"(id);
 
 
 --
@@ -1699,6 +1665,14 @@ ALTER TABLE ONLY public."GracePeriod"
 
 ALTER TABLE ONLY public."GracePeriod"
     ADD CONSTRAINT fk_grace_period_billing_recurrence_id FOREIGN KEY (billing_recurrence_id) REFERENCES public."BillingRecurrence"(billing_recurrence_id);
+
+
+--
+-- Name: GracePeriod fk_grace_period_domain_repo_id; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."GracePeriod"
+    ADD CONSTRAINT fk_grace_period_domain_repo_id FOREIGN KEY (domain_repo_id) REFERENCES public."Domain"(repo_id);
 
 
 --
