@@ -310,6 +310,7 @@ subprojects {
 
   javadocSource << project.sourceSets.main.allJava
   javadocClasspath << project.sourceSets.main.compileClasspath
+  javadocClasspath << "${buildDir}/generated/sources/annotationProcessor/java/main"
   javadocDependentTasks << project.tasks.compileJava
 }
 
