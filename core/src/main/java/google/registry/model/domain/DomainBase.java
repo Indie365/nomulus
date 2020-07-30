@@ -83,7 +83,6 @@ import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Embedded;
-import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
 import javax.persistence.OneToMany;
 import javax.persistence.PostLoad;
@@ -256,10 +255,9 @@ public class DomainBase extends EppResource
   VKey<PollMessage.Autorenew> autorenewPollMessage;
 
   /** The unexpired grace periods for this domain (some of which may not be active yet). */
-  @OneToMany(cascade = {CascadeType.ALL})
-  @JoinTable(
-      name = "DomainGracePeriod",
-      inverseJoinColumns = @JoinColumn(name = "grace_period_id", referencedColumnName = "id"))
+  @OneToMany(
+      cascade = {CascadeType.ALL},
+      mappedBy = "domainRepoId")
   Set<GracePeriod> gracePeriods;
 
   /**
@@ -286,6 +284,10 @@ public class DomainBase extends EppResource
     allContacts =
         allContacts.stream().map(contact -> contact.reconstitute()).collect(toImmutableSet());
     setContactFields(allContacts, true);
+
+    if (gracePeriods != null) {
+      gracePeriods.forEach(gracePeriod -> gracePeriod.domainRepoId = getRepoId());
+    }
   }
 
   @PostLoad
@@ -686,7 +688,17 @@ public class DomainBase extends EppResource
       }
       checkArgumentNotNull(instance.getRegistrant(), "Missing registrant");
       instance.tld = getTldFromDomainName(instance.fullyQualifiedDomainName);
-      return super.build();
+
+      DomainBase domain = super.build();
+      if (domain.gracePeriods != null) {
+        domain.gracePeriods.forEach(
+            gracePeriod ->
+                gracePeriod.domainRepoId =
+                    gracePeriod.domainRepoId == null
+                        ? domain.getRepoId()
+                        : gracePeriod.domainRepoId);
+      }
+      return domain;
     }
 
     public Builder setDomainName(String domainName) {
