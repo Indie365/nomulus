@@ -189,4 +189,13 @@ public class GracePeriod extends ImmutableObject {
         billingEvent.getClientId(),
         billingEvent.createVKey());
   }
+
+  /**
+   * Returns a clone of this {@link GracePeriod} with {@link #domainRepoId} set to the given value.
+   */
+  public GracePeriod cloneWithDomainRepoId(String domainRepoId) {
+    GracePeriod clone = clone(this);
+    clone.domainRepoId = checkArgumentNotNull(domainRepoId);
+    return clone;
+  }
 }

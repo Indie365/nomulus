@@ -285,18 +285,14 @@ public class DomainBase extends EppResource
         allContacts.stream().map(contact -> contact.reconstitute()).collect(toImmutableSet());
     setContactFields(allContacts, true);
 
+    // We have to return the cloned object here because the original object's
+    // hashcode is not correct due to the change to its domainRepoId. The cloned
+    // object will have a null hashcode so that it can get a recalculated hashcode
+    // when its hashCode() is invoked.
     if (gracePeriods != null) {
       gracePeriods =
           gracePeriods.stream()
-              .map(
-                  gracePeriod -> {
-                    gracePeriod.domainRepoId = getRepoId();
-                    // We have to return the cloned object here because the original object's
-                    // hashcode is not correct due to the change to its domainRepoId. The cloned
-                    // object will have a null hashcode so that it can get a recalculated hashcode
-                    // when its hashCode() is invoked.
-                    return GracePeriod.clone(gracePeriod);
-                  })
+              .map(gracePeriod -> gracePeriod.cloneWithDomainRepoId(getRepoId()))
               .collect(toImmutableSet());
     }
   }
