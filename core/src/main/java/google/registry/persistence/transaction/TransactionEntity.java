@@ -31,13 +31,21 @@ public class TransactionEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
-  long id;
+  private long id;
 
-  byte[] contents;
+  private byte[] contents;
 
   TransactionEntity() {}
 
   TransactionEntity(byte[] contents) {
     this.contents = contents;
+  }
+
+  public long getId() {
+    return id;
+  }
+
+  public byte[] getContents() {
+    return contents;
   }
 }

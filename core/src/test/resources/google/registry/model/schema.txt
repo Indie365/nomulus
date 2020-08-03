@@ -764,3 +764,7 @@ enum google.registry.model.transfer.TransferStatus {
   SERVER_APPROVED;
   SERVER_CANCELLED;
 }
+class google.registry.schema.replay.LastSqlTransaction {
+  @Id long id;
+  long transactionId;
+}

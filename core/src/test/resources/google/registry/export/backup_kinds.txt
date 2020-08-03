@@ -12,6 +12,7 @@ HistoryEntry
 HostResource
 KmsSecret
 KmsSecretRevision
+LastSqlTransaction
 Modification
 OneTime
 PollMessage
