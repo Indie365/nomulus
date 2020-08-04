@@ -60,6 +60,7 @@
     <class>google.registry.schema.tld.PremiumEntry</class>
     <class>google.registry.model.domain.secdns.DelegationSignerData</class>
     <class>google.registry.model.domain.GracePeriod</class>
+    <class>google.registry.model.domain.GracePeriod$GracePeriodHistory</class>
     <class>google.registry.model.poll.PollMessage</class>
     <class>google.registry.model.poll.PollMessage$OneTime</class>
     <class>google.registry.model.poll.PollMessage$Autorenew</class>
