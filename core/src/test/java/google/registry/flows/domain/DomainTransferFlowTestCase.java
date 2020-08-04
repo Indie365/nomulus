@@ -43,7 +43,7 @@ import google.registry.model.registry.Registry;
 import google.registry.model.reporting.HistoryEntry;
 import google.registry.model.transfer.TransferData;
 import google.registry.model.transfer.TransferStatus;
-import google.registry.testing.AppEngineRule;
+import google.registry.testing.AppEngineExtension;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,8 +54,8 @@ import org.junit.jupiter.api.BeforeEach;
  * @param <F> the flow type
  * @param <R> the resource type
  */
-public class DomainTransferFlowTestCase<F extends Flow, R extends EppResource>
-    extends ResourceFlowTestCase<F, R>{
+abstract class DomainTransferFlowTestCase<F extends Flow, R extends EppResource>
+    extends ResourceFlowTestCase<F, R> {
 
   // Transfer is requested on the 6th and expires on the 11th.
   // The "now" of this flow is on the 9th, 3 days in.
@@ -81,11 +81,10 @@ public class DomainTransferFlowTestCase<F extends Flow, R extends EppResource>
   }
 
   @BeforeEach
-  void makeClientZ() {
+  void beforeEachDomainTransferFlowTestCase() {
     // Registrar ClientZ is used in tests that need another registrar that definitely doesn't own
     // the resources in question.
-    persistResource(
-        AppEngineRule.makeRegistrar1().asBuilder().setClientId("ClientZ").build());
+    persistResource(AppEngineExtension.makeRegistrar1().asBuilder().setClientId("ClientZ").build());
   }
 
   static DomainBase persistWithPendingTransfer(DomainBase domain) {

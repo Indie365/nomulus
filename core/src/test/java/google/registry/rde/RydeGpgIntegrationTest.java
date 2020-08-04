@@ -18,16 +18,16 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static google.registry.testing.SystemInfo.hasCommand;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.io.CharStreams;
 import google.registry.keyring.api.Keyring;
-import google.registry.testing.BouncyCastleProviderRule;
+import google.registry.testing.BouncyCastleProviderExtension;
 import google.registry.testing.FakeKeyringModule;
-import google.registry.testing.GpgSystemCommandRule;
+import google.registry.testing.GpgSystemCommandExtension;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -49,11 +49,12 @@ public class RydeGpgIntegrationTest {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  @RegisterExtension public final BouncyCastleProviderRule bouncy = new BouncyCastleProviderRule();
+  @RegisterExtension
+  public final BouncyCastleProviderExtension bouncy = new BouncyCastleProviderExtension();
 
   @RegisterExtension
-  public final GpgSystemCommandRule gpg =
-      new GpgSystemCommandRule(
+  public final GpgSystemCommandExtension gpg =
+      new GpgSystemCommandExtension(
           RdeTestData.loadBytes("pgp-public-keyring.asc"),
           RdeTestData.loadBytes("pgp-private-keyring-escrow.asc"));
 

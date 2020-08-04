@@ -36,7 +36,7 @@ import static google.registry.testing.DatastoreHelper.loadPremiumListEntries;
 import static google.registry.testing.DatastoreHelper.persistPremiumList;
 import static google.registry.testing.DatastoreHelper.persistResource;
 import static org.joda.time.Duration.standardDays;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -47,8 +47,8 @@ import google.registry.model.pricing.StaticPremiumListPricingEngine;
 import google.registry.model.registry.Registry;
 import google.registry.model.registry.label.PremiumList.PremiumListEntry;
 import google.registry.model.registry.label.PremiumList.PremiumListRevision;
-import google.registry.testing.AppEngineRule;
-import google.registry.testing.TestCacheRule;
+import google.registry.testing.AppEngineExtension;
+import google.registry.testing.TestCacheExtension;
 import java.util.Map;
 import org.joda.money.Money;
 import org.junit.jupiter.api.BeforeEach;
@@ -59,12 +59,13 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 public class PremiumListUtilsTest {
 
   @RegisterExtension
-  public final AppEngineRule appEngine = AppEngineRule.builder().withDatastoreAndCloudSql().build();
+  public final AppEngineExtension appEngine =
+      AppEngineExtension.builder().withDatastoreAndCloudSql().build();
 
   // Set long persist times on caches so they can be tested (cache times default to 0 in tests).
   @RegisterExtension
-  public final TestCacheRule testCacheRule =
-      new TestCacheRule.Builder()
+  public final TestCacheExtension testCacheExtension =
+      new TestCacheExtension.Builder()
           .withPremiumListsCache(standardDays(1))
           .withPremiumListEntriesCache(standardDays(1))
           .build();

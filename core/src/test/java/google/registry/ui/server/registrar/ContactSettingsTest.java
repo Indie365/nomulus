@@ -25,24 +25,20 @@ import com.google.common.collect.Iterables;
 import google.registry.model.registrar.Registrar;
 import google.registry.model.registrar.RegistrarContact;
 import google.registry.model.registrar.RegistrarContact.Type;
-import google.registry.testing.AppEngineRule;
+import google.registry.testing.AppEngineExtension;
 import java.util.List;
 import java.util.Map;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for contact_settings.js use of {@link RegistrarSettingsAction}.
  *
- * <p>The default read and session validation tests are handled by the
- * superclass.
+ * <p>The default read and session validation tests are handled by the superclass.
  */
-@RunWith(JUnit4.class)
-public class ContactSettingsTest extends RegistrarSettingsActionTestCase {
+class ContactSettingsTest extends RegistrarSettingsActionTestCase {
 
   @Test
-  public void testPost_readContacts_success() {
+  void testPost_readContacts_success() {
     Map<String, Object> response = action.handleJsonRequest(ImmutableMap.of(
         "op", "read",
         "id", CLIENT_ID,
@@ -55,7 +51,7 @@ public class ContactSettingsTest extends RegistrarSettingsActionTestCase {
   }
 
   @Test
-  public void testPost_loadSaveRegistrar_success() {
+  void testPost_loadSaveRegistrar_success() {
     Map<String, Object> response = action.handleJsonRequest(ImmutableMap.of(
         "op", "update",
         "id", CLIENT_ID,
@@ -65,7 +61,7 @@ public class ContactSettingsTest extends RegistrarSettingsActionTestCase {
   }
 
   @Test
-  public void testPost_updateContacts_success() throws Exception {
+  void testPost_updateContacts_success() throws Exception {
     // Remove all the contacts but one by updating with a list of just it
     Map<String, Object> adminContact =
         loadRegistrar(CLIENT_ID).getContacts().stream()
@@ -95,7 +91,7 @@ public class ContactSettingsTest extends RegistrarSettingsActionTestCase {
   }
 
   @Test
-  public void testPost_updateContacts_requiredTypes_error() {
+  void testPost_updateContacts_requiredTypes_error() {
     Map<String, Object> reqJson = loadRegistrar(CLIENT_ID).toJsonMap();
     reqJson.put("contacts", ImmutableList.of(techContact.toJsonMap()));
     Map<String, Object> response =
@@ -110,12 +106,12 @@ public class ContactSettingsTest extends RegistrarSettingsActionTestCase {
   }
 
   @Test
-  public void testPost_updateContacts_requireTechPhone_error() {
+  void testPost_updateContacts_requireTechPhone_error() {
     Map<String, Object> reqJson = loadRegistrar(CLIENT_ID).toJsonMap();
     reqJson.put(
         "contacts",
         ImmutableList.of(
-            AppEngineRule.makeRegistrarContact2().toJsonMap(),
+            AppEngineExtension.makeRegistrarContact2().toJsonMap(),
             techContact.asBuilder().setPhoneNumber(null).build().toJsonMap()));
     Map<String, Object> response =
         action.handleJsonRequest(
@@ -131,11 +127,11 @@ public class ContactSettingsTest extends RegistrarSettingsActionTestCase {
   }
 
   @Test
-  public void testPost_updateContacts_cannotRemoveWhoisAbuseContact_error() {
+  void testPost_updateContacts_cannotRemoveWhoisAbuseContact_error() {
     // First make the contact's info visible in whois as abuse contact info.
     Registrar registrar = loadRegistrar(CLIENT_ID);
     RegistrarContact rc =
-        AppEngineRule.makeRegistrarContact2()
+        AppEngineExtension.makeRegistrarContact2()
             .asBuilder()
             .setVisibleInDomainWhoisAsAbuse(true)
             .build();
@@ -158,11 +154,11 @@ public class ContactSettingsTest extends RegistrarSettingsActionTestCase {
   }
 
   @Test
-  public void testPost_updateContacts_whoisAbuseContactMustHavePhoneNumber_error() {
+  void testPost_updateContacts_whoisAbuseContactMustHavePhoneNumber_error() {
     // First make the contact's info visible in whois as abuse contact info.
     Registrar registrar = loadRegistrar(CLIENT_ID);
     RegistrarContact rc =
-        AppEngineRule.makeRegistrarContact2()
+        AppEngineExtension.makeRegistrarContact2()
             .asBuilder()
             .setVisibleInDomainWhoisAsAbuse(true)
             .build();
@@ -185,9 +181,9 @@ public class ContactSettingsTest extends RegistrarSettingsActionTestCase {
   }
 
   @Test
-  public void testSuccess_setRegistryLockPassword() {
+  void testSuccess_setRegistryLockPassword() {
     addPasswordToContactTwo();
-    String emailAddress = AppEngineRule.makeRegistrarContact2().getEmailAddress();
+    String emailAddress = AppEngineExtension.makeRegistrarContact2().getEmailAddress();
     RegistrarContact newContactWithPassword =
         loadRegistrar(CLIENT_ID).getContacts().stream()
             .filter(rc -> rc.getEmailAddress().equals(emailAddress))
@@ -198,9 +194,9 @@ public class ContactSettingsTest extends RegistrarSettingsActionTestCase {
   }
 
   @Test
-  public void testSuccess_setRegistryLockPassword_notOverriddenLater() {
+  void testSuccess_setRegistryLockPassword_notOverriddenLater() {
     addPasswordToContactTwo();
-    String emailAddress = AppEngineRule.makeRegistrarContact2().getEmailAddress();
+    String emailAddress = AppEngineExtension.makeRegistrarContact2().getEmailAddress();
     RegistrarContact newContactWithPassword =
         loadRegistrar(CLIENT_ID).getContacts().stream()
             .filter(rc -> rc.getEmailAddress().equals(emailAddress))
@@ -214,9 +210,9 @@ public class ContactSettingsTest extends RegistrarSettingsActionTestCase {
     reqJson.put(
         "contacts",
         ImmutableList.of(
-            AppEngineRule.makeRegistrarContact1().toJsonMap(),
+            AppEngineExtension.makeRegistrarContact1().toJsonMap(),
             newContactMap,
-            AppEngineRule.makeRegistrarContact3().toJsonMap()));
+            AppEngineExtension.makeRegistrarContact3().toJsonMap()));
     Map<String, Object> response =
         action.handleJsonRequest(ImmutableMap.of("op", "update", "id", CLIENT_ID, "args", reqJson));
     assertThat(response).containsAtLeastEntriesIn(ImmutableMap.of("status", "SUCCESS"));
@@ -231,7 +227,7 @@ public class ContactSettingsTest extends RegistrarSettingsActionTestCase {
   private void addPasswordToContactTwo() {
     RegistrarContact contact =
         persistResource(
-            AppEngineRule.makeRegistrarContact2()
+            AppEngineExtension.makeRegistrarContact2()
                 .asBuilder()
                 .setRegistryLockEmailAddress("johndoe@theregistrar.com")
                 .setAllowedToSetRegistryLockPassword(true)
@@ -242,21 +238,21 @@ public class ContactSettingsTest extends RegistrarSettingsActionTestCase {
     reqJson.put(
         "contacts",
         ImmutableList.of(
-            AppEngineRule.makeRegistrarContact1().toJsonMap(),
+            AppEngineExtension.makeRegistrarContact1().toJsonMap(),
             contactMap,
-            AppEngineRule.makeRegistrarContact3().toJsonMap()));
+            AppEngineExtension.makeRegistrarContact3().toJsonMap()));
     Map<String, Object> response =
         action.handleJsonRequest(ImmutableMap.of("op", "update", "id", CLIENT_ID, "args", reqJson));
     assertThat(response).containsAtLeastEntriesIn(ImmutableMap.of("status", "SUCCESS"));
   }
 
   @Test
-  public void testPost_failure_setRegistryLockPassword_newContact() {
+  void testPost_failure_setRegistryLockPassword_newContact() {
     Map<String, Object> reqJson = loadRegistrar(CLIENT_ID).toJsonMap();
     reqJson.put(
         "contacts",
         ImmutableList.of(
-            AppEngineRule.makeRegistrarContact2()
+            AppEngineExtension.makeRegistrarContact2()
                 .asBuilder()
                 .setEmailAddress("someotheremail@example.com")
                 .setRegistryLockEmailAddress("someotherexample@example.com")
@@ -279,19 +275,19 @@ public class ContactSettingsTest extends RegistrarSettingsActionTestCase {
   }
 
   @Test
-  public void testPost_failure_setRegistryLockPassword_notAllowed() {
+  void testPost_failure_setRegistryLockPassword_notAllowed() {
     // "allowedToSetRegistryLockPassword" must be set through the back end first
     // before we can set a password through the UI
-    Map<String, Object> contactMap = AppEngineRule.makeRegistrarContact2().toJsonMap();
+    Map<String, Object> contactMap = AppEngineExtension.makeRegistrarContact2().toJsonMap();
     contactMap.put("allowedToSetRegistryLockPassword", true);
     contactMap.put("registryLockPassword", "hellothere");
     Map<String, Object> reqJson = loadRegistrar(CLIENT_ID).toJsonMap();
     reqJson.put(
         "contacts",
         ImmutableList.of(
-            AppEngineRule.makeRegistrarContact1().toJsonMap(),
+            AppEngineExtension.makeRegistrarContact1().toJsonMap(),
             contactMap,
-            AppEngineRule.makeRegistrarContact3().toJsonMap()));
+            AppEngineExtension.makeRegistrarContact3().toJsonMap()));
 
     Map<String, Object> response =
         action.handleJsonRequest(ImmutableMap.of("op", "update", "id", CLIENT_ID, "args", reqJson));
@@ -307,13 +303,13 @@ public class ContactSettingsTest extends RegistrarSettingsActionTestCase {
   }
 
   @Test
-  public void testPost_failure_setRegistryLockAllowed() {
+  void testPost_failure_setRegistryLockAllowed() {
     // One cannot set the "isAllowedToSetRegistryLockPassword" field through the UI
     Map<String, Object> reqJson = loadRegistrar(CLIENT_ID).toJsonMap();
     reqJson.put(
         "contacts",
         ImmutableList.of(
-            AppEngineRule.makeRegistrarContact2().toJsonMap(),
+            AppEngineExtension.makeRegistrarContact2().toJsonMap(),
             techContact.asBuilder().setAllowedToSetRegistryLockPassword(true).build().toJsonMap()));
 
     Map<String, Object> response =
@@ -330,10 +326,10 @@ public class ContactSettingsTest extends RegistrarSettingsActionTestCase {
   }
 
   @Test
-  public void testPost_failure_setRegistryLockEmail() {
+  void testPost_failure_setRegistryLockEmail() {
     addPasswordToContactTwo();
     Map<String, Object> reqJson = loadRegistrar(CLIENT_ID).toJsonMap();
-    String emailAddress = AppEngineRule.makeRegistrarContact2().getEmailAddress();
+    String emailAddress = AppEngineExtension.makeRegistrarContact2().getEmailAddress();
     RegistrarContact newContactWithPassword =
         loadRegistrar(CLIENT_ID).getContacts().stream()
             .filter(rc -> rc.getEmailAddress().equals(emailAddress))
@@ -344,9 +340,9 @@ public class ContactSettingsTest extends RegistrarSettingsActionTestCase {
     reqJson.put(
         "contacts",
         ImmutableList.of(
-            AppEngineRule.makeRegistrarContact1().toJsonMap(),
+            AppEngineExtension.makeRegistrarContact1().toJsonMap(),
             contactJson,
-            AppEngineRule.makeRegistrarContact3().toJsonMap()));
+            AppEngineExtension.makeRegistrarContact3().toJsonMap()));
 
     Map<String, Object> response =
         action.handleJsonRequest(ImmutableMap.of("op", "update", "id", CLIENT_ID, "args", reqJson));
@@ -362,7 +358,7 @@ public class ContactSettingsTest extends RegistrarSettingsActionTestCase {
   }
 
   @Test
-  public void testPost_failure_removingRegistryLockContact() {
+  void testPost_failure_removingRegistryLockContact() {
     ImmutableMap<String, String> contact =
         ImmutableMap.of(
             "name", "contact1",
@@ -386,7 +382,7 @@ public class ContactSettingsTest extends RegistrarSettingsActionTestCase {
   }
 
   @Test
-  public void testPost_failure_setRegistryLock_passwordTooShort() {
+  void testPost_failure_setRegistryLock_passwordTooShort() {
     techContact =
         persistResource(techContact.asBuilder().setAllowedToSetRegistryLockPassword(true).build());
     Map<String, Object> contactMap = techContact.toJsonMap();
@@ -394,7 +390,7 @@ public class ContactSettingsTest extends RegistrarSettingsActionTestCase {
     Map<String, Object> reqJson = loadRegistrar(CLIENT_ID).toJsonMap();
     reqJson.put(
         "contacts",
-        ImmutableList.of(AppEngineRule.makeRegistrarContact2().toJsonMap(), contactMap));
+        ImmutableList.of(AppEngineExtension.makeRegistrarContact2().toJsonMap(), contactMap));
 
     Map<String, Object> response =
         action.handleJsonRequest(ImmutableMap.of("op", "update", "id", CLIENT_ID, "args", reqJson));

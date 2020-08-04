@@ -25,7 +25,7 @@ import static google.registry.testing.SqlHelper.saveRegistrar;
 import static google.registry.util.DateTimeUtils.END_OF_TIME;
 import static org.joda.money.CurrencyUnit.USD;
 import static org.joda.time.DateTimeZone.UTC;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
@@ -396,14 +396,15 @@ public class BillingEventTest extends EntityTestCase {
 
   @Test
   void testSuccess_cancellation_forGracePeriod_withRecurring() {
-    BillingEvent.Cancellation newCancellation = BillingEvent.Cancellation.forGracePeriod(
-        GracePeriod.createForRecurring(
-            GracePeriodStatus.AUTO_RENEW,
-            now.plusYears(1).plusDays(45),
-            "a registrar",
-            Key.create(recurring)),
-        historyEntry2,
-        "foo.tld");
+    BillingEvent.Cancellation newCancellation =
+        BillingEvent.Cancellation.forGracePeriod(
+            GracePeriod.createForRecurring(
+                GracePeriodStatus.AUTO_RENEW,
+                now.plusYears(1).plusDays(45),
+                "a registrar",
+                recurring.createVKey()),
+            historyEntry2,
+            "foo.tld");
     // Set ID to be the same to ignore for the purposes of comparison.
     newCancellation = newCancellation.asBuilder().setId(cancellationRecurring.getId()).build();
     assertThat(newCancellation).isEqualTo(cancellationRecurring);

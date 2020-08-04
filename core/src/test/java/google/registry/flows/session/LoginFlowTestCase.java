@@ -18,7 +18,7 @@ import static google.registry.testing.DatastoreHelper.deleteResource;
 import static google.registry.testing.DatastoreHelper.loadRegistrar;
 import static google.registry.testing.DatastoreHelper.persistResource;
 import static google.registry.testing.EppExceptionSubject.assertAboutEppExceptions;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import google.registry.flows.EppException;
 import google.registry.flows.EppException.UnimplementedExtensionException;
@@ -44,7 +44,7 @@ public abstract class LoginFlowTestCase extends FlowTestCase<LoginFlow> {
   private Registrar.Builder registrarBuilder;
 
   @BeforeEach
-  void initRegistrar() {
+  void beforeEachLoginFlowTestCase() {
     sessionMetadata.setClientId(null); // Don't implicitly log in (all other flows need to).
     registrar = loadRegistrar("NewRegistrar");
     registrarBuilder = registrar.asBuilder();

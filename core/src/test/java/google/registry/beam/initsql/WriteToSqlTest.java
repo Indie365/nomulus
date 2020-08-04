@@ -15,72 +15,75 @@
 package google.registry.beam.initsql;
 
 import static com.google.common.truth.Truth.assertThat;
+import static google.registry.model.ImmutableObjectSubject.immutableObjectCorrespondence;
 import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
 
 import com.google.appengine.api.datastore.Entity;
 import com.google.common.collect.ImmutableList;
 import google.registry.backup.VersionedEntity;
+import google.registry.beam.TestPipelineExtension;
+import google.registry.model.ImmutableObject;
 import google.registry.model.contact.ContactResource;
 import google.registry.model.ofy.Ofy;
 import google.registry.model.registrar.Registrar;
 import google.registry.persistence.transaction.JpaTestRules;
-import google.registry.persistence.transaction.JpaTestRules.JpaIntegrationTestRule;
-import google.registry.testing.AppEngineRule;
+import google.registry.persistence.transaction.JpaTestRules.JpaIntegrationTestExtension;
+import google.registry.testing.AppEngineExtension;
 import google.registry.testing.DatastoreEntityExtension;
 import google.registry.testing.DatastoreHelper;
 import google.registry.testing.FakeClock;
-import google.registry.testing.InjectRule;
-import java.io.File;
-import java.io.PrintStream;
+import google.registry.testing.InjectExtension;
 import java.io.Serializable;
+import java.nio.file.Path;
 import java.util.stream.Collectors;
-import org.apache.beam.sdk.testing.NeedsRunner;
-import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.transforms.Create;
 import org.joda.time.DateTime;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.RuleChain;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.api.io.TempDir;
 
 /** Unit test for {@link Transforms#writeToSql}. */
-@RunWith(JUnit4.class)
-public class WriteToSqlTest implements Serializable {
+class WriteToSqlTest implements Serializable {
+
   private static final DateTime START_TIME = DateTime.parse("2000-01-01T00:00:00.0Z");
 
   private final FakeClock fakeClock = new FakeClock(START_TIME);
 
-  @Rule public final transient InjectRule injectRule = new InjectRule();
+  @RegisterExtension
+  @Order(Order.DEFAULT - 1)
+  final transient DatastoreEntityExtension datastore = new DatastoreEntityExtension();
 
-  // For use in the RuleChain below. Saves a reference to retrieve Database connection config.
-  public final transient JpaIntegrationTestRule database =
+  @RegisterExtension final transient InjectExtension injectRule = new InjectExtension();
+
+  @RegisterExtension
+  final transient JpaIntegrationTestExtension database =
       new JpaTestRules.Builder().withClock(fakeClock).buildIntegrationTestRule();
 
-  @Rule
-  public final transient RuleChain jpaRules =
-      RuleChain.outerRule(new DatastoreEntityExtension()).around(database);
+  @SuppressWarnings("WeakerAccess")
+  @TempDir
+  transient Path tmpDir;
 
-  @Rule public transient TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  final transient TestPipelineExtension testPipeline =
+      TestPipelineExtension.create().enableAbandonedNodeEnforcement(true);
 
-  @Rule
-  public final transient TestPipeline pipeline =
-      TestPipeline.create().enableAbandonedNodeEnforcement(true);
+  // Must not be transient!
+  @RegisterExtension
+  @Order(Order.DEFAULT + 1)
+  final BeamJpaExtension beamJpaExtension =
+      new BeamJpaExtension(() -> tmpDir.resolve("credential.dat"), database.getDatabase());
 
   private ImmutableList<Entity> contacts;
 
-  private File credentialFile;
-
-  @Before
-  public void beforeEach() throws Exception {
+  @BeforeEach
+  void beforeEach() throws Exception {
     try (BackupTestStore store = new BackupTestStore(fakeClock)) {
       injectRule.setStaticField(Ofy.class, "clock", fakeClock);
 
       // Required for contacts created below.
-      Registrar ofyRegistrar = AppEngineRule.makeRegistrar2();
+      Registrar ofyRegistrar = AppEngineExtension.makeRegistrar2();
       store.insertOrUpdate(ofyRegistrar);
       jpaTm().transact(() -> jpaTm().saveNewOrUpdate(store.loadAsOfyEntity(ofyRegistrar)));
 
@@ -93,20 +96,11 @@ public class WriteToSqlTest implements Serializable {
       }
       contacts = builder.build();
     }
-    credentialFile = temporaryFolder.newFile();
-    new PrintStream(credentialFile)
-        .printf(
-            "%s %s %s",
-            database.getDatabaseUrl(),
-            database.getDatabaseUsername(),
-            database.getDatabasePassword())
-        .close();
   }
 
   @Test
-  @Category(NeedsRunner.class)
-  public void writeToSql_twoWriters() {
-    pipeline
+  void writeToSql_twoWriters() {
+    testPipeline
         .apply(
             Create.of(
                 contacts.stream()
@@ -120,14 +114,18 @@ public class WriteToSqlTest implements Serializable {
                 4,
                 () ->
                     DaggerBeamJpaModule_JpaTransactionManagerComponent.builder()
-                        .beamJpaModule(new BeamJpaModule(credentialFile.getAbsolutePath()))
+                        .beamJpaModule(beamJpaExtension.getBeamJpaModule())
                         .build()
                         .localDbJpaTransactionManager()));
-    pipeline.run().waitUntilFinish();
+    testPipeline.run().waitUntilFinish();
 
     ImmutableList<?> sqlContacts = jpaTm().transact(() -> jpaTm().loadAll(ContactResource.class));
-    // TODO(weiminyu): compare load entities with originals. Note: lastUpdateTimes won't match by
-    // design. Need an elegant way to deal with this.bbq
-    assertThat(sqlContacts).hasSize(3);
+    assertThat(sqlContacts)
+        .comparingElementsUsing(immutableObjectCorrespondence("revisions", "updateTimestamp"))
+        .containsExactlyElementsIn(
+            contacts.stream()
+                .map(InitSqlTestUtils::datastoreToOfyEntity)
+                .map(ImmutableObject.class::cast)
+                .collect(ImmutableList.toImmutableList()));
   }
 }

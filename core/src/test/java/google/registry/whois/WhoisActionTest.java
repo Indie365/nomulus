@@ -53,12 +53,12 @@ import google.registry.model.registrar.Registrar;
 import google.registry.model.registry.Registry;
 import google.registry.model.transfer.DomainTransferData;
 import google.registry.model.transfer.TransferStatus;
-import google.registry.testing.AppEngineRule;
+import google.registry.testing.AppEngineExtension;
 import google.registry.testing.FakeClock;
 import google.registry.testing.FakeResponse;
 import google.registry.testing.FakeSleeper;
-import google.registry.testing.InjectRule;
-import google.registry.testing.TestCacheRule;
+import google.registry.testing.InjectExtension;
+import google.registry.testing.TestCacheExtension;
 import google.registry.util.Retrier;
 import google.registry.whois.WhoisMetrics.WhoisMetric;
 import java.io.IOException;
@@ -75,13 +75,14 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 public class WhoisActionTest {
 
   @RegisterExtension
-  public final AppEngineRule appEngine = AppEngineRule.builder().withDatastoreAndCloudSql().build();
+  public final AppEngineExtension appEngine =
+      AppEngineExtension.builder().withDatastoreAndCloudSql().build();
 
-  @RegisterExtension public final InjectRule inject = new InjectRule();
+  @RegisterExtension public final InjectExtension inject = new InjectExtension();
 
   @RegisterExtension
-  public final TestCacheRule testCacheRule =
-      new TestCacheRule.Builder()
+  public final TestCacheExtension testCacheExtension =
+      new TestCacheExtension.Builder()
           .withEppResourceCache(Duration.standardDays(1))
           .withForeignIndexKeyCache(Duration.standardDays(1))
           .build();

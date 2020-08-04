@@ -31,7 +31,6 @@ import static org.joda.money.CurrencyUnit.USD;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.net.InetAddresses;
-import com.googlecode.objectify.Key;
 import google.registry.model.billing.BillingEvent;
 import google.registry.model.billing.BillingEvent.Flag;
 import google.registry.model.billing.BillingEvent.Reason;
@@ -55,7 +54,7 @@ import google.registry.model.rde.RdeMode;
 import google.registry.model.reporting.HistoryEntry;
 import google.registry.model.transfer.DomainTransferData;
 import google.registry.model.transfer.TransferStatus;
-import google.registry.testing.AppEngineRule;
+import google.registry.testing.AppEngineExtension;
 import google.registry.testing.FakeClock;
 import google.registry.util.Idn;
 import google.registry.xjc.domain.XjcDomainStatusType;
@@ -84,7 +83,8 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 public class DomainBaseToXjcConverterTest {
 
   @RegisterExtension
-  public final AppEngineRule appEngine = AppEngineRule.builder().withDatastoreAndCloudSql().build();
+  public final AppEngineExtension appEngine =
+      AppEngineExtension.builder().withDatastoreAndCloudSql().build();
 
   private final DateTime now = DateTime.parse("2014-01-01T00:00:00Z");
   private final FakeClock clock = new FakeClock(now);
@@ -302,8 +302,7 @@ public class DomainBaseToXjcConverterTest {
                     StatusValue.CLIENT_TRANSFER_PROHIBITED,
                     StatusValue.SERVER_UPDATE_PROHIBITED))
             .setAutorenewBillingEvent(
-                Key.create(
-                    persistResource(
+                persistResource(
                         new BillingEvent.Recurring.Builder()
                             .setReason(Reason.RENEW)
                             .setFlags(ImmutableSet.of(Flag.AUTO_RENEW))
@@ -312,10 +311,10 @@ public class DomainBaseToXjcConverterTest {
                             .setEventTime(END_OF_TIME)
                             .setRecurrenceEndTime(END_OF_TIME)
                             .setParent(historyEntry)
-                            .build())))
+                            .build())
+                    .createVKey())
             .setAutorenewPollMessage(
-                Key.create(
-                    persistResource(
+                persistResource(
                         new PollMessage.Autorenew.Builder()
                             .setTargetId("lol")
                             .setClientId("TheRegistrar")
@@ -323,7 +322,8 @@ public class DomainBaseToXjcConverterTest {
                             .setAutorenewEndTime(END_OF_TIME)
                             .setMsg("Domain was auto-renewed.")
                             .setParent(historyEntry)
-                            .build())))
+                            .build())
+                    .createVKey())
             .setTransferData(
                 new DomainTransferData.Builder()
                     .setGainingClientId("gaining")
