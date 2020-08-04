@@ -21,12 +21,16 @@ import static google.registry.testing.DatastoreHelper.newContactResourceWithRoid
 import static google.registry.testing.DatastoreHelper.newDomainBase;
 import static google.registry.testing.DatastoreHelper.newHostResourceWithRoid;
 import static google.registry.testing.SqlHelper.saveRegistrar;
+import static google.registry.util.DateTimeUtils.END_OF_TIME;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+import com.google.common.collect.ImmutableSet;
 import google.registry.model.EntityTestCase;
 import google.registry.model.contact.ContactResource;
 import google.registry.model.domain.DomainBase;
 import google.registry.model.domain.DomainHistory;
+import google.registry.model.domain.GracePeriod;
+import google.registry.model.domain.rgp.GracePeriodStatus;
 import google.registry.model.eppcommon.Trid;
 import google.registry.model.host.HostResource;
 import google.registry.model.reporting.HistoryEntry;
@@ -52,6 +56,10 @@ public class DomainHistoryTest extends EntityTestCase {
     DomainBase domain =
         newDomainBase("example.tld", "domainRepoId", contact)
             .asBuilder()
+            .setGracePeriods(
+                ImmutableSet.of(
+                    GracePeriod.create(
+                        GracePeriodStatus.ADD, "domainRepoId", END_OF_TIME, "clientId", null)))
             .setNameservers(host.createVKey())
             .build();
     jpaTm().transact(() -> jpaTm().saveNew(domain));
@@ -76,6 +84,13 @@ public class DomainHistoryTest extends EntityTestCase {
             () -> {
               DomainHistory fromDatabase =
                   jpaTm().load(VKey.createSql(DomainHistory.class, domainHistory.getId()));
+
+              assertAboutImmutableObjects()
+                  .that(fromDatabase.getGracePeriodHistories().iterator().next())
+                  .isEqualExceptFields(
+                      domainHistory.getGracePeriodHistories().iterator().next(),
+                      "historyRevisionId");
+
               assertDomainHistoriesEqual(fromDatabase, domainHistory);
               assertThat(fromDatabase.getDomainRepoId().getSqlKey())
                   .isEqualTo(domainHistory.getDomainRepoId().getSqlKey());
@@ -85,6 +100,7 @@ public class DomainHistoryTest extends EntityTestCase {
   static void assertDomainHistoriesEqual(DomainHistory one, DomainHistory two) {
     assertAboutImmutableObjects()
         .that(one)
-        .isEqualExceptFields(two, "domainContent", "domainRepoId", "parent");
+        .isEqualExceptFields(
+            two, "domainContent", "gracePeriodHistories", "domainRepoId", "parent");
   }
 }

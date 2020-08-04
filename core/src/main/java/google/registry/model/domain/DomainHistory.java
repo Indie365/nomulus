@@ -14,19 +14,27 @@
 
 package google.registry.model.domain;
 
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static google.registry.util.CollectionUtils.nullToEmptyImmutableCopy;
+
 import com.googlecode.objectify.Key;
 import google.registry.model.EppResource;
 import google.registry.model.contact.ContactResource;
+import google.registry.model.domain.GracePeriod.GracePeriodHistory;
 import google.registry.model.host.HostResource;
 import google.registry.model.reporting.HistoryEntry;
 import google.registry.persistence.VKey;
 import java.util.Set;
 import javax.persistence.Access;
 import javax.persistence.AccessType;
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
+import javax.persistence.OneToMany;
 
 /**
  * A persisted history entry representing an EPP modification to a domain.
@@ -46,6 +54,13 @@ import javax.persistence.JoinTable;
 public class DomainHistory extends HistoryEntry {
   // Store DomainContent instead of DomainBase so we don't pick up its @Id
   DomainContent domainContent;
+
+  @OneToMany(
+      cascade = {CascadeType.ALL},
+      fetch = FetchType.EAGER,
+      orphanRemoval = true)
+  @JoinColumn(name = "historyRevisionId", referencedColumnName = "historyRevisionId")
+  Set<GracePeriodHistory> gracePeriodHistories;
 
   @Column(nullable = false)
   VKey<DomainBase> domainRepoId;
@@ -76,6 +91,10 @@ public class DomainHistory extends HistoryEntry {
     }
   }
 
+  public Set<GracePeriodHistory> getGracePeriodHistories() {
+    return nullToEmptyImmutableCopy(gracePeriodHistories);
+  }
+
   @Override
   public Builder asBuilder() {
     return new Builder(clone(this));
@@ -91,6 +110,10 @@ public class DomainHistory extends HistoryEntry {
 
     public Builder setDomainContent(DomainContent domainContent) {
       getInstance().domainContent = domainContent;
+      getInstance().gracePeriodHistories =
+          domainContent.getGracePeriods().stream()
+              .map(GracePeriodHistory::createFrom)
+              .collect(toImmutableSet());
       return this;
     }
 
