@@ -65,6 +65,7 @@ public class BackfillSpec11ThreatMatchCommand extends ConfirmingCommand {
               spec11ReportFilename, filenamesToDates.get(spec11ReportFilename));
       jpaTm().transact(() -> jpaTm().saveNewOrUpdateAll(threatMatches));
     }
+    // TODO: return a result description
     return "";
   }
 
