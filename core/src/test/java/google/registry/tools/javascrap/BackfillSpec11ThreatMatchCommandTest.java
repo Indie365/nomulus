@@ -1,5 +1,5 @@
 package google.registry.tools.javascrap;
 
-public class BackfillSpec11ThreatMatchesCommandTest {
+public class BackfillSpec11ThreatMatchCommandTest {
 
 }

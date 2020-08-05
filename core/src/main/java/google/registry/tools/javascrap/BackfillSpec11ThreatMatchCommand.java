@@ -20,6 +20,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.appengine.tools.cloudstorage.GcsFilename;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.CharStreams;
 import google.registry.beam.spec11.Spec11Pipeline;
@@ -36,6 +37,7 @@ import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.inject.Inject;
+import jdk.nashorn.internal.ir.annotations.Immutable;
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
 import org.joda.time.YearMonth;
@@ -47,25 +49,44 @@ import org.json.JSONObject;
 public class BackfillSpec11ThreatMatchCommand extends ConfirmingCommand {
 
   private static final YearMonth START_MONTH = new YearMonth(2019, 01);
-  private static final YearMonth END_MONTH = new YearMonth();
+  private static final YearMonth END_MONTH =
+      new YearMonth(); // Constructs a YearMonth with the current year and month
 
+  private static int numFiles = 0;
   private static final Pattern FILENAME_PATTERN =
       Pattern.compile("SPEC11_MONTHLY_REPORT_(\\d{4}-\\d{2}-\\d{2})");
   private static final String REPORTING_FOLDER = "domain-registry-reporting/icann/spec11/";
-  private HashMap<GcsFilename, LocalDate> filenamesToDates = new HashMap<>();
+  private static ImmutableMap<GcsFilename, LocalDate> filenamesToDates;
 
   @Inject GcsUtils gcsUtils;
 
   @Override
-  protected String execute() throws IOException {
-    mapFilenamesToDates(START_MONTH, END_MONTH);
+  protected String prompt() throws IOException {
+    filenamesToDates = mapFilenamesToDates(START_MONTH, END_MONTH);
+    return String.format("Parsing through %d files.", numFiles);
+  }
+
+  @Override
+  protected String execute() {
+    ImmutableSet.Builder<GcsFilename> failedFilesBuilder = new ImmutableSet.Builder<>();
     for (GcsFilename spec11ReportFilename : filenamesToDates.keySet()) {
-      ImmutableList<Spec11ThreatMatch> threatMatches =
-          getSpec11ThreatMatchesFromFile(
-              spec11ReportFilename, filenamesToDates.get(spec11ReportFilename));
-      jpaTm().transact(() -> jpaTm().saveNewOrUpdateAll(threatMatches));
+      try {
+        ImmutableList<Spec11ThreatMatch> threatMatches =
+            getSpec11ThreatMatchesFromFile(
+                spec11ReportFilename, filenamesToDates.get(spec11ReportFilename));
+        jpaTm().transact(() -> jpaTm().saveNewOrUpdateAll(threatMatches));
+      } catch (IOException e) {
+        failedFilesBuilder.add(spec11ReportFilename);
+      }
     }
-    return "";
+    ImmutableSet<GcsFilename> failedFiles = failedFilesBuilder.build();
+    if (failedFiles.isEmpty()) {
+      return String.format("Successfully parsed through %d files.", numFiles);
+    } else {
+      return String.format(
+          "Successfully parsed through %d files. We failed to parse through the following files: %s",
+          numFiles - failedFiles.size(), failedFiles);
+    }
   }
 
   protected ImmutableList<Spec11ThreatMatch> createSpec11ThreatMatches(String line, LocalDate date)
@@ -82,7 +103,7 @@ public class BackfillSpec11ThreatMatchCommand extends ConfirmingCommand {
               .setDomainName(domainName)
               .setCheckDate(date)
               .setRegistrarId(reportJSON.getString(Spec11Pipeline.REGISTRAR_CLIENT_ID_FIELD))
-              .setDomainRepoId(getDomainRepoId(domainName, date.toDateTimeAtCurrentTime()))
+              .setDomainRepoId(getDomainRepoId(domainName, date.toDateTimeAtStartOfDay()))
               .build();
       threatMatches.add(spec11ThreatMatch);
     }
@@ -102,10 +123,6 @@ public class BackfillSpec11ThreatMatchCommand extends ConfirmingCommand {
     return domain.getRepoId();
   }
 
-  private GcsFilename getGcsFilename(String reportingBucket, LocalDate localDate) {
-    return new GcsFilename(reportingBucket, Spec11Pipeline.getSpec11ReportFilePath(localDate));
-  }
-
   protected ImmutableList<Spec11ThreatMatch> getSpec11ThreatMatchesFromFile(
       GcsFilename spec11ReportFilename, LocalDate date) throws IOException, JSONException {
     ImmutableList.Builder<Spec11ThreatMatch> threatMatches = ImmutableList.builder();
@@ -123,17 +140,30 @@ public class BackfillSpec11ThreatMatchCommand extends ConfirmingCommand {
   /**
    * Get all of the folders that contain the JSON files and list all files from each folder. Map
    * each GcsFilename to a LocalDate corresponding to the date of the pipeline run.
+   *
+   * @param startMonth the month at which we begin parsing the files
+   * @param endMonth the month at which we stop parsing the files
+   * @return the number of files to be parsed
+   * @throws IOException
    */
-  private void mapFilenamesToDates(YearMonth startMonth, YearMonth endMonth) throws IOException {
+  private ImmutableMap<GcsFilename, LocalDate> mapFilenamesToDates(
+      YearMonth startMonth, YearMonth endMonth) throws IOException {
+    ImmutableMap.Builder<GcsFilename, LocalDate> mappedFilenamesToDates =
+        new ImmutableMap.Builder<>();
     while (!startMonth.isAfter(endMonth)) {
       String bucket = String.format("%s%s", REPORTING_FOLDER, startMonth.toString());
       ImmutableList<String> filesFromBucket =
           gcsUtils.listFolderObjects(bucket, "SPEC11_MONTHLY_REPORT_");
       for (String filename : filesFromBucket) {
         LocalDate fileDate = getDateFromFilename(filename, FILENAME_PATTERN);
-        filenamesToDates.put(getGcsFilename("domain-registry-reporting", fileDate), fileDate);
+        mappedFilenamesToDates.put(
+            new GcsFilename(
+                "domain-registry-reporting", Spec11Pipeline.getSpec11ReportFilePath(fileDate)),
+            fileDate);
+        numFiles += 1;
       }
       startMonth = startMonth.plusMonths(1);
     }
+    return mappedFilenamesToDates.build();
   }
 }
