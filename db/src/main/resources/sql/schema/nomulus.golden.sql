@@ -526,6 +526,41 @@ CREATE TABLE public."GracePeriod" (
 
 
 --
+-- Name: GracePeriodHistory; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public."GracePeriodHistory" (
+    id bigint NOT NULL,
+    billing_event_id bigint,
+    billing_recurrence_id bigint,
+    registrar_id text NOT NULL,
+    domain_repo_id text NOT NULL,
+    expiration_time timestamp with time zone NOT NULL,
+    type text NOT NULL,
+    history_revision_id bigint
+);
+
+
+--
+-- Name: GracePeriodHistory_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public."GracePeriodHistory_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: GracePeriodHistory_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public."GracePeriodHistory_id_seq" OWNED BY public."GracePeriodHistory".id;
+
+
+--
 -- Name: GracePeriod_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -965,6 +1000,13 @@ ALTER TABLE ONLY public."GracePeriod" ALTER COLUMN id SET DEFAULT nextval('publi
 
 
 --
+-- Name: GracePeriodHistory id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."GracePeriodHistory" ALTER COLUMN id SET DEFAULT nextval('public."GracePeriodHistory_id_seq"'::regclass);
+
+
+--
 -- Name: PollMessage poll_message_id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1092,6 +1134,14 @@ ALTER TABLE ONLY public."DomainHistory"
 
 ALTER TABLE ONLY public."Domain"
     ADD CONSTRAINT "Domain_pkey" PRIMARY KEY (repo_id);
+
+
+--
+-- Name: GracePeriodHistory GracePeriodHistory_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."GracePeriodHistory"
+    ADD CONSTRAINT "GracePeriodHistory_pkey" PRIMARY KEY (id);
 
 
 --
@@ -1352,6 +1402,13 @@ CREATE INDEX idxaydgox62uno9qx8cjlj5lauye ON public."PollMessage" USING btree (e
 --
 
 CREATE INDEX idxbn8t4wp85fgxjl8q4ctlscx55 ON public."Contact" USING btree (current_sponsor_registrar_id);
+
+
+--
+-- Name: idxd01j17vrpjxaerxdmn8bwxs7s; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idxd01j17vrpjxaerxdmn8bwxs7s ON public."GracePeriodHistory" USING btree (domain_repo_id);
 
 
 --
@@ -1853,6 +1910,22 @@ ALTER TABLE ONLY public."GracePeriod"
 
 
 --
+-- Name: GracePeriodHistory fk_grace_period_history_billing_event_id; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."GracePeriodHistory"
+    ADD CONSTRAINT fk_grace_period_history_billing_event_id FOREIGN KEY (billing_event_id) REFERENCES public."BillingEvent"(billing_event_id);
+
+
+--
+-- Name: GracePeriodHistory fk_grace_period_history_billing_recurrence_id; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."GracePeriodHistory"
+    ADD CONSTRAINT fk_grace_period_history_billing_recurrence_id FOREIGN KEY (billing_recurrence_id) REFERENCES public."BillingRecurrence"(billing_recurrence_id);
+
+
+--
 -- Name: HostResource fk_host_resource_superordinate_domain; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1914,6 +1987,14 @@ ALTER TABLE ONLY public."PollMessage"
 
 ALTER TABLE ONLY public."PollMessage"
     ADD CONSTRAINT fk_poll_message_transfer_response_losing_registrar_id FOREIGN KEY (transfer_response_losing_registrar_id) REFERENCES public."Registrar"(registrar_id);
+
+
+--
+-- Name: GracePeriodHistory fkd0ac6a7xw17itq006bww30vnb; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."GracePeriodHistory"
+    ADD CONSTRAINT fkd0ac6a7xw17itq006bww30vnb FOREIGN KEY (history_revision_id) REFERENCES public."DomainHistory"(history_revision_id);
 
 
 --
