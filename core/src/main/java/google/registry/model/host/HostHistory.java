@@ -18,8 +18,14 @@ import com.googlecode.objectify.Key;
 import google.registry.model.EppResource;
 import google.registry.model.reporting.HistoryEntry;
 import google.registry.persistence.VKey;
+import javax.persistence.Access;
+import javax.persistence.AccessType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.SequenceGenerator;
 
 /**
  * A persisted history entry representing an EPP modification to a host.
@@ -37,6 +43,7 @@ import javax.persistence.Entity;
       @javax.persistence.Index(columnList = "historyType"),
       @javax.persistence.Index(columnList = "historyModificationTime")
     })
+@Access(AccessType.FIELD)
 public class HostHistory extends HistoryEntry {
 
   // Store HostBase instead of HostResource so we don't pick up its @Id
@@ -44,6 +51,19 @@ public class HostHistory extends HistoryEntry {
 
   @Column(nullable = false)
   VKey<HostResource> hostRepoId;
+
+  @Id
+  @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "HistorySequenceGenerator")
+  @SequenceGenerator(
+      name = "HistorySequenceGenerator",
+      sequenceName = "history_id_sequence",
+      allocationSize = 1)
+  @Column(name = "historyRevisionId")
+  @Access(AccessType.PROPERTY)
+  @Override
+  public Long getId() {
+    return super.getId();
+  }
 
   /** The state of the {@link HostBase} object at this point in time. */
   public HostBase getHostBase() {
