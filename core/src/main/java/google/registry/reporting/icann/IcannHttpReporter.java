@@ -40,6 +40,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.List;
 import javax.inject.Inject;
+import org.apache.geronimo.mail.util.Hex;
 import org.joda.time.YearMonth;
 import org.joda.time.format.DateTimeFormat;
 
@@ -93,8 +94,8 @@ public class IcannHttpReporter {
         response.getContent().close();
       }
       logger.atInfo().log(
-          "Received response code %d with content %s",
-          response.getStatusCode(), new String(content, UTF_8));
+          "Received response code %d with content %s\nThe hex representation is:\n%s",
+          response.getStatusCode(), new String(content, UTF_8), Hex.encode(content));
       XjcIirdeaResult result = parseResult(content);
       if (result.getCode().getValue() != 1000) {
         success = false;

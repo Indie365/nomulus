@@ -84,6 +84,7 @@ ext {
       'com.sun.xml.bind:jaxb-osgi:2.2.11',
       'com.sun.xml.bind:jaxb-xjc:2.2.11',
       'com.thoughtworks.qdox:qdox:1.12.1',
+      'commons-codec:commons-codec:1.14',
       'dnsjava:dnsjava:2.1.7',
       'io.github.classgraph:classgraph:4.8.52',
       'io.github.java-diff-utils:java-diff-utils:4.0',

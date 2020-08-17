@@ -221,6 +221,7 @@ dependencies {
   compile deps['com.google.template:soy']
   compile deps['com.googlecode.json-simple:json-simple']
   compile deps['com.jcraft:jsch']
+  compile deps['commons-codec:commons-codec']
   testCompile deps['com.thoughtworks.qdox:qdox']
   compile deps['dnsjava:dnsjava']
   testCompile deps['io.github.classgraph:classgraph']
