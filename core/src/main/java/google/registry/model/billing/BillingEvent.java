@@ -47,6 +47,7 @@ import google.registry.model.transfer.TransferData.TransferServerApproveEntity;
 import google.registry.persistence.VKey;
 import google.registry.persistence.WithLongVKey;
 import google.registry.schema.replay.DatastoreAndSqlEntity;
+import java.io.Serializable;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -68,7 +69,7 @@ import org.joda.time.DateTime;
 @MappedSuperclass
 @WithLongVKey
 public abstract class BillingEvent extends ImmutableObject
-    implements Buildable, TransferServerApproveEntity {
+    implements Buildable, TransferServerApproveEntity, Serializable {
 
   /** The reason for the bill, which maps 1:1 to skus in go/registry-billing-skus. */
   public enum Reason {
