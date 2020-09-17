@@ -47,14 +47,13 @@ public class HostHistoryTest extends EntityTestCase {
     jpaTm().transact(() -> jpaTm().saveNew(host));
     VKey<HostResource> hostVKey = VKey.createSql(HostResource.class, "host1");
     HostResource hostFromDb = jpaTm().transact(() -> jpaTm().load(hostVKey));
-    HostHistory hostHistory = createHostHistory(hostFromDb, hostVKey);
+    HostHistory hostHistory = createHostHistory(hostFromDb, host.getRepoId());
     hostHistory.id = null;
     jpaTm().transact(() -> jpaTm().saveNew(hostHistory));
     jpaTm()
         .transact(
             () -> {
-              HostHistory fromDatabase =
-                  jpaTm().load(VKey.createSql(HostHistory.class, hostHistory.getId()));
+              HostHistory fromDatabase = jpaTm().load(hostHistory.createVKey());
               assertHostHistoriesEqual(fromDatabase, hostHistory);
               assertThat(fromDatabase.getHostRepoId().getSqlKey())
                   .isEqualTo(hostHistory.getHostRepoId().getSqlKey());
@@ -69,14 +68,14 @@ public class HostHistoryTest extends EntityTestCase {
     tm().transact(() -> tm().saveNew(host));
     VKey<HostResource> hostVKey = VKey.create(HostResource.class, "host1", Key.create(host));
     HostResource hostFromDb = tm().transact(() -> tm().load(hostVKey));
-    HostHistory hostHistory = createHostHistory(hostFromDb, hostVKey);
+    HostHistory hostHistory = createHostHistory(hostFromDb, host.getRepoId());
     fakeClock.advanceOneMilli();
     tm().transact(() -> tm().saveNew(hostHistory));
 
     // retrieving a HistoryEntry or a HostHistory with the same key should return the same object
     // note: due to the @EntitySubclass annotation. all Keys for ContactHistory objects will have
     // type HistoryEntry
-    VKey<HostHistory> hostHistoryVKey = VKey.createOfy(HostHistory.class, Key.create(hostHistory));
+    VKey<HostHistory> hostHistoryVKey = hostHistory.createVKey();
     VKey<HistoryEntry> historyEntryVKey =
         VKey.createOfy(HistoryEntry.class, Key.create(hostHistory.asHistoryEntry()));
     HostHistory hostHistoryFromDb = tm().transact(() -> tm().load(hostHistoryVKey));
@@ -92,7 +91,7 @@ public class HostHistoryTest extends EntityTestCase {
         .isEqualExceptFields(two.getHostBase(), "repoId");
   }
 
-  private HostHistory createHostHistory(HostBase hostBase, VKey<HostResource> hostVKey) {
+  private HostHistory createHostHistory(HostBase hostBase, String hostRepoId) {
     return new HostHistory.Builder()
         .setType(HistoryEntry.Type.HOST_CREATE)
         .setXmlBytes("<xml></xml>".getBytes(UTF_8))
@@ -103,7 +102,7 @@ public class HostHistoryTest extends EntityTestCase {
         .setReason("reason")
         .setRequestedByRegistrar(true)
         .setHostBase(hostBase)
-        .setHostRepoId(hostVKey)
+        .setHostRepoId(hostRepoId)
         .build();
   }
 }

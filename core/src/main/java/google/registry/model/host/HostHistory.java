@@ -14,11 +14,15 @@
 
 package google.registry.model.host;
 
+
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.EntitySubclass;
 import google.registry.model.EppResource;
+import google.registry.model.ImmutableObject;
+import google.registry.model.host.HostHistory.HostHistoryId;
 import google.registry.model.reporting.HistoryEntry;
 import google.registry.persistence.VKey;
+import java.io.Serializable;
 import javax.persistence.Access;
 import javax.persistence.AccessType;
 import javax.persistence.Column;
@@ -26,6 +30,8 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.IdClass;
+import javax.persistence.PostLoad;
 
 /**
  * A persisted history entry representing an EPP modification to a host.
@@ -45,13 +51,13 @@ import javax.persistence.Id;
     })
 @EntitySubclass
 @Access(AccessType.FIELD)
+@IdClass(HostHistoryId.class)
 public class HostHistory extends HistoryEntry {
 
   // Store HostBase instead of HostResource so we don't pick up its @Id
   HostBase hostBase;
 
-  @Column(nullable = false)
-  VKey<HostResource> hostRepoId;
+  @Id String hostRepoId;
 
   @Id
   @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "TempHistorySequenceGenerator")
@@ -69,7 +75,49 @@ public class HostHistory extends HistoryEntry {
 
   /** The key to the {@link google.registry.model.host.HostResource} this is based off of. */
   public VKey<HostResource> getHostRepoId() {
-    return hostRepoId;
+    return VKey.create(HostResource.class, hostRepoId, Key.create(HostResource.class, hostRepoId));
+  }
+
+  /** Creates a {@link VKey} instance for this entity. */
+  public VKey<HostHistory> createVKey() {
+    return VKey.create(HostHistory.class, new HostHistoryId(hostRepoId, getId()), Key.create(this));
+  }
+
+  @PostLoad
+  void postLoad() {
+    parent = Key.create(HostResource.class, hostRepoId);
+  }
+
+  /** Class to represent the composite primary key of {@link HostHistory} entity. */
+  static class HostHistoryId extends ImmutableObject implements Serializable {
+
+    private String hostRepoId;
+
+    private Long id;
+
+    /** Hibernate requires this default constructor. */
+    private HostHistoryId() {}
+
+    HostHistoryId(String hostRepoId, long id) {
+      this.hostRepoId = hostRepoId;
+      this.id = id;
+    }
+
+    String getHostRepoId() {
+      return hostRepoId;
+    }
+
+    void setHostRepoId(String hostRepoId) {
+      this.hostRepoId = hostRepoId;
+    }
+
+    long getId() {
+      return id;
+    }
+
+    void setId(long id) {
+      this.id = id;
+    }
   }
 
   @Override
@@ -90,9 +138,9 @@ public class HostHistory extends HistoryEntry {
       return this;
     }
 
-    public Builder setHostRepoId(VKey<HostResource> hostRepoId) {
+    public Builder setHostRepoId(String hostRepoId) {
       getInstance().hostRepoId = hostRepoId;
-      hostRepoId.maybeGetOfyKey().ifPresent(parent -> getInstance().parent = parent);
+      getInstance().parent = Key.create(HostResource.class, hostRepoId);
       return this;
     }
 
@@ -100,8 +148,7 @@ public class HostHistory extends HistoryEntry {
     @Override
     public Builder setParent(Key<? extends EppResource> parent) {
       super.setParent(parent);
-      getInstance().hostRepoId =
-          VKey.create(HostResource.class, parent.getName(), (Key<HostResource>) parent);
+      getInstance().hostRepoId = parent.getName();
       return this;
     }
   }

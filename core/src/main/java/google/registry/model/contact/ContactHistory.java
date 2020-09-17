@@ -17,8 +17,11 @@ package google.registry.model.contact;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.EntitySubclass;
 import google.registry.model.EppResource;
+import google.registry.model.ImmutableObject;
+import google.registry.model.contact.ContactHistory.ContactHistoryId;
 import google.registry.model.reporting.HistoryEntry;
 import google.registry.persistence.VKey;
+import java.io.Serializable;
 import javax.persistence.Access;
 import javax.persistence.AccessType;
 import javax.persistence.Column;
@@ -26,6 +29,8 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.IdClass;
+import javax.persistence.PostLoad;
 
 /**
  * A persisted history entry representing an EPP modification to a contact.
@@ -44,13 +49,13 @@ import javax.persistence.Id;
     })
 @EntitySubclass
 @Access(AccessType.FIELD)
+@IdClass(ContactHistoryId.class)
 public class ContactHistory extends HistoryEntry {
 
   // Store ContactBase instead of ContactResource so we don't pick up its @Id
   ContactBase contactBase;
 
-  @Column(nullable = false)
-  VKey<ContactResource> contactRepoId;
+  @Id String contactRepoId;
 
   @Id
   @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "TempHistorySequenceGenerator")
@@ -68,7 +73,51 @@ public class ContactHistory extends HistoryEntry {
 
   /** The key to the {@link ContactResource} this is based off of. */
   public VKey<ContactResource> getContactRepoId() {
-    return contactRepoId;
+    return VKey.create(
+        ContactResource.class, contactRepoId, Key.create(ContactResource.class, contactRepoId));
+  }
+
+  /** Creates a {@link VKey} instance for this entity. */
+  public VKey<ContactHistory> createVKey() {
+    return VKey.create(
+        ContactHistory.class, new ContactHistoryId(contactRepoId, getId()), Key.create(this));
+  }
+
+  @PostLoad
+  void postLoad() {
+    parent = Key.create(ContactResource.class, contactRepoId);
+  }
+
+  /** Class to represent the composite primary key of {@link ContactHistory} entity. */
+  static class ContactHistoryId extends ImmutableObject implements Serializable {
+
+    private String contactRepoId;
+
+    private Long id;
+
+    /** Hibernate requires this default constructor. */
+    private ContactHistoryId() {}
+
+    ContactHistoryId(String contactRepoId, long id) {
+      this.contactRepoId = contactRepoId;
+      this.id = id;
+    }
+
+    String getContactRepoId() {
+      return contactRepoId;
+    }
+
+    void setContactRepoId(String contactRepoId) {
+      this.contactRepoId = contactRepoId;
+    }
+
+    long getId() {
+      return id;
+    }
+
+    void setId(long id) {
+      this.id = id;
+    }
   }
 
   @Override
@@ -89,9 +138,9 @@ public class ContactHistory extends HistoryEntry {
       return this;
     }
 
-    public Builder setContactRepoId(VKey<ContactResource> contactRepoId) {
+    public Builder setContactRepoId(String contactRepoId) {
       getInstance().contactRepoId = contactRepoId;
-      contactRepoId.maybeGetOfyKey().ifPresent(parent -> getInstance().parent = parent);
+      getInstance().parent = Key.create(ContactResource.class, contactRepoId);
       return this;
     }
 
@@ -99,8 +148,7 @@ public class ContactHistory extends HistoryEntry {
     @Override
     public Builder setParent(Key<? extends EppResource> parent) {
       super.setParent(parent);
-      getInstance().contactRepoId =
-          VKey.create(ContactResource.class, parent.getName(), (Key<ContactResource>) parent);
+      getInstance().contactRepoId = parent.getName();
       return this;
     }
   }

@@ -99,8 +99,10 @@ public class DomainHistory extends HistoryEntry {
     return VKey.create(DomainBase.class, domainRepoId, Key.create(DomainBase.class, domainRepoId));
   }
 
+  /** Creates a {@link VKey} instance for this entity. */
   public VKey<DomainHistory> createVKey() {
-    return VKey.createSql(DomainHistory.class, new DomainHistoryId(domainRepoId, getId()));
+    return VKey.create(
+        DomainHistory.class, new DomainHistoryId(domainRepoId, getId()), Key.create(this));
   }
 
   @PostLoad
@@ -108,6 +110,7 @@ public class DomainHistory extends HistoryEntry {
     if (domainContent != null) {
       domainContent.nsHosts = nullToEmptyImmutableCopy(nsHosts);
     }
+    parent = Key.create(DomainBase.class, domainRepoId);
   }
 
   /** Class to represent the composite primary key of {@link DomainHistory} entity. */

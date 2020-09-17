@@ -47,13 +47,13 @@ public class ContactHistoryTest extends EntityTestCase {
     jpaTm().transact(() -> jpaTm().saveNew(contact));
     VKey<ContactResource> contactVKey = contact.createVKey();
     ContactResource contactFromDb = jpaTm().transact(() -> jpaTm().load(contactVKey));
-    ContactHistory contactHistory = createContactHistory(contactFromDb, contactVKey);
+    ContactHistory contactHistory = createContactHistory(contactFromDb, contact.getRepoId());
     contactHistory.id = null;
     jpaTm().transact(() -> jpaTm().saveNew(contactHistory));
     jpaTm()
         .transact(
             () -> {
-              ContactHistory fromDatabase = jpaTm().load(VKey.createSql(ContactHistory.class, 1L));
+              ContactHistory fromDatabase = jpaTm().load(contactHistory.createVKey());
               assertContactHistoriesEqual(fromDatabase, contactHistory);
               assertThat(fromDatabase.getContactRepoId().getSqlKey())
                   .isEqualTo(contactHistory.getContactRepoId().getSqlKey());
@@ -69,14 +69,13 @@ public class ContactHistoryTest extends EntityTestCase {
     VKey<ContactResource> contactVKey = contact.createVKey();
     ContactResource contactFromDb = tm().transact(() -> tm().load(contactVKey));
     fakeClock.advanceOneMilli();
-    ContactHistory contactHistory = createContactHistory(contactFromDb, contactVKey);
+    ContactHistory contactHistory = createContactHistory(contactFromDb, contact.getRepoId());
     tm().transact(() -> tm().saveNew(contactHistory));
 
     // retrieving a HistoryEntry or a ContactHistory with the same key should return the same object
     // note: due to the @EntitySubclass annotation. all Keys for ContactHistory objects will have
     // type HistoryEntry
-    VKey<ContactHistory> contactHistoryVKey =
-        VKey.createOfy(ContactHistory.class, Key.create(contactHistory));
+    VKey<ContactHistory> contactHistoryVKey = contactHistory.createVKey();
     VKey<HistoryEntry> historyEntryVKey =
         VKey.createOfy(HistoryEntry.class, Key.create(contactHistory.asHistoryEntry()));
     ContactHistory hostHistoryFromDb = tm().transact(() -> tm().load(contactHistoryVKey));
@@ -85,8 +84,7 @@ public class ContactHistoryTest extends EntityTestCase {
     assertThat(hostHistoryFromDb).isEqualTo(historyEntryFromDb);
   }
 
-  private ContactHistory createContactHistory(
-      ContactBase contact, VKey<ContactResource> contactVKey) {
+  private ContactHistory createContactHistory(ContactBase contact, String contactRepoId) {
     return new ContactHistory.Builder()
         .setType(HistoryEntry.Type.HOST_CREATE)
         .setXmlBytes("<xml></xml>".getBytes(UTF_8))
@@ -97,14 +95,14 @@ public class ContactHistoryTest extends EntityTestCase {
         .setReason("reason")
         .setRequestedByRegistrar(true)
         .setContactBase(contact)
-        .setContactRepoId(contactVKey)
+        .setContactRepoId(contactRepoId)
         .build();
   }
 
   static void assertContactHistoriesEqual(ContactHistory one, ContactHistory two) {
     assertAboutImmutableObjects()
         .that(one)
-        .isEqualExceptFields(two, "contactBase", "contactRepoId", "parent");
+        .isEqualExceptFields(two, "contactBase", "contactRepoId");
     assertAboutImmutableObjects()
         .that(one.getContactBase())
         .isEqualExceptFields(two.getContactBase(), "repoId");
