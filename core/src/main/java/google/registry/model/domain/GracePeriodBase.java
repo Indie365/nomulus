@@ -40,7 +40,7 @@ public class GracePeriodBase extends ImmutableObject {
   /** Unique id required for hibernate representation. */
   @javax.persistence.Id
   @Ignore
-  Long id;
+  Long gracePeriodId;
 
   /** Repository id for the domain which this grace period belongs to. */
   @Ignore
