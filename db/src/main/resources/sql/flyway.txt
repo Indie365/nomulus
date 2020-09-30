@@ -56,3 +56,4 @@ V55__domain_history_fields.sql
 V56__rename_host_table.sql
 V57__history_null_content.sql
 V58__drop_default_value_and_sequences_for_billing_event.sql
+V59__remove_pollmessage_sequence.sql
