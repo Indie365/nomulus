@@ -125,7 +125,7 @@ public class DomainHistory extends HistoryEntry implements SqlEntity {
       orphanRemoval = true)
   @JoinColumns({
     @JoinColumn(
-        name = "historyRevisionId",
+        name = "domainHistoryRevisionId",
         referencedColumnName = "historyRevisionId",
         insertable = false,
         updatable = false),
