@@ -17,6 +17,7 @@ package google.registry.model.domain;
 import static com.google.common.base.Preconditions.checkArgument;
 import static google.registry.util.PreconditionsUtils.checkArgumentNotNull;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.googlecode.objectify.annotation.Embed;
 import com.googlecode.objectify.annotation.OnLoad;
 import google.registry.model.billing.BillingEvent;
@@ -99,6 +100,7 @@ public class GracePeriod extends GracePeriodBase implements DatastoreAndSqlEntit
    * to avoid loading the BillingEvent from Datastore. This method should typically be called only
    * from test code to explicitly construct GracePeriods.
    */
+  @VisibleForTesting
   public static GracePeriod create(
       GracePeriodStatus type,
       String domainRepoId,
@@ -120,6 +122,20 @@ public class GracePeriod extends GracePeriodBase implements DatastoreAndSqlEntit
     checkArgumentNotNull(billingEventRecurring, "billingEventRecurring cannot be null");
     return createInternal(
         type, domainRepoId, expirationTime, clientId, null, billingEventRecurring, null);
+  }
+
+  /** Creates a GracePeriod for a Recurring billing event and a given {@link #gracePeriodId}. */
+  @VisibleForTesting
+  public static GracePeriod createForRecurring(
+      GracePeriodStatus type,
+      String domainRepoId,
+      DateTime expirationTime,
+      String clientId,
+      VKey<Recurring> billingEventRecurring,
+      @Nullable Long gracePeriodId) {
+    checkArgumentNotNull(billingEventRecurring, "billingEventRecurring cannot be null");
+    return createInternal(
+        type, domainRepoId, expirationTime, clientId, null, billingEventRecurring, gracePeriodId);
   }
 
   /** Creates a GracePeriod with no billing event. */

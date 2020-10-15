@@ -25,7 +25,6 @@ import static google.registry.testing.DatastoreHelper.newDomainBase;
 import static google.registry.testing.DatastoreHelper.newHostResource;
 import static google.registry.testing.DatastoreHelper.persistResource;
 import static google.registry.testing.DomainBaseSubject.assertAboutDomains;
-import static google.registry.testing.GracePeriodsSubject.assertAboutGracePeriods;
 import static google.registry.util.DateTimeUtils.START_OF_TIME;
 import static org.joda.money.CurrencyUnit.USD;
 import static org.joda.time.DateTimeZone.UTC;
@@ -403,9 +402,8 @@ public class DomainBaseTest extends EntityTestCase {
     VKey<BillingEvent.Recurring> serverApproveAutorenewEvent =
         domain.getTransferData().getServerApproveAutorenewEvent();
     assertTransferred(afterTransfer, newExpirationTime, serverApproveAutorenewEvent);
-    assertAboutGracePeriods()
-        .that(afterTransfer.getGracePeriods())
-        .containsExactlyExceptId(
+    assertThat(afterTransfer.getGracePeriods())
+        .containsExactly(
             GracePeriod.create(
                 GracePeriodStatus.TRANSFER,
                 domain.getRepoId(),
@@ -414,7 +412,8 @@ public class DomainBaseTest extends EntityTestCase {
                     .plusDays(1)
                     .plus(Registry.get("com").getTransferGracePeriodLength()),
                 "winner",
-                transferBillingEvent.createVKey()));
+                transferBillingEvent.createVKey(),
+                afterTransfer.getGracePeriods().iterator().next().getGracePeriodId()));
     // If we project after the grace period expires all should be the same except the grace period.
     DomainBase afterGracePeriod =
         domain.cloneProjectedAtTime(
@@ -645,9 +644,8 @@ public class DomainBaseTest extends EntityTestCase {
     assertThat(renewedThreeTimes.getRegistrationExpirationTime())
         .isEqualTo(oldExpirationTime.plusYears(3));
     assertThat(renewedThreeTimes.getLastEppUpdateTime()).isEqualTo(oldExpirationTime.plusYears(2));
-    assertAboutGracePeriods()
-        .that(renewedThreeTimes.getGracePeriods())
-        .containsExactlyExceptId(
+    assertThat(renewedThreeTimes.getGracePeriods())
+        .containsExactly(
             GracePeriod.createForRecurring(
                 GracePeriodStatus.AUTO_RENEW,
                 domain.getRepoId(),
@@ -655,7 +653,8 @@ public class DomainBaseTest extends EntityTestCase {
                     .plusYears(2)
                     .plus(Registry.get("com").getAutoRenewGracePeriodLength()),
                 renewedThreeTimes.getCurrentSponsorClientId(),
-                renewedThreeTimes.autorenewBillingEvent));
+                renewedThreeTimes.autorenewBillingEvent,
+                renewedThreeTimes.getGracePeriods().iterator().next().getGracePeriodId()));
   }
 
   @Test

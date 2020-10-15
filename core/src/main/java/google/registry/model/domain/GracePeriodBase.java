@@ -70,6 +70,10 @@ public class GracePeriodBase extends ImmutableObject {
   @Column(name = "billing_recurrence_id")
   VKey<BillingEvent.Recurring> billingEventRecurring = null;
 
+  public long getGracePeriodId() {
+    return gracePeriodId;
+  }
+
   public GracePeriodStatus getType() {
     return type;
   }

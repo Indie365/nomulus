@@ -50,7 +50,6 @@ import static google.registry.testing.DatastoreHelper.persistDeletedDomain;
 import static google.registry.testing.DatastoreHelper.persistResource;
 import static google.registry.testing.DomainBaseSubject.assertAboutDomains;
 import static google.registry.testing.EppExceptionSubject.assertAboutEppExceptions;
-import static google.registry.testing.GracePeriodsSubject.assertAboutGracePeriods;
 import static google.registry.testing.HistoryEntrySubject.assertAboutHistoryEntries;
 import static google.registry.testing.TaskQueueHelper.assertDnsTasksEnqueued;
 import static google.registry.testing.TaskQueueHelper.assertTasksEnqueued;
@@ -430,15 +429,15 @@ class DomainDeleteFlowTest extends ResourceFlowTestCase<DomainDeleteFlow, Domain
     assertAutorenewClosedAndCancellationCreatedFor(
         renewBillingEvent, getOnlyHistoryEntryOfType(resource, DOMAIN_DELETE));
     // All existing grace periods should be gone, and a new REDEMPTION one should be added.
-    assertAboutGracePeriods()
-        .that(resource.getGracePeriods())
-        .containsExactlyExceptId(
+    assertThat(resource.getGracePeriods())
+        .containsExactly(
             GracePeriod.create(
                 GracePeriodStatus.REDEMPTION,
                 domain.getRepoId(),
                 clock.nowUtc().plus(Registry.get("tld").getRedemptionGracePeriodLength()),
                 "TheRegistrar",
-                null));
+                null,
+                resource.getGracePeriods().iterator().next().getGracePeriodId()));
     assertDeletionPollMessageFor(resource, "Domain deleted.");
   }
 
@@ -632,15 +631,15 @@ class DomainDeleteFlowTest extends ResourceFlowTestCase<DomainDeleteFlow, Domain
         .and()
         .hasOneHistoryEntryEachOfTypes(DOMAIN_CREATE, DOMAIN_TRANSFER_REQUEST, DOMAIN_DELETE);
     // All existing grace periods should be gone, and a new REDEMPTION one should be added.
-    assertAboutGracePeriods()
-        .that(domain.getGracePeriods())
-        .containsExactlyExceptId(
+    assertThat(domain.getGracePeriods())
+        .containsExactly(
             GracePeriod.create(
                 GracePeriodStatus.REDEMPTION,
                 domain.getRepoId(),
                 clock.nowUtc().plus(Registry.get("tld").getRedemptionGracePeriodLength()),
                 "TheRegistrar",
-                null));
+                null,
+                domain.getGracePeriods().iterator().next().getGracePeriodId()));
     // The poll message (in the future) to the losing registrar for implicit ack should be gone.
     assertThat(getPollMessages("TheRegistrar", clock.nowUtc().plusMonths(1))).isEmpty();
     // The poll message in the future to the gaining registrar should be gone too, but there
@@ -1100,15 +1099,15 @@ class DomainDeleteFlowTest extends ResourceFlowTestCase<DomainDeleteFlow, Domain
         .hasExactlyStatusValues(StatusValue.INACTIVE, StatusValue.PENDING_DELETE)
         .and()
         .hasDeletionTime(clock.nowUtc().plus(standardDays(19)));
-    assertAboutGracePeriods()
-        .that(resource.getGracePeriods())
-        .containsExactlyExceptId(
+    assertThat(resource.getGracePeriods())
+        .containsExactly(
             GracePeriod.create(
                 GracePeriodStatus.REDEMPTION,
                 domain.getRepoId(),
                 clock.nowUtc().plus(standardDays(15)),
                 "TheRegistrar",
-                null));
+                null,
+                resource.getGracePeriods().iterator().next().getGracePeriodId()));
     assertDeletionPollMessageFor(resource, "Deleted by registry administrator.");
   }
 
@@ -1148,15 +1147,15 @@ class DomainDeleteFlowTest extends ResourceFlowTestCase<DomainDeleteFlow, Domain
         .hasExactlyStatusValues(StatusValue.INACTIVE, StatusValue.PENDING_DELETE)
         .and()
         .hasDeletionTime(clock.nowUtc().plus(standardDays(15)));
-    assertAboutGracePeriods()
-        .that(resource.getGracePeriods())
-        .containsExactlyExceptId(
+    assertThat(resource.getGracePeriods())
+        .containsExactly(
             GracePeriod.create(
                 GracePeriodStatus.REDEMPTION,
                 domain.getRepoId(),
                 clock.nowUtc().plus(standardDays(15)),
                 "TheRegistrar",
-                null));
+                null,
+                resource.getGracePeriods().iterator().next().getGracePeriodId()));
     assertDeletionPollMessageFor(resource, "Deleted by registry administrator.");
   }
 
