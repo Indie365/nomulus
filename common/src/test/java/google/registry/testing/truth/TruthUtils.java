@@ -12,20 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package google.registry.testing;
+package google.registry.testing.truth;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import javax.annotation.Nullable;
+import com.google.common.truth.Truth;
+import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 
-/**
- * Helper class to contain assertion functions that {@link com.google.common.truth.Truth} is not
- * covered.
- */
-public class TruthHelper {
+/** Utils class containing helper functions for {@link Truth}. */
+public class TruthUtils {
 
   /** Asserts that both of the given objects are either null or nonnull. */
-  public static void assertBothNullOrNonnull(@Nullable Object thisObj, @Nullable Object thatObj) {
+  public static void assertNullnessParity(
+      @NullableDecl Object thisObj, @NullableDecl Object thatObj) {
     if (thisObj == null) {
       assertThat(thatObj).isNull();
     } else {

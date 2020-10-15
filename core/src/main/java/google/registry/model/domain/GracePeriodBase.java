@@ -83,8 +83,8 @@ public class GracePeriodBase extends ImmutableObject {
   @Column(name = "billing_recurrence_history_id")
   Long billingEventRecurringHistoryId;
 
-  public long getId() {
-    return id;
+  public long getGracePeriodId() {
+    return gracePeriodId;
   }
 
   public GracePeriodStatus getType() {
