@@ -524,7 +524,7 @@ ALTER SEQUENCE public."DomainTransactionRecord_id_seq" OWNED BY public."DomainTr
 --
 
 CREATE TABLE public."GracePeriod" (
-    id bigint NOT NULL,
+    grace_period_id bigint NOT NULL,
     billing_event_id bigint,
     billing_recurrence_id bigint,
     registrar_id text NOT NULL,
@@ -533,6 +533,24 @@ CREATE TABLE public."GracePeriod" (
     type text NOT NULL,
     billing_event_history_id bigint,
     billing_recurrence_history_id bigint
+);
+
+
+--
+-- Name: GracePeriodHistory; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public."GracePeriodHistory" (
+    grace_period_id bigint NOT NULL,
+    billing_event_id bigint,
+    billing_event_history_id bigint,
+    billing_recurrence_id bigint,
+    billing_recurrence_history_id bigint,
+    registrar_id text NOT NULL,
+    domain_repo_id text NOT NULL,
+    expiration_time timestamp with time zone NOT NULL,
+    type text NOT NULL,
+    domain_history_revision_id bigint
 );
 
 
@@ -1123,11 +1141,19 @@ ALTER TABLE ONLY public."Domain"
 
 
 --
+-- Name: GracePeriodHistory GracePeriodHistory_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."GracePeriodHistory"
+    ADD CONSTRAINT "GracePeriodHistory_pkey" PRIMARY KEY (grace_period_id);
+
+
+--
 -- Name: GracePeriod GracePeriod_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public."GracePeriod"
-    ADD CONSTRAINT "GracePeriod_pkey" PRIMARY KEY (id);
+    ADD CONSTRAINT "GracePeriod_pkey" PRIMARY KEY (grace_period_id);
 
 
 --
@@ -1399,6 +1425,13 @@ CREATE INDEX idxbn8t4wp85fgxjl8q4ctlscx55 ON public."Contact" USING btree (curre
 
 
 --
+-- Name: idxd01j17vrpjxaerxdmn8bwxs7s; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idxd01j17vrpjxaerxdmn8bwxs7s ON public."GracePeriodHistory" USING btree (domain_repo_id);
+
+
+--
 -- Name: idxe7wu46c7wpvfmfnj4565abibp; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1664,6 +1697,14 @@ ALTER TABLE ONLY public."ClaimsEntry"
 
 
 --
+-- Name: GracePeriodHistory fk7w3cx8d55q8bln80e716tr7b8; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."GracePeriodHistory"
+    ADD CONSTRAINT fk7w3cx8d55q8bln80e716tr7b8 FOREIGN KEY (domain_repo_id, domain_history_revision_id) REFERENCES public."DomainHistory"(domain_repo_id, history_revision_id);
+
+
+--
 -- Name: Contact fk93c185fx7chn68uv7nl6uv2s0; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1893,6 +1934,22 @@ ALTER TABLE ONLY public."GracePeriod"
 
 ALTER TABLE ONLY public."GracePeriod"
     ADD CONSTRAINT fk_grace_period_domain_repo_id FOREIGN KEY (domain_repo_id) REFERENCES public."Domain"(repo_id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- Name: GracePeriodHistory fk_grace_period_history_billing_event_id; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."GracePeriodHistory"
+    ADD CONSTRAINT fk_grace_period_history_billing_event_id FOREIGN KEY (billing_event_id) REFERENCES public."BillingEvent"(billing_event_id);
+
+
+--
+-- Name: GracePeriodHistory fk_grace_period_history_billing_recurrence_id; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."GracePeriodHistory"
+    ADD CONSTRAINT fk_grace_period_history_billing_recurrence_id FOREIGN KEY (billing_recurrence_id) REFERENCES public."BillingRecurrence"(billing_recurrence_id);
 
 
 --

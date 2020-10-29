@@ -12,16 +12,14 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
-alter table "GracePeriod" alter column id drop default;
-
-drop sequence "GracePeriod_id_seq";
-
 alter table "GracePeriod" rename column "id" to "grace_period_id";
 
 create table "GracePeriodHistory" (
     grace_period_id int8 not null,
     billing_event_id int8,
+    billing_event_history_id int8,
     billing_recurrence_id int8,
+    billing_recurrence_history_id int8,
     registrar_id text not null,
     domain_repo_id text not null,
     expiration_time timestamptz not null,

@@ -23,8 +23,7 @@ import javax.annotation.Nullable;
 public class TruthUtils {
 
   /** Asserts that both of the given objects are either null or nonnull. */
-  public static void assertNullnessParity(
-      @Nullable Object thisObj, @Nullable Object thatObj) {
+  public static void assertNullnessParity(@Nullable Object thisObj, @Nullable Object thatObj) {
     if (thisObj == null) {
       assertThat(thatObj).isNull();
     } else {
