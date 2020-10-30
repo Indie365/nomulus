@@ -27,7 +27,10 @@ import google.registry.model.ofy.ObjectifyService;
 import google.registry.persistence.VKey;
 import google.registry.schema.replay.DatastoreAndSqlEntity;
 import javax.annotation.Nullable;
+import javax.persistence.Access;
+import javax.persistence.AccessType;
 import javax.persistence.Entity;
+import javax.persistence.Id;
 import javax.persistence.Index;
 import javax.persistence.Table;
 import org.joda.time.DateTime;
@@ -42,6 +45,13 @@ import org.joda.time.DateTime;
 @Entity
 @Table(indexes = @Index(columnList = "domainRepoId"))
 public class GracePeriod extends GracePeriodBase implements DatastoreAndSqlEntity {
+
+  @Id
+  @Access(AccessType.PROPERTY)
+  @Override
+  public long getGracePeriodId() {
+    return super.getGracePeriodId();
+  }
 
   // TODO(b/169873747): Remove this method after explicitly re-saving all domain entities.
   @OnLoad
@@ -187,10 +197,20 @@ public class GracePeriod extends GracePeriodBase implements DatastoreAndSqlEntit
   @Entity(name = "GracePeriodHistory")
   @Table(indexes = @Index(columnList = "domainRepoId"))
   static class GracePeriodHistory extends GracePeriodBase {
+    @Id Long gracePeriodHistoryRevisionId;
+
+    /** ID for the associated {@link DomainHistory} entity. */
     Long domainHistoryRevisionId;
+
+    @Override
+    @Access(AccessType.PROPERTY)
+    public long getGracePeriodId() {
+      return super.getGracePeriodId();
+    }
 
     static GracePeriodHistory createFrom(long historyRevisionId, GracePeriod gracePeriod) {
       GracePeriodHistory instance = new GracePeriodHistory();
+      instance.gracePeriodHistoryRevisionId = ObjectifyService.allocateId();
       instance.domainHistoryRevisionId = historyRevisionId;
       instance.gracePeriodId = gracePeriod.gracePeriodId;
       instance.type = gracePeriod.type;
@@ -198,7 +218,9 @@ public class GracePeriod extends GracePeriodBase implements DatastoreAndSqlEntit
       instance.expirationTime = gracePeriod.expirationTime;
       instance.clientId = gracePeriod.clientId;
       instance.billingEventOneTime = gracePeriod.billingEventOneTime;
+      instance.billingEventOneTimeHistoryId = gracePeriod.billingEventOneTimeHistoryId;
       instance.billingEventRecurring = gracePeriod.billingEventRecurring;
+      instance.billingEventRecurringHistoryId = gracePeriod.billingEventRecurringHistoryId;
       return instance;
     }
   }

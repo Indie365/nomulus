@@ -14,7 +14,7 @@
 
 package google.registry.testing.truth;
 
-import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 
 import com.google.common.truth.Truth;
 import javax.annotation.Nullable;
@@ -25,9 +25,23 @@ public class TruthUtils {
   /** Asserts that both of the given objects are either null or nonnull. */
   public static void assertNullnessParity(@Nullable Object thisObj, @Nullable Object thatObj) {
     if (thisObj == null) {
-      assertThat(thatObj).isNull();
+      assertWithMessage("Expects both objects are null but thatObj is not null")
+          .that(thatObj)
+          .isNull();
     } else {
-      assertThat(thatObj).isNotNull();
+      assertWithMessage("Expects both objects are not null but thatObj is null")
+          .that(thatObj)
+          .isNotNull();
+    }
+  }
+
+  /** Asserts that both of the given objects are either null or nonnull. */
+  public static void assertNullnessParity(
+      @Nullable Object thisObj, @Nullable Object thatObj, String errorMessage) {
+    if (thisObj == null) {
+      assertWithMessage(errorMessage).that(thatObj).isNull();
+    } else {
+      assertWithMessage(errorMessage).that(thatObj).isNotNull();
     }
   }
 }

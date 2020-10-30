@@ -15,7 +15,7 @@
 alter table "GracePeriod" rename column "id" to "grace_period_id";
 
 create table "GracePeriodHistory" (
-    grace_period_id int8 not null,
+    grace_period_history_revision_id int8 not null,
     billing_event_id int8,
     billing_event_history_id int8,
     billing_recurrence_id int8,
@@ -25,7 +25,8 @@ create table "GracePeriodHistory" (
     expiration_time timestamptz not null,
     type text not null,
     domain_history_revision_id int8,
-    primary key (grace_period_id)
+    grace_period_id int8 not null,
+    primary key (grace_period_history_revision_id)
 );
 
 alter table if exists "GracePeriodHistory"

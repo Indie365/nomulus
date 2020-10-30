@@ -541,7 +541,7 @@ CREATE TABLE public."GracePeriod" (
 --
 
 CREATE TABLE public."GracePeriodHistory" (
-    grace_period_id bigint NOT NULL,
+    grace_period_history_revision_id bigint NOT NULL,
     billing_event_id bigint,
     billing_event_history_id bigint,
     billing_recurrence_id bigint,
@@ -550,7 +550,8 @@ CREATE TABLE public."GracePeriodHistory" (
     domain_repo_id text NOT NULL,
     expiration_time timestamp with time zone NOT NULL,
     type text NOT NULL,
-    domain_history_revision_id bigint
+    domain_history_revision_id bigint,
+    grace_period_id bigint NOT NULL
 );
 
 
@@ -1145,7 +1146,7 @@ ALTER TABLE ONLY public."Domain"
 --
 
 ALTER TABLE ONLY public."GracePeriodHistory"
-    ADD CONSTRAINT "GracePeriodHistory_pkey" PRIMARY KEY (grace_period_id);
+    ADD CONSTRAINT "GracePeriodHistory_pkey" PRIMARY KEY (grace_period_history_revision_id);
 
 
 --
