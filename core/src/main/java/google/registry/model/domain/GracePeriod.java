@@ -165,7 +165,6 @@ public class GracePeriod extends GracePeriodBase implements DatastoreAndSqlEntit
    */
   public GracePeriod cloneAfterOfyLoad(String domainRepoId) {
     GracePeriod clone = clone(this);
-    clone.gracePeriodId = ObjectifyService.allocateId();
     clone.domainRepoId = checkArgumentNotNull(domainRepoId);
     clone.restoreHistoryIds();
     return clone;

@@ -33,14 +33,4 @@ alter table if exists "GracePeriodHistory"
    foreign key (domain_repo_id, domain_history_revision_id)
    references "DomainHistory";
 
-alter table if exists "GracePeriodHistory"
-   add constraint fk_grace_period_history_billing_event_id
-   foreign key (billing_event_id)
-   references "BillingEvent";
-
-alter table if exists "GracePeriodHistory"
-   add constraint fk_grace_period_history_billing_recurrence_id
-   foreign key (billing_recurrence_id)
-   references "BillingRecurrence";
-
 create index IDXd01j17vrpjxaerxdmn8bwxs7s on "GracePeriodHistory" (domain_repo_id);

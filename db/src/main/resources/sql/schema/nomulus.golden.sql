@@ -1937,22 +1937,6 @@ ALTER TABLE ONLY public."GracePeriod"
 
 
 --
--- Name: GracePeriodHistory fk_grace_period_history_billing_event_id; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public."GracePeriodHistory"
-    ADD CONSTRAINT fk_grace_period_history_billing_event_id FOREIGN KEY (billing_event_id) REFERENCES public."BillingEvent"(billing_event_id);
-
-
---
--- Name: GracePeriodHistory fk_grace_period_history_billing_recurrence_id; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public."GracePeriodHistory"
-    ADD CONSTRAINT fk_grace_period_history_billing_recurrence_id FOREIGN KEY (billing_recurrence_id) REFERENCES public."BillingRecurrence"(billing_recurrence_id);
-
-
---
 -- Name: Host fk_host_superordinate_domain; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
