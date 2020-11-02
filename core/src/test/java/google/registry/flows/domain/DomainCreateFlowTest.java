@@ -163,6 +163,7 @@ import google.registry.model.reporting.DomainTransactionRecord.TransactionReport
 import google.registry.model.reporting.HistoryEntry;
 import google.registry.monitoring.whitebox.EppMetric;
 import google.registry.persistence.VKey;
+import google.registry.testing.ReplayExtension;
 import google.registry.testing.TaskQueueHelper.TaskMatcher;
 import java.math.BigDecimal;
 import java.util.Map;
@@ -172,6 +173,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 /** Unit tests for {@link DomainCreateFlow}. */
 class DomainCreateFlowTest extends ResourceFlowTestCase<DomainCreateFlow, DomainBase> {
@@ -179,6 +181,8 @@ class DomainCreateFlowTest extends ResourceFlowTestCase<DomainCreateFlow, Domain
   private static final String CLAIMS_KEY = "2013041500/2/6/9/rJ1NrDO92vDsAzf7EQzgjX4R0000000001";
 
   private AllocationToken allocationToken;
+
+  @RegisterExtension final ReplayExtension replayExtension = new ReplayExtension();
 
   DomainCreateFlowTest() {
     setEppInput("domain_create.xml", ImmutableMap.of("DOMAIN", "example.tld"));
