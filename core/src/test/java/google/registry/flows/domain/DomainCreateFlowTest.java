@@ -31,6 +31,7 @@ import static google.registry.model.registry.Registry.TldState.GENERAL_AVAILABIL
 import static google.registry.model.registry.Registry.TldState.PREDELEGATION;
 import static google.registry.model.registry.Registry.TldState.QUIET_PERIOD;
 import static google.registry.model.registry.Registry.TldState.START_DATE_SUNRISE;
+import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 import static google.registry.pricing.PricingEngineProxy.isDomainPremium;
 import static google.registry.testing.DatastoreHelper.assertBillingEvents;
@@ -144,6 +145,7 @@ import google.registry.flows.exceptions.ResourceCreateContentionException;
 import google.registry.model.billing.BillingEvent;
 import google.registry.model.billing.BillingEvent.Flag;
 import google.registry.model.billing.BillingEvent.Reason;
+import google.registry.model.contact.ContactResource;
 import google.registry.model.domain.DomainBase;
 import google.registry.model.domain.GracePeriod;
 import google.registry.model.domain.launch.LaunchNotice;
@@ -151,6 +153,7 @@ import google.registry.model.domain.rgp.GracePeriodStatus;
 import google.registry.model.domain.secdns.DelegationSignerData;
 import google.registry.model.domain.token.AllocationToken;
 import google.registry.model.domain.token.AllocationToken.TokenStatus;
+import google.registry.model.host.HostResource;
 import google.registry.model.poll.PendingActionNotificationResponse.DomainPendingActionNotificationResponse;
 import google.registry.model.poll.PollMessage;
 import google.registry.model.registrar.Registrar;
@@ -213,6 +216,9 @@ class DomainCreateFlowTest extends ResourceFlowTestCase<DomainCreateFlow, Domain
                 persistReservedList("global-list", "resdom,FULLY_BLOCKED"))
             .build());
     persistClaimsList(ImmutableMap.of("example-one", CLAIMS_KEY));
+
+    // Save test entities to JPA (these are saved without backup and won't get replayed)
+    jpaTm().transact(() -> jpaTm().insert(loadRegistrar("TheRegistrar")));
   }
 
   /**
@@ -221,11 +227,20 @@ class DomainCreateFlowTest extends ResourceFlowTestCase<DomainCreateFlow, Domain
    * @param hostTld the TLD of the host (which might be an external TLD)
    */
   private void persistContactsAndHosts(String hostTld) {
+    ImmutableList.Builder<HostResource> hosts = new ImmutableList.Builder<HostResource>();
     for (int i = 1; i <= 14; ++i) {
-      persistActiveHost(String.format("ns%d.example.%s", i, hostTld));
+      hosts.add(persistActiveHost(String.format("ns%d.example.%s", i, hostTld)));
     }
     persistActiveContact("jd1234");
     persistActiveContact("sh8013");
+    ContactResource contact1 = persistActiveContact("jd1234");
+    ContactResource contact2 = persistActiveContact("sh8013");
+    jpaTm().transact(() -> {
+          jpaTm().insert(contact1);
+          jpaTm().insert(contact2);
+          jpaTm().insertAll(hosts.build());
+        });
+
     clock.advanceOneMilli();
   }
 
