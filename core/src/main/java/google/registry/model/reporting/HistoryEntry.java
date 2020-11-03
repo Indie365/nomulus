@@ -183,7 +183,7 @@ public class HistoryEntry extends ImmutableObject implements Buildable, Datastor
 
   /** Whether this change was requested by a registrar. */
   @Column(nullable = false, name = "historyRequestedByRegistrar")
-  Boolean requestedByRegistrar;
+  Boolean requestedByRegistrar = false;
 
   /**
    * Logging field for transaction reporting.
