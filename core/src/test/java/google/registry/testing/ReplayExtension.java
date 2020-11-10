@@ -21,15 +21,37 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 
 /**
  * A JUnit extension that replays datastore transactions against postgresql.
+ *
+ * <p>This extension must be ordered before AppEngineExtension. If AppEngineExtension is not used,
+ * JpaTransactionManagerException must be, and this extension should be ordered _after_
+ * JpaTransactionManagerException.
  */
 public class ReplayExtension implements BeforeEachCallback, AfterEachCallback {
+
+  FakeClock clock;
+
+  public ReplayExtension(FakeClock clock) {
+    this.clock = clock;
+  }
+
   @Override
   public void beforeEach(ExtensionContext context) {
+    DatastoreHelper.setClock(clock);
+    DatastoreHelper.setAlwaysSaveWithBackup(true);
     ReplayQueue.clear();
+    context.getStore(ExtensionContext.Namespace.GLOBAL).put(ReplayExtension.class, this);
   }
 
   @Override
   public void afterEach(ExtensionContext context) {
+    // This ensures that we do the replay even if we're not called from AppEngineExtension.  It
+    // should be safe to call replayToSql() twice, as the replay queue should be empty the second
+    // time.
+    replayToSql();
+  }
+
+  public void replayToSql() {
+    DatastoreHelper.setAlwaysSaveWithBackup(false);
     ReplayQueue.replay();
   }
 }

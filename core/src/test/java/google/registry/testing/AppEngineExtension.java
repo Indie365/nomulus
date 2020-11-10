@@ -477,6 +477,14 @@ public final class AppEngineExtension implements BeforeEachCallback, AfterEachCa
   public void afterEach(ExtensionContext context) throws Exception {
     checkArgumentNotNull(context, "The ExtensionContext must not be null");
     try {
+      // If there is a replay extension, we'll want to call its replayToSql() method.
+      ReplayExtension replayer =
+          (ReplayExtension)
+              context.getStore(ExtensionContext.Namespace.GLOBAL).get(ReplayExtension.class);
+      if (replayer != null) {
+        replayer.replayToSql();
+      }
+
       if (withCloudSql) {
         if (enableJpaEntityCoverageCheck) {
           jpaIntegrationWithCoverageExtension.afterEach(context);

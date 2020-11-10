@@ -31,7 +31,6 @@ import static google.registry.model.registry.Registry.TldState.GENERAL_AVAILABIL
 import static google.registry.model.registry.Registry.TldState.PREDELEGATION;
 import static google.registry.model.registry.Registry.TldState.QUIET_PERIOD;
 import static google.registry.model.registry.Registry.TldState.START_DATE_SUNRISE;
-import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 import static google.registry.pricing.PricingEngineProxy.isDomainPremium;
 import static google.registry.testing.DatastoreHelper.assertBillingEvents;
@@ -145,7 +144,6 @@ import google.registry.flows.exceptions.ResourceCreateContentionException;
 import google.registry.model.billing.BillingEvent;
 import google.registry.model.billing.BillingEvent.Flag;
 import google.registry.model.billing.BillingEvent.Reason;
-import google.registry.model.contact.ContactResource;
 import google.registry.model.domain.DomainBase;
 import google.registry.model.domain.GracePeriod;
 import google.registry.model.domain.launch.LaunchNotice;
@@ -153,7 +151,6 @@ import google.registry.model.domain.rgp.GracePeriodStatus;
 import google.registry.model.domain.secdns.DelegationSignerData;
 import google.registry.model.domain.token.AllocationToken;
 import google.registry.model.domain.token.AllocationToken.TokenStatus;
-import google.registry.model.host.HostResource;
 import google.registry.model.poll.PendingActionNotificationResponse.DomainPendingActionNotificationResponse;
 import google.registry.model.poll.PollMessage;
 import google.registry.model.registrar.Registrar;
@@ -175,6 +172,7 @@ import org.joda.money.Money;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -185,7 +183,9 @@ class DomainCreateFlowTest extends ResourceFlowTestCase<DomainCreateFlow, Domain
 
   private AllocationToken allocationToken;
 
-  @RegisterExtension final ReplayExtension replayExtension = new ReplayExtension();
+  @Order(value = Order.DEFAULT - 2)
+  @RegisterExtension
+  final ReplayExtension replayExtension = new ReplayExtension(clock);
 
   DomainCreateFlowTest() {
     setEppInput("domain_create.xml", ImmutableMap.of("DOMAIN", "example.tld"));
@@ -216,9 +216,6 @@ class DomainCreateFlowTest extends ResourceFlowTestCase<DomainCreateFlow, Domain
                 persistReservedList("global-list", "resdom,FULLY_BLOCKED"))
             .build());
     persistClaimsList(ImmutableMap.of("example-one", CLAIMS_KEY));
-
-    // Save test entities to JPA (these are saved without backup and won't get replayed)
-    jpaTm().transact(() -> jpaTm().insert(loadRegistrar("TheRegistrar")));
   }
 
   /**
@@ -227,21 +224,11 @@ class DomainCreateFlowTest extends ResourceFlowTestCase<DomainCreateFlow, Domain
    * @param hostTld the TLD of the host (which might be an external TLD)
    */
   private void persistContactsAndHosts(String hostTld) {
-    ImmutableList.Builder<HostResource> hosts = new ImmutableList.Builder<HostResource>();
     for (int i = 1; i <= 14; ++i) {
-      hosts.add(persistActiveHost(String.format("ns%d.example.%s", i, hostTld)));
+      persistActiveHost(String.format("ns%d.example.%s", i, hostTld));
     }
     persistActiveContact("jd1234");
     persistActiveContact("sh8013");
-    ContactResource contact1 = persistActiveContact("jd1234");
-    ContactResource contact2 = persistActiveContact("sh8013");
-    jpaTm().transact(() -> {
-          jpaTm().insert(contact1);
-          jpaTm().insert(contact2);
-          jpaTm().insertAll(hosts.build());
-        });
-
-    clock.advanceOneMilli();
   }
 
   private void persistContactsAndHosts() {
@@ -369,7 +356,7 @@ class DomainCreateFlowTest extends ResourceFlowTestCase<DomainCreateFlow, Domain
         .hasLaunchNotice(null);
     String expectedPayload =
         String.format(
-            "%s,%s,0000001761376042759136-65535,1,2014-09-09T09:09:09.001Z",
+            "%s,%s,0000001761376042759136-65535,1,2014-09-09T09:09:09.016Z",
             reloadResourceByForeignKey().getRepoId(), domainName);
     assertTasksEnqueued(QUEUE_SUNRISE, new TaskMatcher().payload(expectedPayload));
   }
@@ -390,7 +377,7 @@ class DomainCreateFlowTest extends ResourceFlowTestCase<DomainCreateFlow, Domain
             .payload(
                 reloadResourceByForeignKey().getRepoId()
                     + ",example-one.tld,370d0b7c9223372036854775807,1,"
-                    + "2009-08-16T09:00:00.001Z,2009-08-16T09:00:00.000Z");
+                    + "2009-08-16T09:00:00.016Z,2009-08-16T09:00:00.000Z");
     assertTasksEnqueued(QUEUE_CLAIMS, task);
   }
 
