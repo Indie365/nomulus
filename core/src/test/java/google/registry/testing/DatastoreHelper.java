@@ -122,6 +122,8 @@ import org.joda.time.DateTimeZone;
 /** Static utils for setting up test resources. */
 public class DatastoreHelper {
 
+  // The following two fields are injected by ReplayExtension.
+
   // If this is true, all of the methods that save to the datastore do so with backup.
   private static boolean alwaysSaveWithBackup;
 
