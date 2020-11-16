@@ -22,9 +22,10 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 /**
  * A JUnit extension that replays datastore transactions against postgresql.
  *
- * <p>This extension must be ordered before AppEngineExtension. If AppEngineExtension is not used,
- * JpaTransactionManagerException must be, and this extension should be ordered _after_
- * JpaTransactionManagerException.
+ * <p>This extension must be ordered before AppEngineExtension so that the test entities saved in
+ * that extension are also replayed. If AppEngineExtension is not used,
+ * JpaTransactionManagerExtension must be, and this extension should be ordered _after_
+ * JpaTransactionManagerExtension so that writes to SQL work.
  */
 public class ReplayExtension implements BeforeEachCallback, AfterEachCallback {
 

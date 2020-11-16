@@ -107,7 +107,8 @@ class TransactionInfo {
 
   // The beginning of the range of weights reserved for delete.  This must be greater than any of
   // the values in CLASS_WEIGHTS.
-  static final int DELETE_RANGE = 100;
+  static final int DELETE_RANGE =
+      CLASS_WEIGHTS.values().stream().mapToInt(Integer::intValue).max().getAsInt() + 1;
 
   /** Returns the weight of the entity type in the map entry. */
   private static int getWeight(ImmutableMap.Entry<Key<?>, Object> entry) {
