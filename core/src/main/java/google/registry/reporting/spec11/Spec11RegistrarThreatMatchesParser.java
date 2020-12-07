@@ -59,6 +59,25 @@ public class Spec11RegistrarThreatMatchesParser {
     return getFromFile(getGcsFilename(date));
   }
 
+  /** Returns registrar:set-of-threat-match pairings from the file, or empty if it doesn't exist. */
+  public ImmutableSet<RegistrarThreatMatches> getFromFile(GcsFilename spec11ReportFilename)
+      throws IOException {
+    if (!gcsUtils.existsAndNotEmpty(spec11ReportFilename)) {
+      return ImmutableSet.of();
+    }
+    ImmutableSet.Builder<RegistrarThreatMatches> builder = ImmutableSet.builder();
+    try (InputStream in = gcsUtils.openInputStream(spec11ReportFilename);
+        InputStreamReader isr = new InputStreamReader(in, UTF_8)) {
+    ImmutableList<String> reportLines =
+          ImmutableList.copyOf(CharStreams.toString(isr).split("\n"));
+      // Iterate from 1 to size() to skip the header at line 0.
+      for (int i = 1; i < reportLines.size(); i++) {
+        builder.add(parseRegistrarThreatMatch(reportLines.get(i)));
+      }
+      return builder.build();
+    }
+  }
+
   public Optional<LocalDate> getPreviousDateWithMatches(LocalDate date) {
     LocalDate yesterday = date.minusDays(1);
     GcsFilename gcsFilename = getGcsFilename(yesterday);
@@ -80,20 +99,6 @@ public class Spec11RegistrarThreatMatchesParser {
 
   private GcsFilename getGcsFilename(LocalDate localDate) {
     return new GcsFilename(reportingBucket, Spec11Pipeline.getSpec11ReportFilePath(localDate));
-  }
-
-  private ImmutableSet<RegistrarThreatMatches> getFromFile(GcsFilename spec11ReportFilename)
-      throws IOException, JSONException {
-    ImmutableSet.Builder<RegistrarThreatMatches> builder = ImmutableSet.builder();
-    try (InputStream in = gcsUtils.openInputStream(spec11ReportFilename)) {
-      ImmutableList<String> reportLines =
-          ImmutableList.copyOf(CharStreams.toString(new InputStreamReader(in, UTF_8)).split("\n"));
-      // Iterate from 1 to size() to skip the header at line 0.
-      for (int i = 1; i < reportLines.size(); i++) {
-        builder.add(parseRegistrarThreatMatch(reportLines.get(i)));
-      }
-      return builder.build();
-    }
   }
 
   private RegistrarThreatMatches parseRegistrarThreatMatch(String line) throws JSONException {
