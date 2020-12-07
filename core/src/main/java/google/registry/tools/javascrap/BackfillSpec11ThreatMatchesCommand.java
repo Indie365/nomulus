@@ -60,7 +60,7 @@ public class BackfillSpec11ThreatMatchesCommand extends ConfirmingCommand
   @Override
   protected String prompt() {
     return String.format(
-        "We will attempt to backfill Spec11 results from %d files.", getDatesToBackfill().size());
+        "Attempt to backfill Spec11 results from %d files?", getDatesToBackfill().size());
   }
 
   @Override
@@ -73,7 +73,7 @@ public class BackfillSpec11ThreatMatchesCommand extends ConfirmingCommand
         // It's OK if the file doesn't exist for a particular date; the result will be empty.
         ImmutableList<Spec11ThreatMatch> threatMatches =
             threatMatchesParser.getRegistrarThreatMatches(date).stream()
-                .map(rtm -> registrarThreatMatchesToNewObjects(rtm, date))
+                .map(rtm -> registrarThreatMatchesToCloudSqlObjects(rtm, date))
                 .flatMap(ImmutableList::stream)
                 .collect(toImmutableList());
         if (!threatMatches.isEmpty()) {
@@ -103,7 +103,7 @@ public class BackfillSpec11ThreatMatchesCommand extends ConfirmingCommand
   }
 
   /** Converts the previous {@link RegistrarThreatMatches} objects to {@link Spec11ThreatMatch}. */
-  private ImmutableList<Spec11ThreatMatch> registrarThreatMatchesToNewObjects(
+  private ImmutableList<Spec11ThreatMatch> registrarThreatMatchesToCloudSqlObjects(
       RegistrarThreatMatches registrarThreatMatches, LocalDate date) {
     return registrarThreatMatches.threatMatches().stream()
         .map(
