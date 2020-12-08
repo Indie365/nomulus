@@ -62,7 +62,7 @@ public class BackfillSpec11ThreatMatchesCommandTest
     when(threatMatchesParser.getRegistrarThreatMatches(CURRENT_DATE))
         .thenReturn(sampleThreatMatches());
     runCommandForced();
-    assertInStdout("We will attempt to backfill Spec11 results from 692 files.");
+    assertInStdout("Attempt to backfill Spec11 results from 692 files?");
     assertInStdout("Successfully parsed through 692 files with 3 threats.");
     verifyExactlyThreeEntriesInDbFromLastDay();
   }
@@ -74,7 +74,7 @@ public class BackfillSpec11ThreatMatchesCommandTest
     when(threatMatchesParser.getRegistrarThreatMatches(LocalDate.parse("2019-01-01")))
         .thenReturn(sampleThreatMatches());
     runCommandForced();
-    assertInStdout("We will attempt to backfill Spec11 results from 692 files.");
+    assertInStdout("Attempt to backfill Spec11 results from 692 files?");
     assertInStdout("Successfully parsed through 692 files with 6 threats.");
     jpaTm()
         .transact(
@@ -98,7 +98,7 @@ public class BackfillSpec11ThreatMatchesCommandTest
   @Test
   void testSuccess_empty() throws Exception {
     runCommandForced();
-    assertInStdout("We will attempt to backfill Spec11 results from 692 files.");
+    assertInStdout("Attempt to backfill Spec11 results from 692 files?");
     assertInStdout("Successfully parsed through 692 files with 0 threats.");
   }
 
@@ -120,7 +120,7 @@ public class BackfillSpec11ThreatMatchesCommandTest
     when(threatMatchesParser.getRegistrarThreatMatches(CURRENT_DATE.minusDays(2)))
         .thenThrow(new RuntimeException("hi"));
     runCommandForced();
-    assertInStdout("We will attempt to backfill Spec11 results from 692 files.");
+    assertInStdout("Attempt to backfill Spec11 results from 692 files?");
     assertInStdout(
         "Successfully parsed through 690 files with 3 threats. Failed to parse through "
             + "files with the following dates: 2020-11-20\n2020-11-21");
