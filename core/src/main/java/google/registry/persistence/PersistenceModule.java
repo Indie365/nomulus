@@ -139,8 +139,8 @@ public class PersistenceModule {
     validateCredentialStore(
         credentialStore,
         new RobotUser(RobotId.NOMULUS),
-        overrides.get(Environment.USER),
-        overrides.get(Environment.PASS));
+        username,
+        kmsKeyring.getCloudSqlPassword());
     return new JpaTransactionManagerImpl(create(overrides), clock);
   }
 
@@ -155,14 +155,13 @@ public class PersistenceModule {
       @CloudSqlClientCredential Credential credential,
       Clock clock) {
     CloudSqlCredentialSupplier.setupCredentialSupplier(credential);
+    RobotUser toolRobotUser = new RobotUser(RobotId.TOOL);
+    SqlCredential sqlCredential = credentialStore.getCredential(toolRobotUser);
     HashMap<String, String> overrides = Maps.newHashMap(cloudSqlConfigs);
-    overrides.put(Environment.USER, username);
-    overrides.put(Environment.PASS, kmsKeyring.getToolsCloudSqlPassword());
+    overrides.put(Environment.USER, sqlCredential.login());
+    overrides.put(Environment.PASS, sqlCredential.password());
     validateCredentialStore(
-        credentialStore,
-        new RobotUser(RobotId.TOOL),
-        overrides.get(Environment.USER),
-        overrides.get(Environment.PASS));
+        credentialStore, toolRobotUser, username, kmsKeyring.getToolsCloudSqlPassword());
     return new JpaTransactionManagerImpl(create(overrides), clock);
   }
 
@@ -171,21 +170,15 @@ public class PersistenceModule {
   @SocketFactoryJpaTm
   static JpaTransactionManager provideSocketFactoryJpaTm(
       SqlCredentialStore credentialStore,
-      @Config("beamCloudSqlUsername") String username,
-      @Config("beamCloudSqlPassword") String password,
       @Config("beamHibernateHikariMaximumPoolSize") int hikariMaximumPoolSize,
       @BeamPipelineCloudSqlConfigs ImmutableMap<String, String> cloudSqlConfigs,
       Clock clock) {
     HashMap<String, String> overrides = Maps.newHashMap(cloudSqlConfigs);
-    overrides.put(Environment.USER, username);
-    overrides.put(Environment.PASS, password);
+    SqlCredential sqlCredential = credentialStore.getCredential(new RobotUser(RobotId.NOMULUS));
+    overrides.put(Environment.USER, sqlCredential.login());
+    overrides.put(Environment.PASS, sqlCredential.password());
     overrides.put(HIKARI_MAXIMUM_POOL_SIZE, String.valueOf(hikariMaximumPoolSize));
     // TODO(b/175700623): consider assigning different logins to pipelines
-    validateCredentialStore(
-        credentialStore,
-        new RobotUser(RobotId.NOMULUS),
-        overrides.get(Environment.USER),
-        overrides.get(Environment.PASS));
     return new JpaTransactionManagerImpl(create(overrides), clock);
   }
 
@@ -230,11 +223,12 @@ public class PersistenceModule {
     return emf;
   }
 
-  /** Verifies that the credential from the Secret Manager matches the one currently in use.
+  /**
+   * Verifies that the credential from the Secret Manager matches the one currently in use.
    *
-   * <p>This is a helper for the transition to the Secret Manager, and will be removed once data
-   * and permissions are properly set up for all projects.
-   **/
+   * <p>This is a helper for the transition to the Secret Manager, and will be removed once data and
+   * permissions are properly set up for all projects.
+   */
   private static void validateCredentialStore(
       SqlCredentialStore credentialStore, SqlUser sqlUser, String login, String password) {
     try {
