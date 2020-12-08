@@ -59,8 +59,7 @@ public class BackfillSpec11ThreatMatchesCommand extends ConfirmingCommand
 
   @Override
   protected String prompt() {
-    return String.format(
-        "Attempt to backfill Spec11 results from %d files?", getDatesToBackfill().size());
+    return String.format("Backfill Spec11 results from %d files?", getDatesToBackfill().size());
   }
 
   @Override

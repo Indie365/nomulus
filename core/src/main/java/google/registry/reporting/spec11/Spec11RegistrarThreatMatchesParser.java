@@ -14,6 +14,7 @@
 
 package google.registry.reporting.spec11;
 
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.appengine.tools.cloudstorage.GcsFilename;
@@ -68,13 +69,13 @@ public class Spec11RegistrarThreatMatchesParser {
     ImmutableSet.Builder<RegistrarThreatMatches> builder = ImmutableSet.builder();
     try (InputStream in = gcsUtils.openInputStream(spec11ReportFilename);
         InputStreamReader isr = new InputStreamReader(in, UTF_8)) {
-    ImmutableList<String> reportLines =
+      ImmutableList<String> reportLines =
           ImmutableList.copyOf(CharStreams.toString(isr).split("\n"));
-      // Iterate from 1 to size() to skip the header at line 0.
-      for (int i = 1; i < reportLines.size(); i++) {
-        builder.add(parseRegistrarThreatMatch(reportLines.get(i)));
-      }
-      return builder.build();
+      // Skip the header at line 0
+      return reportLines.stream()
+          .skip(1)
+          .map(this::parseRegistrarThreatMatch)
+          .collect(toImmutableSet());
     }
   }
 
