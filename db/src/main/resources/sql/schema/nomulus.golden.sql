@@ -373,7 +373,9 @@ CREATE TABLE public."Domain" (
     deletion_poll_message_history_id bigint,
     transfer_billing_recurrence_history_id bigint,
     transfer_autorenew_poll_message_history_id bigint,
-    transfer_billing_event_history_id bigint
+    transfer_billing_event_history_id bigint,
+    deletion_poll_message_domain_repo_id text,
+    autorenew_poll_message_domain_repo_id text
 );
 
 
@@ -461,7 +463,9 @@ CREATE TABLE public."DomainHistory" (
     deletion_poll_message_history_id bigint,
     transfer_billing_recurrence_history_id bigint,
     transfer_autorenew_poll_message_history_id bigint,
-    transfer_billing_event_history_id bigint
+    transfer_billing_event_history_id bigint,
+    deletion_poll_message_domain_repo_id text,
+    autorenew_poll_message_domain_repo_id text
 );
 
 
