@@ -22,6 +22,7 @@ import google.registry.backup.DeleteOldCommitLogsAction;
 import google.registry.backup.ExportCommitLogDiffAction;
 import google.registry.batch.BatchModule;
 import google.registry.batch.DeleteContactsAndHostsAction;
+import google.registry.batch.DeleteExpiredDomainsAction;
 import google.registry.batch.DeleteLoadTestDataAction;
 import google.registry.batch.DeleteProberDataAction;
 import google.registry.batch.ExpandRecurringBillingEventsAction;
@@ -126,6 +127,8 @@ interface BackendRequestComponent {
   CopyDetailReportsAction copyDetailReportAction();
 
   DeleteContactsAndHostsAction deleteContactsAndHostsAction();
+
+  DeleteExpiredDomainsAction deleteExpiredDomainsAction();
 
   DeleteLoadTestDataAction deleteLoadTestDataAction();
 
