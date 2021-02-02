@@ -32,7 +32,7 @@ import static google.registry.model.ImmutableObjectSubject.immutableObjectCorres
 import static google.registry.model.ResourceTransferUtils.createTransferResponse;
 import static google.registry.model.ofy.ObjectifyService.ofy;
 import static google.registry.model.registry.Registry.TldState.GENERAL_AVAILABILITY;
-import static google.registry.model.registry.label.PremiumListUtils.parentPremiumListEntriesOnRevision;
+import static google.registry.model.registry.label.PremiumListDatastoreDao.parentPremiumListEntriesOnRevision;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 import static google.registry.persistence.transaction.TransactionManagerUtil.ofyTmOrDoNothing;
 import static google.registry.persistence.transaction.TransactionManagerUtil.transactIfJpaTm;
@@ -57,6 +57,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Streams;
 import com.google.common.net.InetAddresses;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.cmd.Saver;
@@ -100,6 +101,7 @@ import google.registry.model.registry.Registry.TldType;
 import google.registry.model.registry.label.PremiumList;
 import google.registry.model.registry.label.PremiumList.PremiumListEntry;
 import google.registry.model.registry.label.PremiumList.PremiumListRevision;
+import google.registry.model.registry.label.PremiumListDualDao;
 import google.registry.model.registry.label.ReservedList;
 import google.registry.model.reporting.HistoryEntry;
 import google.registry.model.transfer.ContactTransferData;
@@ -108,11 +110,11 @@ import google.registry.model.transfer.TransferData;
 import google.registry.model.transfer.TransferStatus;
 import google.registry.persistence.VKey;
 import google.registry.tmch.LordnTaskUtils;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import javax.annotation.Nullable;
 import org.joda.money.CurrencyUnit;
 import org.joda.money.Money;
@@ -807,7 +809,7 @@ public class DatabaseHelper {
 
   /** Assert that the expected billing events are exactly the ones found in the fake Datastore. */
   public static void assertBillingEvents(BillingEvent... expected) {
-    assertBillingEventsEqual(getBillingEvents(), Arrays.asList(expected));
+    assertBillingEventsEqual(getBillingEvents(), asList(expected));
   }
 
   /** Assert that the expected billing events set is exactly the one found in the fake Datastore. */
@@ -820,7 +822,7 @@ public class DatabaseHelper {
    */
   public static void assertBillingEventsForResource(
       EppResource resource, BillingEvent... expected) {
-    assertBillingEventsEqual(getBillingEvents(resource), Arrays.asList(expected));
+    assertBillingEventsEqual(getBillingEvents(resource), asList(expected));
   }
 
   /** Assert that there are no billing events. */
@@ -851,15 +853,15 @@ public class DatabaseHelper {
   }
 
   public static void assertPollMessages(String clientId, PollMessage... expected) {
-    assertPollMessagesEqual(getPollMessages(clientId), Arrays.asList(expected));
+    assertPollMessagesEqual(getPollMessages(clientId), asList(expected));
   }
 
   public static void assertPollMessages(PollMessage... expected) {
-    assertPollMessagesEqual(getPollMessages(), Arrays.asList(expected));
+    assertPollMessagesEqual(getPollMessages(), asList(expected));
   }
 
   public static void assertPollMessagesForResource(DomainContent domain, PollMessage... expected) {
-    assertPollMessagesEqual(getPollMessages(domain), Arrays.asList(expected));
+    assertPollMessagesEqual(getPollMessages(domain), asList(expected));
   }
 
   public static ImmutableList<PollMessage> getPollMessages() {
@@ -1232,19 +1234,8 @@ public class DatabaseHelper {
   /** Returns the entire map of {@link PremiumListEntry}s for the given {@link PremiumList}. */
   public static ImmutableMap<String, PremiumListEntry> loadPremiumListEntries(
       PremiumList premiumList) {
-    try {
-      ImmutableMap.Builder<String, PremiumListEntry> entriesMap = new ImmutableMap.Builder<>();
-      if (premiumList.getRevisionKey() != null) {
-        for (PremiumListEntry entry :
-            ofy().load().type(PremiumListEntry.class).ancestor(premiumList.getRevisionKey())) {
-          entriesMap.put(entry.getLabel(), entry);
-        }
-      }
-      return entriesMap.build();
-    } catch (Exception e) {
-      throw new RuntimeException(
-          "Could not retrieve entries for premium list " + premiumList.getName(), e);
-    }
+    return Streams.stream(PremiumListDualDao.loadAllPremiumListEntries(premiumList.getName()))
+        .collect(toImmutableMap(PremiumListEntry::getLabel, Function.identity()));
   }
 
   /** Loads and returns the registrar with the given client ID, or throws IAE if not present. */

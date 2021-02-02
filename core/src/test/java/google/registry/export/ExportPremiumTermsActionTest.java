@@ -17,8 +17,6 @@ package google.registry.export;
 import static com.google.common.net.MediaType.PLAIN_TEXT_UTF_8;
 import static google.registry.export.ExportPremiumTermsAction.EXPORT_MIME_TYPE;
 import static google.registry.export.ExportPremiumTermsAction.PREMIUM_TERMS_FILENAME;
-import static google.registry.model.registry.label.PremiumListUtils.deletePremiumList;
-import static google.registry.model.registry.label.PremiumListUtils.savePremiumListAndEntries;
 import static google.registry.testing.DatabaseHelper.createTld;
 import static google.registry.testing.DatabaseHelper.deleteTld;
 import static google.registry.testing.DatabaseHelper.persistResource;
@@ -39,6 +37,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.net.MediaType;
 import google.registry.model.registry.Registry;
 import google.registry.model.registry.label.PremiumList;
+import google.registry.model.registry.label.PremiumListDualDao;
 import google.registry.request.Response;
 import google.registry.storage.drive.DriveConnection;
 import google.registry.testing.AppEngineExtension;
@@ -76,8 +75,7 @@ public class ExportPremiumTermsActionTest {
   @BeforeEach
   void beforeEach() throws Exception {
     createTld("tld");
-    PremiumList pl = new PremiumList.Builder().setName("pl-name").build();
-    savePremiumListAndEntries(pl, PREMIUM_NAMES);
+    PremiumList pl = PremiumListDualDao.save("pl-name", PREMIUM_NAMES);
     persistResource(
         Registry.get("tld").asBuilder().setPremiumList(pl).setDriveFolderId("folder_id").build());
     when(driveConnection.createOrUpdateFile(
@@ -108,8 +106,7 @@ public class ExportPremiumTermsActionTest {
 
   @Test
   void test_exportPremiumTerms_success_emptyPremiumList() throws IOException {
-    PremiumList pl = new PremiumList.Builder().setName("pl-name").build();
-    savePremiumListAndEntries(pl, ImmutableList.of());
+    PremiumListDualDao.save("pl-name", ImmutableList.of());
     runAction("tld");
 
     verify(driveConnection)
@@ -165,7 +162,7 @@ public class ExportPremiumTermsActionTest {
 
   @Test
   void test_exportPremiumTerms_failure_noPremiumList() {
-    deletePremiumList(new PremiumList.Builder().setName("pl-name").build());
+    PremiumListDualDao.delete(new PremiumList.Builder().setName("pl-name").build());
     assertThrows(RuntimeException.class, () -> runAction("tld"));
 
     verifyNoInteractions(driveConnection);
