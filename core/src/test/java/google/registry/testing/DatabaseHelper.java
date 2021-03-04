@@ -587,26 +587,29 @@ public class DatabaseHelper {
     String domainName = String.format("%s.%s", label, tld);
     String repoId = generateNewDomainRoid(tld);
     DomainBase domain =
-        new DomainBase.Builder()
-            .setRepoId(repoId)
-            .setDomainName(domainName)
-            .setPersistedCurrentSponsorClientId("TheRegistrar")
-            .setCreationClientId("TheRegistrar")
-            .setCreationTimeForTest(creationTime)
-            .setRegistrationExpirationTime(expirationTime)
-            .setRegistrant(contact.createVKey())
-            .setContacts(
-                ImmutableSet.of(
-                    DesignatedContact.create(Type.ADMIN, contact.createVKey()),
-                    DesignatedContact.create(Type.TECH, contact.createVKey())))
-            .setAuthInfo(DomainAuthInfo.create(PasswordAuth.create("fooBAR")))
-            .addGracePeriod(
-                GracePeriod.create(GracePeriodStatus.ADD, repoId, now.plusDays(10), "foo", null))
-            .build();
+        persistResource(
+            new DomainBase.Builder()
+                .setRepoId(repoId)
+                .setDomainName(domainName)
+                .setPersistedCurrentSponsorClientId("TheRegistrar")
+                .setCreationClientId("TheRegistrar")
+                .setCreationTimeForTest(creationTime)
+                .setRegistrationExpirationTime(expirationTime)
+                .setRegistrant(contact.createVKey())
+                .setContacts(
+                    ImmutableSet.of(
+                        DesignatedContact.create(Type.ADMIN, contact.createVKey()),
+                        DesignatedContact.create(Type.TECH, contact.createVKey())))
+                .setAuthInfo(DomainAuthInfo.create(PasswordAuth.create("fooBAR")))
+                .addGracePeriod(
+                    GracePeriod.create(
+                        GracePeriodStatus.ADD, repoId, now.plusDays(10), "TheRegistrar", null))
+                .build());
     HistoryEntry historyEntryDomainCreate =
         persistResource(
             new HistoryEntry.Builder()
                 .setType(HistoryEntry.Type.DOMAIN_CREATE)
+                .setModificationTime(tm().transact(() -> tm().getTransactionTime()))
                 .setParent(domain)
                 .build());
     BillingEvent.Recurring autorenewEvent =
@@ -769,7 +772,7 @@ public class DatabaseHelper {
     return newRegistrars.build();
   }
 
-  private static Iterable<BillingEvent> getBillingEvents() {
+  public static Iterable<BillingEvent> getBillingEvents() {
     return transactIfJpaTm(
         () ->
             Iterables.concat(
