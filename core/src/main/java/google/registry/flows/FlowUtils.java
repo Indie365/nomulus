@@ -15,7 +15,8 @@
 package google.registry.flows;
 
 import static com.google.common.base.Preconditions.checkState;
-import static google.registry.model.ofy.ObjectifyService.ofy;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 import static google.registry.xml.ValidationMode.LENIENT;
 import static google.registry.xml.ValidationMode.STRICT;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -34,6 +35,8 @@ import google.registry.model.host.InetAddressAdapter.IpVersionMismatchException;
 import google.registry.model.translators.CurrencyUnitAdapter.UnknownCurrencyException;
 import google.registry.xml.XmlException;
 import java.util.List;
+import javax.persistence.Entity;
+import javax.persistence.MappedSuperclass;
 
 /** Static utility functions for flows. */
 public final class FlowUtils {
@@ -51,8 +54,19 @@ public final class FlowUtils {
 
   /** Persists the saves and deletes in an {@link EntityChanges} to Datastore. */
   public static void persistEntityChanges(EntityChanges entityChanges) {
-    ofy().save().entities(entityChanges.getSaves());
-    ofy().delete().keys(entityChanges.getDeletes());
+    if (tm().isOfy()) {
+      tm().putAll(entityChanges.getSaves());
+    } else {
+      // Some objects, e.g. ForeignKeyIndex, aren't saved in SQL
+      tm().putAll(
+              entityChanges.getSaves().stream()
+                  .filter(
+                      obj ->
+                          obj.getClass().isAnnotationPresent(Entity.class)
+                              || obj.getClass().isAnnotationPresent(MappedSuperclass.class))
+                  .collect(toImmutableSet()));
+    }
+    tm().delete(entityChanges.getDeletes());
   }
 
   /**
