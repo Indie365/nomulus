@@ -206,6 +206,7 @@ PRESUBMITS = {
          # using Criteria
          "ForeignKeyIndex.java",
          "HistoryEntryDao.java",
+         "JpaTransactionManager.java",
          "JpaTransactionManagerImpl.java",
          # CriteriaQueryBuilder is a false positive
          "CriteriaQueryBuilder.java",
