@@ -451,6 +451,7 @@ public class Registrar extends ImmutableObject
   CreateAutoTimestamp creationTime = CreateAutoTimestamp.create(null);
 
   /** An automatically managed last-saved timestamp. */
+  @DoNotCompare
   UpdateAutoTimestamp lastUpdateTime = UpdateAutoTimestamp.create(null);
 
   /** The time that the certificate was last updated. */

@@ -151,6 +151,7 @@ public class Cursor extends ImmutableObject implements DatastoreAndSqlEntity {
 
   /** An automatically managed timestamp of when this object was last written to Datastore. */
   @Column(nullable = false)
+  @DoNotCompare
   UpdateAutoTimestamp lastUpdateTime = UpdateAutoTimestamp.create(null);
 
   @OnLoad

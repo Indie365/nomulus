@@ -140,7 +140,8 @@ public final class RegistryLock extends ImmutableObject implements Buildable, Sq
   private Duration relockDuration;
 
   /** Time that this entity was last updated. */
-  private UpdateAutoTimestamp lastUpdateTimestamp;
+  @DoNotCompare
+  private UpdateAutoTimestamp lastUpdateTimestamp = UpdateAutoTimestamp.create(null);
 
   public String getRepoId() {
     return repoId;
