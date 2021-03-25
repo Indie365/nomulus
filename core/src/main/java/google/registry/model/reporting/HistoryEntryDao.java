@@ -21,7 +21,9 @@ import static google.registry.persistence.transaction.TransactionManagerFactory.
 import static google.registry.util.DateTimeUtils.END_OF_TIME;
 import static google.registry.util.DateTimeUtils.START_OF_TIME;
 
+import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Streams;
 import google.registry.model.EppResource;
 import google.registry.model.contact.ContactHistory;
 import google.registry.model.contact.ContactResource;
@@ -31,6 +33,7 @@ import google.registry.model.host.HostHistory;
 import google.registry.model.host.HostResource;
 import google.registry.persistence.VKey;
 import java.util.Comparator;
+import java.util.stream.Stream;
 import org.joda.time.DateTime;
 
 /**
@@ -83,6 +86,39 @@ public class HistoryEntryDao {
       return jpaTm()
           .transact(() -> loadHistoryObjectsForResourceFromSql(parentKey, afterTime, beforeTime));
     }
+  }
+
+  public static Iterable<? extends HistoryEntry> loadHistoryObjectsByRegistrars(
+      ImmutableCollection<String> registrarIds) {
+    if (tm().isOfy()) {
+      return ofy()
+          .load()
+          .type(HistoryEntry.class)
+          .filter("clientId in", registrarIds)
+          .order("modificationTime");
+    } else {
+      return jpaTm()
+          .transact(
+              () ->
+                  Streams.concat(
+                          loadHistoryObjectFromSqlByRegistrars(ContactHistory.class, registrarIds),
+                          loadHistoryObjectFromSqlByRegistrars(DomainHistory.class, registrarIds),
+                          loadHistoryObjectFromSqlByRegistrars(HostHistory.class, registrarIds))
+                      .sorted(Comparator.comparing(HistoryEntry::getType))
+                      .collect(toImmutableList()));
+    }
+  }
+
+  private static Stream<? extends HistoryEntry> loadHistoryObjectFromSqlByRegistrars(
+      Class<? extends HistoryEntry> historyClass, ImmutableCollection<String> registrarIds) {
+    return jpaTm()
+        .query(
+            String.format(
+                "SELECT entry FROM %s entry WHERE entry.clientId IN :registrarIds",
+                jpaTm().getEntityManager().getMetamodel().entity(historyClass).getName()),
+            historyClass)
+        .setParameter("registrarIds", registrarIds)
+        .getResultStream();
   }
 
   private static Iterable<? extends HistoryEntry> loadHistoryObjectsForResourceFromSql(
