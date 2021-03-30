@@ -50,5 +50,5 @@ public interface DnsCountQueryCoordinator {
   String createQuery(YearMonth yearMonth);
 
   /** Do any necessry preparation for the DNS query. */
-  void prepareForQuery(YearMonth yearMonth) throws Exception;
+  void prepareForQuery(YearMonth yearMonth);
 }

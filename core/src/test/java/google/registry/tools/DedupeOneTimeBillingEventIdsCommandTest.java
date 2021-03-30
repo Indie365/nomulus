@@ -75,7 +75,7 @@ class DedupeOneTimeBillingEventIdsCommandTest
   }
 
   @Test
-  void resaveBillingEvent_failsWhenReferredByDomain() throws Exception {
+  void resaveBillingEvent_failsWhenReferredByDomain() {
     persistResource(
         domain
             .asBuilder()
