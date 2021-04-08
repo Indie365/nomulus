@@ -106,8 +106,6 @@ interface RegistryToolComponent {
 
   void inject(DeployInvoicingPipelineCommand command);
 
-  void inject(DeploySpec11PipelineCommand command);
-
   void inject(EncryptEscrowDepositCommand command);
 
   void inject(GenerateAllocationTokensCommand command);
