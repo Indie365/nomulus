@@ -418,5 +418,10 @@ public class DatastoreTransactionManager implements TransactionManager {
     public long count() {
       return buildQuery().count();
     }
+
+    @Override
+    public List<T> list() {
+      return buildQuery().list();
+    }
   }
 }
