@@ -413,5 +413,10 @@ public class DatastoreTransactionManager implements TransactionManager {
     public Stream<T> stream() {
       return Streams.stream(buildQuery());
     }
+
+    @Override
+    public List<T> list() {
+      return buildQuery().list();
+    }
   }
 }

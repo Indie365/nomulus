@@ -727,5 +727,10 @@ public class JpaTransactionManagerImpl implements JpaTransactionManager {
     public Stream<T> stream() {
       return buildQuery().getResultStream();
     }
+
+    @Override
+    public List<T> list() {
+      return buildQuery().getResultList();
+    }
   }
 }
