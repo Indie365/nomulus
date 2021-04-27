@@ -106,6 +106,18 @@ public final class Registries {
     return tld;
   }
 
+  /**
+   * Pass-through check that the TLD exists, otherwise throw using the given error format message.
+   *
+   * <p>The specified TLD will be passed to the format message string.
+   */
+  public static String assertTldExists(String tld, String fmtMessage) {
+    String message = String.format(fmtMessage, tld);
+    checkArgument(
+        getTlds().contains(checkArgumentNotNull(emptyToNull(tld), message)), message, tld);
+    return tld;
+  }
+
   /** Pass-through check that every TLD in the given iterable exists, otherwise throw an IAE. */
   public static Iterable<String> assertTldsExist(Iterable<String> tlds) {
     for (String tld : tlds) {
