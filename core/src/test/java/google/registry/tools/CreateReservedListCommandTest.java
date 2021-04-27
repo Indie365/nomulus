@@ -113,7 +113,9 @@ class CreateReservedListCommandTest
 
   @Test
   void testNamingRules_tldThatDoesNotExist_failsWithoutOverride() {
-    runNameTestExpectedFailure("footld_reserved-list", "TLD footld does not exist");
+    runNameTestExpectedFailure(
+        "footld_reserved-list",
+        "The name must be in the format {tld|common}_list-name, yet TLD footld does not exist");
   }
 
   @Test
