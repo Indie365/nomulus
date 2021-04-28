@@ -372,6 +372,17 @@ public class TransactionManagerTest {
         () -> tm().transact(() -> tm().loadAllOf(TestEntity.class)));
   }
 
+  @TestOfyAndSql
+  void mutatedObjectNotPersisted() {
+    tm().transact(() -> tm().insert(theEntity));
+    tm().transact(
+            () -> {
+              TestEntity e = tm().loadByKey(theEntity.key());
+              e.data = "some other data!";
+            });
+    assertThat(tm().transact(() -> tm().loadByKey(theEntity.key())).data).isEqualTo("foo");
+  }
+
   private static void assertEntityExists(TestEntity entity) {
     assertThat(tm().transact(() -> tm().exists(entity))).isTrue();
   }
