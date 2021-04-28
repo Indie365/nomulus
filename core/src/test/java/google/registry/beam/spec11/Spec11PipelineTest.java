@@ -39,6 +39,7 @@ import java.nio.file.Path;
 import org.apache.beam.sdk.coders.KvCoder;
 import org.apache.beam.sdk.coders.SerializableCoder;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
+import org.apache.beam.sdk.testing.CrashingRunner;
 import org.apache.beam.sdk.transforms.Create;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
@@ -48,12 +49,8 @@ import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 
 /**
  * Unit tests for {@link Spec11Pipeline}.
@@ -62,9 +59,8 @@ import org.mockito.quality.Strictness;
  * Therefore we cannot fully test the pipeline but only test the two separate sink IO functions,
  * assuming that date is sourcede correctly the {@code BigQueryIO}.
  */
-@ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.STRICT_STUBS)
 class Spec11PipelineTest {
+
   private static final String DATE = "2020-01-27";
   private static final String SAFE_BROWSING_API_KEY = "api-key";
   private static final String REPORTING_BUCKET_URL = "reporting_bucket";
@@ -95,7 +91,7 @@ class Spec11PipelineTest {
   @TempDir Path tmpDir;
 
   @RegisterExtension
-  final TestPipelineExtension pipeline =
+  final transient TestPipelineExtension pipeline =
       TestPipelineExtension.create().enableAbandonedNodeEnforcement(true);
 
   @RegisterExtension
@@ -114,6 +110,7 @@ class Spec11PipelineTest {
     options.setDate(DATE);
     options.setSafeBrowsingApiKey(SAFE_BROWSING_API_KEY);
     options.setReportingBucketUrl(reportingBucketUrl.getAbsolutePath());
+    options.setRunner(CrashingRunner.class);
     threatMatches =
         pipeline.apply(
             Create.of(
