@@ -162,7 +162,7 @@ public final class RegistryJpaIO {
           jpaTm()
               .transactNoRetry(
                   () ->
-                      querySupplier.apply(jpaTm()).withAutoDetachOnLoad(true).stream()
+                      querySupplier.apply(jpaTm()).stream()
                           .map(resultMapper::apply)
                           .forEach(outputReceiver::output));
         }

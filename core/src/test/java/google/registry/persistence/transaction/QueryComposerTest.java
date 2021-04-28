@@ -27,6 +27,7 @@ import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
 import google.registry.model.ImmutableObject;
 import google.registry.testing.AppEngineExtension;
+import google.registry.testing.DatabaseHelper;
 import google.registry.testing.DualDatabaseTest;
 import google.registry.testing.FakeClock;
 import google.registry.testing.TestOfyAndSql;
@@ -75,16 +76,9 @@ public class QueryComposerTest {
             transactIfJpaTm(
                 () ->
                     tm().createQueryComposer(TestEntity.class)
-                        .where("name", Comparator.EQ, "bravo")
-                        .first()
-                        .get()))
-        .isEqualTo(bravo);
-    assertThat(
-            transactIfJpaTm(
-                () ->
-                    tm().createQueryComposer(TestEntity.class)
                         .where("name", Comparator.GT, "bravo")
                         .first()
+                        .map(DatabaseHelper::assertDetached)
                         .get()))
         .isEqualTo(charlie);
     assertThat(
@@ -93,6 +87,7 @@ public class QueryComposerTest {
                     tm().createQueryComposer(TestEntity.class)
                         .where("name", Comparator.GTE, "charlie")
                         .first()
+                        .map(DatabaseHelper::assertDetached)
                         .get()))
         .isEqualTo(charlie);
     assertThat(
@@ -101,6 +96,7 @@ public class QueryComposerTest {
                     tm().createQueryComposer(TestEntity.class)
                         .where("name", Comparator.LT, "bravo")
                         .first()
+                        .map(DatabaseHelper::assertDetached)
                         .get()))
         .isEqualTo(alpha);
     assertThat(
@@ -109,6 +105,7 @@ public class QueryComposerTest {
                     tm().createQueryComposer(TestEntity.class)
                         .where("name", Comparator.LTE, "alpha")
                         .first()
+                        .map(DatabaseHelper::assertDetached)
                         .get()))
         .isEqualTo(alpha);
   }
@@ -129,9 +126,10 @@ public class QueryComposerTest {
     assertThat(
             transactIfJpaTm(
                 () ->
-                    tm().createQueryComposer(TestEntity.class)
-                        .where("name", Comparator.EQ, "alpha")
-                        .getSingleResult()))
+                    DatabaseHelper.assertDetached(
+                        tm().createQueryComposer(TestEntity.class)
+                            .where("name", Comparator.EQ, "alpha")
+                            .getSingleResult())))
         .isEqualTo(alpha);
   }
 
@@ -166,17 +164,9 @@ public class QueryComposerTest {
                 () ->
                     tm()
                         .createQueryComposer(TestEntity.class)
-                        .where("name", Comparator.EQ, "alpha")
-                        .stream()
-                        .collect(toImmutableList())))
-        .isEqualTo(ImmutableList.of(alpha));
-    assertThat(
-            transactIfJpaTm(
-                () ->
-                    tm()
-                        .createQueryComposer(TestEntity.class)
                         .where("name", Comparator.GT, "alpha")
                         .stream()
+                        .map(DatabaseHelper::assertDetached)
                         .collect(toImmutableList())))
         .isEqualTo(ImmutableList.of(bravo, charlie));
     assertThat(
@@ -186,6 +176,7 @@ public class QueryComposerTest {
                         .createQueryComposer(TestEntity.class)
                         .where("name", Comparator.GTE, "bravo")
                         .stream()
+                        .map(DatabaseHelper::assertDetached)
                         .collect(toImmutableList())))
         .isEqualTo(ImmutableList.of(bravo, charlie));
     assertThat(
@@ -195,6 +186,7 @@ public class QueryComposerTest {
                         .createQueryComposer(TestEntity.class)
                         .where("name", Comparator.LT, "charlie")
                         .stream()
+                        .map(DatabaseHelper::assertDetached)
                         .collect(toImmutableList())))
         .isEqualTo(ImmutableList.of(alpha, bravo));
     assertThat(
@@ -204,6 +196,7 @@ public class QueryComposerTest {
                         .createQueryComposer(TestEntity.class)
                         .where("name", Comparator.LTE, "bravo")
                         .stream()
+                        .map(DatabaseHelper::assertDetached)
                         .collect(toImmutableList())))
         .isEqualTo(ImmutableList.of(alpha, bravo));
   }
@@ -227,6 +220,7 @@ public class QueryComposerTest {
                     tm().createQueryComposer(TestEntity.class)
                         .where("val", Comparator.EQ, 2)
                         .first()
+                        .map(DatabaseHelper::assertDetached)
                         .get()))
         .isEqualTo(bravo);
   }
@@ -241,6 +235,7 @@ public class QueryComposerTest {
                         .where("val", Comparator.GT, 1)
                         .orderBy("val")
                         .stream()
+                        .map(DatabaseHelper::assertDetached)
                         .collect(toImmutableList())))
         .isEqualTo(ImmutableList.of(bravo, alpha));
   }
