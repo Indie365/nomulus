@@ -14,47 +14,74 @@
 
 package google.registry.tools;
 
-import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
 
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Streams;
 import com.google.common.io.Files;
-import com.google.common.net.MediaType;
-import google.registry.testing.UriParameters;
+import google.registry.model.registry.label.PremiumList;
+import google.registry.model.registry.label.PremiumList.PremiumListEntry;
+import google.registry.schema.tld.PremiumEntry;
+import google.registry.schema.tld.PremiumListSqlDao;
 import java.io.File;
-import java.nio.charset.StandardCharsets;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
+import java.io.IOException;
+import java.util.Optional;
+import org.joda.money.BigMoney;
+import org.junit.jupiter.api.BeforeEach;
 
 /** Base class for common testing setup for create and update commands for Premium Lists. */
 abstract class CreateOrUpdatePremiumListCommandTestCase<T extends CreateOrUpdatePremiumListCommand>
     extends CommandTestCase<T> {
 
-  @Captor
-  ArgumentCaptor<ImmutableMap<String, String>> urlParamCaptor;
+  protected static final String TLD_TEST = "prime";
+  protected String premiumTermsPath;
 
-  @Captor
-  ArgumentCaptor<byte[]> requestBodyCaptor;
-
-  static String generateInputData(String premiumTermsPath) throws Exception {
-    return Files.asCharSource(new File(premiumTermsPath), StandardCharsets.UTF_8).read();
+  @BeforeEach
+  void beforeEachCreateOrUpdateReservedListCommandTestCase() throws IOException {
+    // set up for initial data
+    File premiumTermsFile = tmpDir.resolve("prime.txt").toFile();
+    String premiumTermsCsv = "foo,USD 2020";
+    Files.asCharSink(premiumTermsFile, UTF_8).write(premiumTermsCsv);
+    premiumTermsPath = premiumTermsFile.getPath();
   }
 
-  void verifySentParams(
-      AppEngineConnection connection, String path, ImmutableMap<String, String> parameterMap)
-      throws Exception {
-    verify(connection)
-        .sendPostRequest(
-            eq(path),
-            urlParamCaptor.capture(),
-            eq(MediaType.FORM_DATA),
-            requestBodyCaptor.capture());
-    assertThat(new ImmutableMap.Builder<String, String>()
-        .putAll(urlParamCaptor.getValue())
-        .putAll(UriParameters.parse(new String(requestBodyCaptor.getValue(), UTF_8)).entries())
-        .build())
-            .containsExactlyEntriesIn(parameterMap);
+  /*
+  To get premium list content as a set of string. This is a workaround to avoid dealing with
+  Hibernate.LazyInitizationException error,
+  "Cannot evaluate google.registry.model.registry.label.PremiumList.toString()'".
+   Ideally, the following should be the way to verify info in latest revision of a premium list:
+
+    PremiumList existingPremiumList =
+        PremiumListDualDao.getLatestRevision(name)
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        String.format(
+                            "Could not update premium list %s because it doesn't exist.", name)));
+    assertThat(persistedList.getLabelsToPrices()).containsEntry("foo", new BigDecimal("9000.00"));
+    assertThat(persistedList.size()).isEqualTo(1);
+
+  * */
+  ImmutableSet<String> getLatestPremiumListStringHelper(String name) {
+    Optional<PremiumList> sqlList = PremiumListSqlDao.getLatestRevision(name);
+    checkArgument(
+        sqlList.isPresent(),
+        String.format("Could not update premium list %s because it doesn't exist.", name));
+    Iterable<PremiumEntry> sqlListEntries =
+        jpaTm().transact(() -> PremiumListSqlDao.loadPremiumListEntriesUncached(sqlList.get()));
+
+    return Streams.stream(sqlListEntries)
+        .map(
+            premiumEntry ->
+                new PremiumListEntry.Builder()
+                    .setPrice(
+                        BigMoney.of(sqlList.get().getCurrency(), premiumEntry.getPrice()).toMoney())
+                    .setLabel(premiumEntry.getDomainLabel())
+                    .build()
+                    .toString())
+        .collect(toImmutableSet());
   }
 }
