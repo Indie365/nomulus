@@ -14,11 +14,15 @@
 
 package google.registry.tools;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static google.registry.model.registry.Registries.assertTldExists;
+import static google.registry.util.ListNamingUtils.convertFilePathToName;
+
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.base.Strings;
 import google.registry.model.registry.label.PremiumList;
-import google.registry.tools.server.CreatePremiumListAction;
+import google.registry.model.registry.label.PremiumListDualDao;
 
 /** Command to create a {@link PremiumList} on Datastore. */
 @Parameters(separators = " =", commandDescription = "Create a PremiumList in Datastore.")
@@ -29,18 +33,16 @@ public class CreatePremiumListCommand extends CreateOrUpdatePremiumListCommand {
       description = "Override restrictions on premium list naming")
   boolean override;
 
-  /** Returns the path to the servlet task. */
   @Override
-  public String getCommandPath() {
-    return CreatePremiumListAction.PATH;
-  }
-
-  @Override
-  ImmutableMap<String, String> getParameterMap() {
-    if (override) {
-      return ImmutableMap.of("override", "true");
-    } else {
-      return ImmutableMap.of();
+  protected void init() {
+    name = Strings.isNullOrEmpty(name) ? convertFilePathToName(inputFile) : name;
+    checkArgument(
+        !PremiumListDualDao.getLatestRevision(name).isPresent(),
+        "A premium list already exists by this name");
+    existingPremiumList = null;
+    if (!override) {
+      // refer to CreatePremiumListAction.java
+      assertTldExists(name);
     }
   }
 }

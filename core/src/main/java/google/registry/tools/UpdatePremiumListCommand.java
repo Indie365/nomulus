@@ -14,18 +14,26 @@
 
 package google.registry.tools;
 
+import static google.registry.util.ListNamingUtils.convertFilePathToName;
+
 import com.beust.jcommander.Parameters;
+import com.google.common.base.Strings;
 import google.registry.model.registry.label.PremiumList;
-import google.registry.tools.server.UpdatePremiumListAction;
+import google.registry.model.registry.label.PremiumListDualDao;
 
 /** Command to safely update {@link PremiumList} in Datastore for a given TLD. */
 @Parameters(separators = " =", commandDescription = "Update a PremiumList in Datastore.")
 class UpdatePremiumListCommand extends CreateOrUpdatePremiumListCommand {
 
-  /** Returns the path to the servlet task. */
   @Override
-  public String getCommandPath() {
-    return UpdatePremiumListAction.PATH;
+  protected void init() {
+    name = Strings.isNullOrEmpty(name) ? convertFilePathToName(inputFile) : name;
+    existingPremiumList =
+        PremiumListDualDao.getLatestRevision(name)
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        String.format(
+                            "Could not update premium list %s because it doesn't exist.", name)));
   }
 }
-
