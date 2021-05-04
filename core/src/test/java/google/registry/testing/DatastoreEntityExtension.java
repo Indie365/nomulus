@@ -40,6 +40,9 @@ public class DatastoreEntityExtension implements BeforeEachCallback, AfterEachCa
   @Override
   public void beforeEach(ExtensionContext context) {
     ApiProxy.setEnvironmentForCurrentThread(PLACEHOLDER_ENV);
+    // Clear this property so that when default Guava ThreadFactory is created it will not think
+    // that it is in App Engine and return an unusable ThreadFactory.
+    System.clearProperty("com.google.appengine.runtime.environment");
   }
 
   @Override
