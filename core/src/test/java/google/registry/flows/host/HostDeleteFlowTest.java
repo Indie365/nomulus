@@ -15,8 +15,11 @@
 package google.registry.flows.host;
 
 import static com.google.common.truth.Truth.assertThat;
+import static google.registry.batch.AsyncTaskEnqueuer.QUEUE_ASYNC_DELETE;
+import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 import static google.registry.testing.DatabaseHelper.assertNoBillingEvents;
 import static google.registry.testing.DatabaseHelper.createTld;
+import static google.registry.testing.DatabaseHelper.loadByKey;
 import static google.registry.testing.DatabaseHelper.newDomainBase;
 import static google.registry.testing.DatabaseHelper.newHostResource;
 import static google.registry.testing.DatabaseHelper.persistActiveHost;
@@ -24,7 +27,9 @@ import static google.registry.testing.DatabaseHelper.persistDeletedHost;
 import static google.registry.testing.DatabaseHelper.persistResource;
 import static google.registry.testing.EppExceptionSubject.assertAboutEppExceptions;
 import static google.registry.testing.HostResourceSubject.assertAboutHosts;
+import static google.registry.testing.TaskQueueHelper.assertDnsTasksEnqueued;
 import static google.registry.testing.TaskQueueHelper.assertNoDnsTasksEnqueued;
+import static google.registry.testing.TaskQueueHelper.assertNoTasksEnqueued;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.common.collect.ImmutableMap;
@@ -43,12 +48,14 @@ import google.registry.model.eppcommon.StatusValue;
 import google.registry.model.eppcommon.Trid;
 import google.registry.model.host.HostResource;
 import google.registry.model.registry.Registry;
-import google.registry.model.reporting.HistoryEntry;
+import google.registry.model.reporting.HistoryEntry.Type;
 import google.registry.model.transfer.DomainTransferData;
 import google.registry.model.transfer.TransferStatus;
 import google.registry.testing.DualDatabaseTest;
 import google.registry.testing.ReplayExtension;
 import google.registry.testing.TestOfyAndSql;
+import google.registry.testing.TestOfyOnly;
+import google.registry.testing.TestSqlOnly;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Order;
@@ -67,47 +74,54 @@ class HostDeleteFlowTest extends ResourceFlowTestCase<HostDeleteFlow, HostResour
     setEppInput("host_delete.xml", ImmutableMap.of("HOSTNAME", "ns1.example.tld"));
   }
 
-  @TestOfyAndSql
-  void testDryRun() throws Exception {
+  @TestOfyOnly
+  void testDryRun_ofy() throws Exception {
+    persistActiveHost("ns1.example.tld");
+    dryRunFlowAssertResponse(loadFile("host_delete_response_pending.xml"));
+  }
+
+  @TestSqlOnly
+  void testDryRun_sql() throws Exception {
     persistActiveHost("ns1.example.tld");
     dryRunFlowAssertResponse(loadFile("host_delete_response.xml"));
   }
 
-  @TestOfyAndSql
-  void testSuccess() throws Exception {
+  @TestOfyOnly
+  void testSuccess_ofy() throws Exception {
+    persistActiveHost("ns1.example.tld");
+    clock.advanceOneMilli();
+    assertTransactionalFlow(true);
+    runFlowAssertResponse(loadFile("host_delete_response_pending.xml"));
+    assertOfyDeleteSuccess();
+  }
+
+  @TestSqlOnly
+  void testSuccess_sql() throws Exception {
     persistActiveHost("ns1.example.tld");
     clock.advanceOneMilli();
     assertTransactionalFlow(true);
     runFlowAssertResponse(loadFile("host_delete_response.xml"));
-    HostResource deletedHost = reloadResourceByForeignKey();
-    assertAboutHosts().that(deletedHost).hasStatusValue(StatusValue.PENDING_DELETE);
-    assertAsyncDeletionTaskEnqueued(
-        deletedHost, "TheRegistrar", Trid.create("ABC-12345", "server-trid"), false);
-    assertAboutHosts()
-        .that(deletedHost)
-        .hasOnlyOneHistoryEntryWhich()
-        .hasType(HistoryEntry.Type.HOST_PENDING_DELETE);
-    assertNoBillingEvents();
-    assertNoDnsTasksEnqueued();
+    assertSqlDeleteSuccess();
   }
 
-  @TestOfyAndSql
-  void testSuccess_clTridNotSpecified() throws Exception {
+  @TestOfyOnly
+  void testSuccess_clTridNotSpecified_ofy() throws Exception {
+    setEppInput("host_delete_no_cltrid.xml", ImmutableMap.of("HOSTNAME", "ns1.example.tld"));
+    persistActiveHost("ns1.example.tld");
+    clock.advanceOneMilli();
+    assertTransactionalFlow(true);
+    runFlowAssertResponse(loadFile("host_delete_response_no_cltrid_pending.xml"));
+    assertOfyDeleteSuccess("TheRegistrar", null, false);
+  }
+
+  @TestSqlOnly
+  void testSuccess_clTridNotSpecified_sql() throws Exception {
     setEppInput("host_delete_no_cltrid.xml", ImmutableMap.of("HOSTNAME", "ns1.example.tld"));
     persistActiveHost("ns1.example.tld");
     clock.advanceOneMilli();
     assertTransactionalFlow(true);
     runFlowAssertResponse(loadFile("host_delete_response_no_cltrid.xml"));
-    HostResource deletedHost = reloadResourceByForeignKey();
-    assertAboutHosts().that(deletedHost).hasStatusValue(StatusValue.PENDING_DELETE);
-    assertAsyncDeletionTaskEnqueued(
-        deletedHost, "TheRegistrar", Trid.create(null, "server-trid"), false);
-    assertAboutHosts()
-        .that(deletedHost)
-        .hasOnlyOneHistoryEntryWhich()
-        .hasType(HistoryEntry.Type.HOST_PENDING_DELETE);
-    assertNoBillingEvents();
-    assertNoDnsTasksEnqueued();
+    assertSqlDeleteSuccess();
   }
 
   @TestOfyAndSql
@@ -161,23 +175,24 @@ class HostDeleteFlowTest extends ResourceFlowTestCase<HostDeleteFlow, HostResour
     assertAboutEppExceptions().that(thrown).marshalsToXml();
   }
 
-  @TestOfyAndSql
-  void testSuccess_superuserUnauthorizedClient() throws Exception {
+  @TestOfyOnly
+  void testSuccess_superuserUnauthorizedClient_ofy() throws Exception {
+    sessionMetadata.setClientId("NewRegistrar");
+    persistActiveHost("ns1.example.tld");
+    clock.advanceOneMilli();
+    runFlowAssertResponse(
+        CommitMode.LIVE, UserPrivileges.SUPERUSER, loadFile("host_delete_response_pending.xml"));
+    assertOfyDeleteSuccess("NewRegistrar", "ABC-12345", true);
+  }
+
+  @TestSqlOnly
+  void testSuccess_superuserUnauthorizedClient_sql() throws Exception {
     sessionMetadata.setClientId("NewRegistrar");
     persistActiveHost("ns1.example.tld");
     clock.advanceOneMilli();
     runFlowAssertResponse(
         CommitMode.LIVE, UserPrivileges.SUPERUSER, loadFile("host_delete_response.xml"));
-    HostResource deletedHost = reloadResourceByForeignKey();
-    assertAboutHosts().that(deletedHost).hasStatusValue(StatusValue.PENDING_DELETE);
-    assertAsyncDeletionTaskEnqueued(
-        deletedHost, "NewRegistrar", Trid.create("ABC-12345", "server-trid"), true);
-    assertAboutHosts()
-        .that(deletedHost)
-        .hasOnlyOneHistoryEntryWhich()
-        .hasType(HistoryEntry.Type.HOST_PENDING_DELETE);
-    assertNoBillingEvents();
-    assertNoDnsTasksEnqueued();
+    assertSqlDeleteSuccess();
   }
 
   @TestOfyAndSql
@@ -197,7 +212,13 @@ class HostDeleteFlowTest extends ResourceFlowTestCase<HostDeleteFlow, HostResour
             .setSuperordinateDomain(domain.createVKey())
             .build());
     clock.advanceOneMilli();
-    runFlowAssertResponse(loadFile("host_delete_response.xml"));
+    if (tm().isOfy()) {
+      runFlowAssertResponse(loadFile("host_delete_response_pending.xml"));
+      assertOfyDeleteSuccess();
+    } else {
+      runFlowAssertResponse(loadFile("host_delete_response.xml"));
+      assertSqlDeleteSuccess(true);
+    }
   }
 
   @TestOfyAndSql
@@ -250,7 +271,13 @@ class HostDeleteFlowTest extends ResourceFlowTestCase<HostDeleteFlow, HostResour
             .setSuperordinateDomain(domain.createVKey())
             .build());
     clock.advanceOneMilli();
-    runFlowAssertResponse(loadFile("host_delete_response.xml"));
+    if (tm().isOfy()) {
+      runFlowAssertResponse(loadFile("host_delete_response_pending.xml"));
+      assertOfyDeleteSuccess("NewRegistrar", "ABC-12345", false);
+    } else {
+      runFlowAssertResponse(loadFile("host_delete_response.xml"));
+      assertSqlDeleteSuccess(true);
+    }
   }
 
   @TestOfyAndSql
@@ -326,5 +353,49 @@ class HostDeleteFlowTest extends ResourceFlowTestCase<HostDeleteFlow, HostResour
     clock.advanceOneMilli();
     runFlow();
     assertIcannReportingActivityFieldLogged("srs-host-delete");
+  }
+
+  private void assertOfyDeleteSuccess(String clientId, String clientTrid, boolean isSuperuser)
+      throws Exception {
+    HostResource deletedHost = reloadResourceByForeignKey();
+    assertAsyncDeletionTaskEnqueued(
+        deletedHost, clientId, Trid.create(clientTrid, "server-trid"), isSuperuser);
+    assertAboutHosts()
+        .that(deletedHost)
+        .hasStatusValue(StatusValue.PENDING_DELETE)
+        .and()
+        .hasOnlyOneHistoryEntryWhich()
+        .hasType(Type.HOST_PENDING_DELETE);
+    assertNoBillingEvents();
+    assertNoDnsTasksEnqueued();
+  }
+
+  private void assertOfyDeleteSuccess() throws Exception {
+    assertOfyDeleteSuccess("TheRegistrar", "ABC-12345", false);
+  }
+
+  private void assertSqlDeleteSuccess(boolean isSubordinate) throws Exception {
+    assertThat(reloadResourceByForeignKey()).isNull();
+    HostResource deletedHost = reloadResourceByForeignKey(clock.nowUtc().minusMillis(1));
+    assertAboutHosts()
+        .that(deletedHost)
+        .isNotActiveAt(clock.nowUtc())
+        .and()
+        .hasExactlyStatusValues(StatusValue.OK)
+        .and()
+        .hasOnlyOneHistoryEntryWhich()
+        .hasType(Type.HOST_DELETE);
+    assertNoBillingEvents();
+    if (isSubordinate) {
+      assertDnsTasksEnqueued(deletedHost.getHostName());
+      assertThat(loadByKey(deletedHost.getSuperordinateDomain()).getSubordinateHosts()).isEmpty();
+    } else {
+      assertNoDnsTasksEnqueued();
+    }
+    assertNoTasksEnqueued(QUEUE_ASYNC_DELETE);
+  }
+
+  private void assertSqlDeleteSuccess() throws Exception {
+    assertSqlDeleteSuccess(false);
   }
 }
