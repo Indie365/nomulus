@@ -86,6 +86,7 @@ public final class ReservedList
 
   @PostLoad
   void postLoad() {
+    // TODO(b/188044616): Determine why Eager loading doesn't work here.
     Hibernate.initialize(reservedListMap);
   }
 
