@@ -142,6 +142,7 @@ public class ClaimsListShard extends ImmutableObject implements NonReplicatedEnt
   @PostLoad
   @SuppressWarnings("UnusedMethod")
   private void postLoad() {
+    // TODO(b/188044616): Determine why Eager loading doesn't work here.
     Hibernate.initialize(labelsToKeys);
   }
 
