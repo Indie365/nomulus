@@ -30,6 +30,8 @@ import google.registry.testing.AppEngineExtension;
 import google.registry.testing.DualDatabaseTest;
 import google.registry.testing.FakeClock;
 import google.registry.testing.TestOfyAndSql;
+import google.registry.testing.TestOfyOnly;
+import google.registry.testing.TestSqlOnly;
 import java.util.Optional;
 import javax.persistence.Column;
 import javax.persistence.NoResultException;
@@ -261,6 +263,65 @@ public class QueryComposerTest {
                         .stream()
                         .collect(toImmutableList())))
         .isEqualTo(ImmutableList.of());
+  }
+
+  @TestSqlOnly
+  public void testLikeQueries() {
+    assertThat(
+            transactIfJpaTm(
+                () ->
+                    tm()
+                        .createQueryComposer(TestEntity.class)
+                        .where("name", Comparator.LIKE, "%harl%")
+                        .stream()
+                        .collect(toImmutableList())))
+        .isEqualTo(ImmutableList.of(charlie));
+
+    // Verify that full matches work.
+    assertThat(
+            transactIfJpaTm(
+                () ->
+                    tm()
+                        .createQueryComposer(TestEntity.class)
+                        .where("name", Comparator.LIKE, "alpha")
+                        .stream()
+                        .collect(toImmutableList())))
+        .isEqualTo(ImmutableList.of(alpha));
+
+    // verify that we don't do partial matches.
+    assertThat(
+            transactIfJpaTm(
+                () ->
+                    tm()
+                        .createQueryComposer(TestEntity.class)
+                        .where("name", Comparator.LIKE, "%harl")
+                        .stream()
+                        .collect(toImmutableList())))
+        .isEqualTo(ImmutableList.of());
+    assertThat(
+            transactIfJpaTm(
+                () ->
+                    tm()
+                        .createQueryComposer(TestEntity.class)
+                        .where("name", Comparator.LIKE, "harl%")
+                        .stream()
+                        .collect(toImmutableList())))
+        .isEqualTo(ImmutableList.of());
+  }
+
+  @TestOfyOnly
+  public void testLikeQueries_failsOnOfy() {
+    UnsupportedOperationException thrown =
+        assertThrows(
+            UnsupportedOperationException.class,
+            () ->
+                tm()
+                    .createQueryComposer(TestEntity.class)
+                    .where("name", Comparator.LIKE, "%")
+                    .stream());
+    assertThat(thrown)
+        .hasMessageThat()
+        .contains("The LIKE operation is not supported on datastore.");
   }
 
   @javax.persistence.Entity
