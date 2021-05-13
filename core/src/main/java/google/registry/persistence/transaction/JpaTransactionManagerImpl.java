@@ -650,7 +650,7 @@ public class JpaTransactionManagerImpl implements JpaTransactionManager {
 
       // If the entity was previously persisted or merged, we have to throw an exception.
       if (transactionInfo.get().objectsToSave.contains(entity)) {
-        throw new IllegalStateException("Inserted/updated object reloaded.");
+        throw new IllegalStateException("Inserted/updated object reloaded: " + entity);
       }
 
       getEntityManager().detach(entity);
