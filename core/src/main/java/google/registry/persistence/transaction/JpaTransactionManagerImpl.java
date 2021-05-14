@@ -731,15 +731,13 @@ public class JpaTransactionManagerImpl implements JpaTransactionManager {
     }
   }
 
-  private static class JpaQueryComposerImpl<T> extends QueryComposer<T> {
+  private class JpaQueryComposerImpl<T> extends QueryComposer<T> {
 
     private static final int DEFAULT_FETCH_SIZE = 1000;
 
-    EntityManager em;
-
     private int fetchSize = DEFAULT_FETCH_SIZE;
 
-    JpaQueryComposerImpl(Class<T> entityClass, EntityManager em) {
+    JpaQueryComposerImpl(Class<T> entityClass) {
       super(entityClass);
     }
 
