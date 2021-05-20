@@ -85,6 +85,22 @@ class SendEmailServiceTest {
   }
 
   @Test
+  void testSuccess_cc() throws Exception {
+    EmailMessage content =
+        createBuilder()
+            .setCcs(
+                ImmutableList.of(
+                    new InternetAddress("cc@example.com"), new InternetAddress("cc2@example.com")))
+            .build();
+    sendEmailService.sendEmail(content);
+    Message message = getMessage();
+    assertThat(message.getRecipients(RecipientType.CC))
+        .asList()
+        .containsExactly(
+            new InternetAddress("cc@example.com"), new InternetAddress("cc2@example.com"));
+  }
+
+  @Test
   void testSuccess_contentType() throws Exception {
     EmailMessage content = createBuilder().setContentType(MediaType.HTML_UTF_8).build();
     sendEmailService.sendEmail(content);
