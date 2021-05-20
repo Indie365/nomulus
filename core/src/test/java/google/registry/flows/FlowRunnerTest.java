@@ -27,6 +27,7 @@ import static org.mockito.Mockito.verify;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.flogger.LoggerConfig;
@@ -64,6 +65,7 @@ class FlowRunnerTest {
       new CertificateChecker(
           ImmutableSortedMap.of(START_OF_TIME, 825, DateTime.parse("2020-09-01T00:00:00Z"), 398),
           30,
+          15,
           2048,
           ImmutableSet.of("secp256r1", "secp384r1"),
           clock);

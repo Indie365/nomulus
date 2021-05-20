@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
 import google.registry.flows.TlsCredentials.BadRegistrarIpAddressException;
@@ -53,6 +54,7 @@ final class TlsCredentialsTest {
       new CertificateChecker(
           ImmutableSortedMap.of(START_OF_TIME, 825, DateTime.parse("2020-09-01T00:00:00Z"), 398),
           30,
+          15,
           2048,
           ImmutableSet.of("secp256r1", "secp384r1"),
           clock);

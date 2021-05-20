@@ -30,6 +30,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.beust.jcommander.ParameterException;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
@@ -67,6 +68,7 @@ class CreateRegistrarCommandTest extends CommandTestCase<CreateRegistrarCommand>
         new CertificateChecker(
             ImmutableSortedMap.of(START_OF_TIME, 825, DateTime.parse("2020-09-01T00:00:00Z"), 398),
             30,
+            15,
             2048,
             ImmutableSet.of("secp256r1", "secp384r1"),
             fakeClock);

@@ -25,7 +25,9 @@ import static google.registry.testing.CertificateSamples.SAMPLE_CERT;
 import static google.registry.testing.CertificateSamples.SAMPLE_CERT3;
 import static google.registry.util.DateTimeUtils.START_OF_TIME;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.lenient;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
 import google.registry.testing.FakeClock;
@@ -36,6 +38,8 @@ import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.security.spec.ECGenParameterSpec;
 import java.security.spec.ECParameterSpec;
+import java.util.Date;
+import java.util.Optional;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.Test;
@@ -46,13 +50,13 @@ class CertificateCheckerTest {
   private static final String SSL_HOST = "www.example.tld";
 
   private FakeClock fakeClock = new FakeClock();
-  private CertificateChecker certificateChecker =
-      new CertificateChecker(
-          ImmutableSortedMap.of(START_OF_TIME, 825, DateTime.parse("2020-09-01T00:00:00Z"), 398),
-          30,
-          2048,
-          ImmutableSet.of("secp256r1", "secp384r1"),
-          fakeClock);
+  private CertificateChecker certificateChecker = new CertificateChecker(
+      ImmutableSortedMap.of(START_OF_TIME, 825, DateTime.parse("2020-09-01T00:00:00Z"), 398),
+      30,
+      15,
+      2048,
+      ImmutableSet.of("secp256r1", "secp384r1"),
+      fakeClock);
 
   @Test
   void test_checkCertificate_compliantCertPasses() throws Exception {
@@ -239,6 +243,123 @@ class CertificateCheckerTest {
                 DateTime.parse("2021-10-01T00:00:00Z"))
             .cert();
     assertThat(certificateChecker.isNearingExpiration(certificate)).isFalse();
+  }
+
+
+  @Test
+  void test_getCertificate_returnsCertificateObject() {
+
+  }
+
+  @Test
+  void test_getCertificate_throwsException() {
+
+  }
+
+  @Test
+  void test_shouldReceiveExpiringNotification_returnsFalse_greaterThan30() throws Exception {
+    fakeClock.setTo(DateTime.parse("2021-07-20T00:00:00Z"));
+    X509Certificate certificate =
+        SelfSignedCaCertificate.create(
+            SSL_HOST,
+            DateTime.parse("2020-09-02T00:00:00Z"),
+            DateTime.parse("2021-10-01T00:00:00Z"))
+            .cert();
+//    assertThat(certificateChecker.shouldReceiveExpiringNotification(certificate)).isFalse();
+  }
+
+  @Test
+  void test_shouldReceiveExpiringNotification_returnsFalse_hasExpired() throws Exception {
+    fakeClock.setTo(DateTime.parse("2021-10-20T00:00:00Z"));
+    X509Certificate certificate =
+        SelfSignedCaCertificate.create(
+            SSL_HOST,
+            DateTime.parse("2020-09-02T00:00:00Z"),
+            DateTime.parse("2021-10-01T00:00:00Z"))
+            .cert();
+//    assertThat(certificateChecker.shouldReceiveExpiringNotification(certificate)).isFalse();
+  }
+
+  @Test
+  void test_shouldReceiveExpiringNotification_returnsTrue_on15days() throws Exception {
+    fakeClock.setTo(DateTime.parse("2021-09-10T00:00:00Z"));
+    X509Certificate certificate =
+        SelfSignedCaCertificate.create(
+            SSL_HOST,
+            DateTime.parse("2020-09-02T00:00:00Z"),
+            DateTime.parse("2021-09-25T00:00:00Z"))
+            .cert();
+    String certificateStr = "certificateStr";
+
+    DateTime lastExpiringNotificationSentDate = null;
+    assertThat(certificateChecker.shouldReceiveExpiringNotification(lastExpiringNotificationSentDate, certificateStr)).isTrue();
+  }
+  @Test
+  void test_shouldReceiveExpiringNotification_returnsTrue_on30days() throws Exception {
+    fakeClock.setTo(DateTime.parse("2021-01-01T00:00:00Z"));
+    X509Certificate certificate =
+        SelfSignedCaCertificate.create(
+            SSL_HOST,
+            DateTime.parse("2020-01-02T00:00:00Z"),
+            DateTime.parse("2021-01-31T00:00:00Z"))
+            .cert();
+//    assertThat(certificateChecker.shouldReceiveExpiringNotification(certificate)).isTrue();
+  }
+
+  @Test
+  void test_shouldReceiveExpiringNotification_returnsFalse_between30and15_lastSentDateIsNotNull() throws Exception {
+    fakeClock.setTo(DateTime.parse("2021-07-05T00:00:00Z"));
+    X509Certificate certificate =
+        SelfSignedCaCertificate.create(
+            SSL_HOST,
+            DateTime.parse("2020-06-02T00:00:00Z"),
+            DateTime.parse("2021-07-18T00:00:00Z"))
+            .cert();
+    String certificateStr = "certificateStr";
+    DateTime lastExpiringNotificationSentDate =  DateTime.parse("2020-07-04T00:00:00Z");
+    assertThat(certificateChecker.shouldReceiveExpiringNotification(lastExpiringNotificationSentDate, certificateStr)).isFalse();
+  }
+
+  @Test
+  void test_shouldReceiveExpiringNotification_returnsTrue_between30and15_lastSentDateIsNull() throws Exception {
+    fakeClock.setTo(DateTime.parse("2021-07-05T00:00:00Z"));
+    X509Certificate certificate =
+        SelfSignedCaCertificate.create(
+            SSL_HOST,
+            DateTime.parse("2020-06-02T00:00:00Z"),
+            DateTime.parse("2021-07-18T00:00:00Z"))
+            .cert();
+    String certificateStr = "certificateStr";
+    DateTime lastExpiringNotificationSentDate =  DateTime.parse("2020-07-04T00:00:00Z");
+    assertThat(certificateChecker.shouldReceiveExpiringNotification(lastExpiringNotificationSentDate, certificateStr)).isFalse();
+  }
+
+  @Test
+  void test_shouldReceiveExpiringNotification_returnsFalse_between15and0_lastSentDateBetween15and0() throws Exception {
+    fakeClock.setTo(DateTime.parse("2021-07-05T00:00:00Z"));
+    X509Certificate certificate =
+        SelfSignedCaCertificate.create(
+            SSL_HOST,
+            DateTime.parse("2020-06-02T00:00:00Z"),
+            DateTime.parse("2021-07-18T00:00:00Z"))
+            .cert();
+    String certificateStr = "certificateStr";
+    DateTime lastExpiringNotificationSentDate =  DateTime.parse("2020-07-04T00:00:00Z");
+    assertThat(certificateChecker.shouldReceiveExpiringNotification(lastExpiringNotificationSentDate, certificateStr)).isFalse();
+  }
+
+  @Test
+  void test_shouldReceiveExpiringNotification_returnsTrue_between15and0_lastSentDateBetween30and15() throws Exception {
+    fakeClock.setTo(DateTime.parse("2021-07-05T00:00:00Z"));
+    X509Certificate certificate =
+        SelfSignedCaCertificate.create(
+            SSL_HOST,
+            DateTime.parse("2020-06-02T00:00:00Z"),
+            DateTime.parse("2021-07-18T00:00:00Z"))
+            .cert();
+    String certificateStr = "certificateStr";
+    DateTime lastExpiringNotificationSentDate =  DateTime.parse("2020-07-04T00:00:00Z");
+    assertThat(certificateChecker.shouldReceiveExpiringNotification(lastExpiringNotificationSentDate, certificateStr)).isFalse();
   }
 
   @Test

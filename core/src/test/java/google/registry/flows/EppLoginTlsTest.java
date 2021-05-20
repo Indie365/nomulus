@@ -20,6 +20,7 @@ import static google.registry.testing.DatabaseHelper.persistResource;
 import static google.registry.util.DateTimeUtils.START_OF_TIME;
 import static google.registry.util.X509Utils.getCertificateHash;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
@@ -55,6 +56,7 @@ class EppLoginTlsTest extends EppTestCase {
       new CertificateChecker(
           ImmutableSortedMap.of(START_OF_TIME, 825, DateTime.parse("2020-09-01T00:00:00Z"), 398),
           30,
+          15,
           2048,
           ImmutableSet.of("secp256r1", "secp384r1"),
           clock);
