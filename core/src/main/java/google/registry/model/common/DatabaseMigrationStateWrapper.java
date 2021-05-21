@@ -63,7 +63,7 @@ public class DatabaseMigrationStateWrapper extends CrossTldSingleton
     }
   }
 
-  private MigrationState migrationState;
+  MigrationState migrationState;
 
   // Required for Objectify initialization
   private DatabaseMigrationStateWrapper() {}

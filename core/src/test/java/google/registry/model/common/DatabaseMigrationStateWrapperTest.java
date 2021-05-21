@@ -25,27 +25,30 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import google.registry.model.common.DatabaseMigrationStateWrapper.MigrationState;
 import google.registry.testing.AppEngineExtension;
-import org.junit.jupiter.api.Test;
+import google.registry.testing.DualDatabaseTest;
+import google.registry.testing.TestOfyAndSql;
+import google.registry.testing.TestSqlOnly;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+@DualDatabaseTest
 public class DatabaseMigrationStateWrapperTest {
 
   @RegisterExtension
   public final AppEngineExtension appEngine =
       AppEngineExtension.builder().withDatastoreAndCloudSql().build();
 
-  @Test
+  @TestOfyAndSql
   void testEmpty_returnsDatastore() {
     assertThat(DatabaseMigrationStateWrapper.get()).isEqualTo(DATASTORE_ONLY);
   }
 
-  @Test
+  @TestOfyAndSql
   void testEmpty_canChangeToDatastorePrimary() {
     DatabaseMigrationStateWrapper.set(DATASTORE_PRIMARY);
     assertThat(DatabaseMigrationStateWrapper.get()).isEqualTo(DATASTORE_PRIMARY);
   }
 
-  @Test
+  @TestOfyAndSql
   void testValidTransitions() {
     runValidTransition(DATASTORE_ONLY, DATASTORE_PRIMARY);
 
@@ -62,7 +65,7 @@ public class DatabaseMigrationStateWrapperTest {
     runValidTransition(SQL_ONLY, SQL_PRIMARY);
   }
 
-  @Test
+  @TestOfyAndSql
   void testInvalidTransitions() {
     runInvalidTransition(DATASTORE_ONLY, DATASTORE_ONLY);
     runInvalidTransition(DATASTORE_ONLY, DATASTORE_PRIMARY_READ_ONLY);
@@ -84,6 +87,13 @@ public class DatabaseMigrationStateWrapperTest {
     runInvalidTransition(SQL_ONLY, DATASTORE_PRIMARY);
     runInvalidTransition(SQL_ONLY, DATASTORE_PRIMARY_READ_ONLY);
     runInvalidTransition(SQL_ONLY, SQL_ONLY);
+  }
+
+  @TestSqlOnly
+  void testSqlPrimary_stillUsesDatastore() {
+    setStateForced(DATASTORE_PRIMARY);
+    assertThat(ofyTm().loadSingleton(DatabaseMigrationStateWrapper.class).get().migrationState)
+        .isEqualTo(DATASTORE_PRIMARY);
   }
 
   private static void runValidTransition(MigrationState from, MigrationState to) {
