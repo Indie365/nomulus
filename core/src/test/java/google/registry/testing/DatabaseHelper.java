@@ -1101,8 +1101,17 @@ public class DatabaseHelper {
   }
 
   /** Returns all of the history entries that are parented off the given EppResource. */
-  public static List<? extends HistoryEntry> getHistoryEntries(EppResource resource) {
+  public static List<HistoryEntry> getHistoryEntries(EppResource resource) {
     return HistoryEntryDao.loadHistoryObjectsForResource(resource.createVKey());
+  }
+
+  /**
+   * Returns all of the history entries that are parented off the given EppResource, casted to the
+   * corresponding subclass.
+   */
+  public static <T extends HistoryEntry> List<T> getHistoryEntries(
+      EppResource resource, Class<T> subclazz) {
+    return HistoryEntryDao.loadHistoryObjectsForResource(resource.createVKey(), subclazz);
   }
 
   /**
@@ -1117,12 +1126,34 @@ public class DatabaseHelper {
   }
 
   /**
+   * Returns all of the history entries that are parented off the given EppResource with the given
+   * type and casted to the corresponding subclass.
+   */
+  public static <T extends HistoryEntry> ImmutableList<T> getHistoryEntriesOfType(
+      EppResource resource, final HistoryEntry.Type type, Class<T> subclazz) {
+    return getHistoryEntries(resource, subclazz).stream()
+        .filter(entry -> entry.getType() == type)
+        .collect(toImmutableList());
+  }
+
+  /**
    * Returns the only history entry of the given type, and throws an AssertionError if there are
    * zero or more than one.
    */
   public static HistoryEntry getOnlyHistoryEntryOfType(
       EppResource resource, final HistoryEntry.Type type) {
     List<HistoryEntry> historyEntries = getHistoryEntriesOfType(resource, type);
+    assertThat(historyEntries).hasSize(1);
+    return historyEntries.get(0);
+  }
+
+  /**
+   * Returns the only history entry of the given type, casted to the corresponding subtype, and
+   * throws an AssertionError if there are zero or more than one.
+   */
+  public static <T extends HistoryEntry> T getOnlyHistoryEntryOfType(
+      EppResource resource, final HistoryEntry.Type type, Class<T> subclazz) {
+    List<T> historyEntries = getHistoryEntriesOfType(resource, type, subclazz);
     assertThat(historyEntries).hasSize(1);
     return historyEntries.get(0);
   }
