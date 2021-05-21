@@ -63,7 +63,7 @@ public class DatabaseMigrationStateWrapper extends CrossTldSingleton
     }
   }
 
-  private MigrationState migrationState;
+  MigrationState migrationState;
 
   // Required for Objectify initialization
   private DatabaseMigrationStateWrapper() {}
@@ -99,6 +99,7 @@ public class DatabaseMigrationStateWrapper extends CrossTldSingleton
 
   /** Sets and persists to Datastore the current database migration state. */
   public static void set(MigrationState newState) {
+    ofyTm().assertInTransaction();
     MigrationState currentState = get();
     checkArgument(
         isValidStateTransition(currentState, newState),
@@ -106,7 +107,7 @@ public class DatabaseMigrationStateWrapper extends CrossTldSingleton
         currentState,
         newState);
     DatabaseMigrationStateWrapper wrapper = new DatabaseMigrationStateWrapper(newState);
-    ofyTm().transact(() -> ofyTm().put(wrapper));
+    ofyTm().put(wrapper);
   }
 
   /** Retrieves the current state of the migration (or DATASTORE_ONLY if it hasn't started). */

@@ -105,6 +105,7 @@ nomulus.iws
 cloudbuild-caches/
 node_modules/**
 /repos/
+gjf.out
 
 # Compiled JS/CSS code
 core/**/registrar_bin*.js
