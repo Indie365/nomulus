@@ -70,6 +70,7 @@ import google.registry.model.EppResourceUtils;
 import google.registry.model.billing.BillingEvent;
 import google.registry.model.billing.BillingEvent.Flag;
 import google.registry.model.billing.BillingEvent.Reason;
+import google.registry.model.billing.BillingEvent.Recurring;
 import google.registry.model.contact.ContactAuthInfo;
 import google.registry.model.contact.ContactHistory;
 import google.registry.model.contact.ContactResource;
@@ -785,6 +786,37 @@ public class DatabaseHelper {
                 tm().loadAllOf(BillingEvent.Recurring.class),
                 tm().loadAllOf(BillingEvent.Cancellation.class)));
   }
+  /**
+   * Reconstruct the {@code CancellationMatchingBillingEvent} field of {@link BillingEvent.OneTime}
+   * if loaded from SQL.
+   *
+   * <p>{@link BillingEvent.OneTime} contains a {@code VKey<Recurring>} field {@code
+   * CancellationMatchingBillingEvent} that points to the corresponding {@link
+   * BillingEvent.Recurring} which generated this billing event. For this {@code VKey} only the SQL
+   * primary key (a {@code int8}) is stored in SQL, it is therefore necessary to restore the Ofy key
+   * for test comparison. However we cannot use a {@link @PostLoad} method because {@link
+   * BillingEvent.OneTime} does not contain all the information needed to restore the Ofy key.
+   * Namely it is missing the ID of the HistoryEntry of the {@link BillingEvent.Recurring}, which is
+   * on its ancestor path. We could add a column to store it, but it is a waste because the column
+   * would only ever be used to restore the VKey for test comparison, and nothing else -- when
+   * operating in SQL mode we do NOT need the Ofy key to retrieve te {@link BillingEvent.Recurring},
+   * and when operating in Ofy mode the {@code VKey} is fully constructed on load. Adding a column
+   * also means we need to back fill all the data. Therefore it is easier to just load the {@link
+   * BillingEvent.Recurring} entity itself from the database and recreate the VKey from it.
+   */
+  public static BillingEvent.OneTime reconstructOneTimeCancellationMatchingBillingEvent(
+      BillingEvent.OneTime oneTime) {
+    if (!tm().isOfy()) {
+      Recurring recurring =
+          tm().transact(() -> tm().loadByKey(oneTime.getCancellationMatchingBillingEvent()));
+      return oneTime
+          .asBuilder()
+          .setCancellationMatchingBillingEvent(recurring.createVKey())
+          .build();
+    } else {
+      return oneTime;
+    }
+  }
 
   private static Iterable<BillingEvent> getBillingEvents(EppResource resource) {
     return transactIfJpaTm(
@@ -792,6 +824,7 @@ public class DatabaseHelper {
             Iterables.concat(
                 tm().loadAllOf(BillingEvent.OneTime.class).stream()
                     .filter(oneTime -> oneTime.getDomainRepoId().equals(resource.getRepoId()))
+                    .map(DatabaseHelper::reconstructOneTimeCancellationMatchingBillingEvent)
                     .collect(toImmutableList()),
                 tm().loadAllOf(BillingEvent.Recurring.class).stream()
                     .filter(recurring -> recurring.getDomainRepoId().equals(resource.getRepoId()))

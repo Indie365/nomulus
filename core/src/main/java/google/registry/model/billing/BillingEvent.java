@@ -354,7 +354,7 @@ public abstract class BillingEvent extends ImmutableObject
       return syntheticCreationTime;
     }
 
-    public VKey<? extends BillingEvent> getCancellationMatchingBillingEvent() {
+    public VKey<Recurring> getCancellationMatchingBillingEvent() {
       return cancellationMatchingBillingEvent;
     }
 
