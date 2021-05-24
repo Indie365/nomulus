@@ -52,9 +52,7 @@ import javax.persistence.Embeddable;
 import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.MapKeyColumn;
-import javax.persistence.PostLoad;
 import javax.persistence.Table;
-import org.hibernate.Hibernate;
 import org.joda.time.DateTime;
 
 /**
@@ -83,12 +81,6 @@ public final class ReservedList
 
   @Column(nullable = false)
   boolean shouldPublish = true;
-
-  @PostLoad
-  void postLoad() {
-    // TODO(b/188044616): Determine why Eager loading doesn't work here.
-    Hibernate.initialize(reservedListMap);
-  }
 
   /**
    * A reserved list entry entity, persisted to Datastore, that represents a single label and its

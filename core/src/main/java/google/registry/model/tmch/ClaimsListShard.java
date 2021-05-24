@@ -58,10 +58,8 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.JoinColumn;
 import javax.persistence.MapKeyColumn;
-import javax.persistence.PostLoad;
 import javax.persistence.Table;
 import javax.persistence.Transient;
-import org.hibernate.Hibernate;
 import org.joda.time.DateTime;
 
 /**
@@ -138,13 +136,6 @@ public class ClaimsListShard extends ImmutableObject implements NonReplicatedEnt
   @Ignore @Transient boolean isShard = false;
 
   private static final Retrier LOADER_RETRIER = new Retrier(new SystemSleeper(), 2);
-
-  @PostLoad
-  @SuppressWarnings("UnusedMethod")
-  private void postLoad() {
-    // TODO(b/188044616): Determine why Eager loading doesn't work here.
-    Hibernate.initialize(labelsToKeys);
-  }
 
   private static Optional<ClaimsListShard> loadClaimsListShard() {
     // Find the most recent revision.

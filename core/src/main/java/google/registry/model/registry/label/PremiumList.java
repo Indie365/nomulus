@@ -51,11 +51,9 @@ import javax.persistence.ElementCollection;
 import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.MapKeyColumn;
-import javax.persistence.PostLoad;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
-import org.hibernate.Hibernate;
 import org.hibernate.LazyInitializationException;
 import org.joda.money.CurrencyUnit;
 import org.joda.money.Money;
@@ -315,12 +313,5 @@ public final class PremiumList extends BaseDomainLabelList<Money, PremiumList.Pr
   @PrePersist
   void prePersist() {
     lastUpdateTime = creationTime;
-  }
-
-  @PostLoad
-  void postLoad() {
-    creationTime = lastUpdateTime;
-    // TODO(b/188044616): Determine why Eager loading doesn't work here.
-    Hibernate.initialize(labelsToPrices);
   }
 }
