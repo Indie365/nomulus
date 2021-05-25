@@ -14,13 +14,8 @@
 
 package google.registry.model;
 
-import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
-
 import com.google.common.flogger.FluentLogger;
 import google.registry.config.RegistryEnvironment;
-import google.registry.model.common.DatabaseTransitionSchedule;
-import google.registry.model.common.DatabaseTransitionSchedule.PrimaryDatabase;
-import google.registry.model.common.DatabaseTransitionSchedule.TransitionId;
 
 /** Utility methods related to migrating dual-read/dual-write entities. */
 public class DatabaseMigrationUtils {
@@ -37,18 +32,6 @@ public class DatabaseMigrationUtils {
       }
       logger.atWarning().withCause(e).log(message);
     }
-  }
-
-  /** Gets the value for the database currently considered primary. */
-  public static PrimaryDatabase getPrimaryDatabase(TransitionId transitionId) {
-    return DatabaseTransitionSchedule.getCached(transitionId)
-        .map(DatabaseTransitionSchedule::getPrimaryDatabase)
-        .orElse(PrimaryDatabase.DATASTORE);
-  }
-
-  public static boolean isDatastore(TransitionId transitionId) {
-    return tm().transactNew(() -> DatabaseMigrationUtils.getPrimaryDatabase(transitionId))
-        .equals(PrimaryDatabase.DATASTORE);
   }
 
   private DatabaseMigrationUtils() {}
