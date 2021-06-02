@@ -31,7 +31,6 @@ import static google.registry.testing.DatabaseHelper.newDomainBase;
 import static google.registry.testing.DatabaseHelper.persistDeletedDomain;
 import static google.registry.testing.DatabaseHelper.persistPremiumList;
 import static google.registry.testing.DatabaseHelper.persistResource;
-import static google.registry.testing.DatabaseHelper.reconstructOneTimeCancellationMatchingBillingEvent;
 import static google.registry.util.DateTimeUtils.END_OF_TIME;
 import static google.registry.util.DateTimeUtils.START_OF_TIME;
 import static org.joda.money.CurrencyUnit.USD;
@@ -256,8 +255,7 @@ public class ExpandRecurringBillingEventsActionTest
   void testSuccess_expandSingleEvent_idempotentForExistingOneTime() throws Exception {
     persistResource(recurring);
     BillingEvent.OneTime persisted =
-        reconstructOneTimeCancellationMatchingBillingEvent(
-            persistResource(defaultOneTimeBuilder().setParent(historyEntry).build()));
+        persistResource(defaultOneTimeBuilder().setParent(historyEntry).build());
     action.cursorTimeParam = Optional.of(START_OF_TIME);
     runAction();
     // No new history entries should be generated
@@ -279,13 +277,12 @@ public class ExpandRecurringBillingEventsActionTest
     BillingEvent.OneTime expected = defaultOneTimeBuilder().setParent(persistedEntry).build();
     // Persist an otherwise identical billing event that differs only in billing time.
     BillingEvent.OneTime persisted =
-        reconstructOneTimeCancellationMatchingBillingEvent(
-            persistResource(
-                expected
-                    .asBuilder()
-                    .setBillingTime(DateTime.parse("1999-02-19T00:00:00Z"))
-                    .setEventTime(DateTime.parse("1999-01-05T00:00:00Z"))
-                    .build()));
+        persistResource(
+            expected
+                .asBuilder()
+                .setBillingTime(DateTime.parse("1999-02-19T00:00:00Z"))
+                .setEventTime(DateTime.parse("1999-01-05T00:00:00Z"))
+                .build());
     assertCursorAt(beginningOfTest);
     assertBillingEventsForResource(domain, persisted, expected, recurring);
   }

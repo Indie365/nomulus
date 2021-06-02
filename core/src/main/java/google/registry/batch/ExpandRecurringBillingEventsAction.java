@@ -15,14 +15,13 @@
 package google.registry.batch;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Sets.difference;
 import static google.registry.mapreduce.MapreduceRunner.PARAM_DRY_RUN;
 import static google.registry.mapreduce.inputs.EppResourceInputs.createChildEntityInput;
 import static google.registry.model.common.Cursor.CursorType.RECURRING_BILLING;
 import static google.registry.model.domain.Period.Unit.YEARS;
-import static google.registry.model.ofy.ObjectifyService.ofy;
+import static google.registry.model.ofy.ObjectifyService.auditedOfy;
 import static google.registry.model.reporting.HistoryEntry.Type.DOMAIN_AUTORENEW;
 import static google.registry.persistence.transaction.QueryComposer.Comparator.EQ;
 import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
@@ -85,11 +84,6 @@ public class ExpandRecurringBillingEventsAction implements Runnable {
   private static final String ERROR_COUNTER = "errors";
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private static final String RECURRING_BILLING_EVENT_QUERY =
-      "SELECT r FROM BillingRecurrence r "
-          + "WHERE event_time <= :executeTime "
-          + "AND event_time < recurrence_end_time";
-
   @Inject Clock clock;
   @Inject MapreduceRunner mrRunner;
   @Inject @Parameter(PARAM_DRY_RUN) boolean isDryRun;
@@ -131,11 +125,13 @@ public class ExpandRecurringBillingEventsAction implements Runnable {
               .transact(
                   () ->
                       jpaTm()
-                          .query(RECURRING_BILLING_EVENT_QUERY, Recurring.class)
+                          .query(
+                              "FROM BillingRecurrence r "
+                                  + "WHERE event_time <= :executeTime "
+                                  + "AND event_time < recurrence_end_time",
+                              Recurring.class)
                           .setParameter("executeTime", executeTime.toDate())
                           .getResultStream()
-                          .collect(toImmutableList())
-                          .stream()
                           .map(
                               recurring ->
                                   expandBillingEvent(recurring, executeTime, cursorTime, isDryRun))
@@ -257,7 +253,8 @@ public class ExpandRecurringBillingEventsAction implements Runnable {
           isDryRun ? "(dry run) " : "", cursorTime, executionTime);
       tm().transact(
               () -> {
-                Cursor cursor = ofy().load().key(Cursor.createGlobalKey(RECURRING_BILLING)).now();
+                Cursor cursor =
+                    auditedOfy().load().key(Cursor.createGlobalKey(RECURRING_BILLING)).now();
                 DateTime currentCursorTime =
                     (cursor == null ? START_OF_TIME : cursor.getCursorTime());
                 if (!currentCursorTime.equals(expectedPersistedCursorTime)) {
@@ -297,7 +294,7 @@ public class ExpandRecurringBillingEventsAction implements Runnable {
             DomainBase.class, recurring.getDomainRepoId(), recurring.getParentKey().getParent());
     Iterable<OneTime> oneTimesForDomain;
     if (tm().isOfy()) {
-      oneTimesForDomain = ofy().load().type(OneTime.class).ancestor(domainKey.getOfyKey());
+      oneTimesForDomain = auditedOfy().load().type(OneTime.class).ancestor(domainKey.getOfyKey());
     } else {
       oneTimesForDomain =
           tm().createQueryComposer(OneTime.class)
@@ -396,16 +393,10 @@ public class ExpandRecurringBillingEventsAction implements Runnable {
       final BillingEvent.Recurring recurringEvent) {
     return Streams.stream(oneTimesForDomain)
         .filter(
-            billingEvent -> {
-              VKey<Recurring> recurringEventVKey = recurringEvent.createVKey();
-              return tm().isOfy()
-                  ? recurringEventVKey
-                      .getOfyKey()
-                      .equals(billingEvent.getCancellationMatchingBillingEvent().getOfyKey())
-                  : recurringEventVKey
-                      .getSqlKey()
-                      .equals(billingEvent.getCancellationMatchingBillingEvent().getSqlKey());
-            })
+            billingEvent ->
+                recurringEvent
+                    .createVKey()
+                    .equals(billingEvent.getCancellationMatchingBillingEvent()))
         .map(OneTime::getBillingTime)
         .collect(toImmutableSet());
   }
