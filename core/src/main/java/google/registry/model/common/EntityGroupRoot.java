@@ -14,6 +14,7 @@
 
 package google.registry.model.common;
 
+import com.google.apphosting.api.ApiProxy;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
@@ -43,6 +44,8 @@ public class EntityGroupRoot extends BackupGroupRoot implements DatastoreOnlyEnt
 
   /** The root key for cross-tld resources such as registrars. */
   public static Key<EntityGroupRoot> getCrossTldKey() {
-    return Key.create(EntityGroupRoot.class, "cross-tld");
+    return ApiProxy.getCurrentEnvironment() == null
+        ? null
+        : Key.create(EntityGroupRoot.class, "cross-tld");
   }
 }
