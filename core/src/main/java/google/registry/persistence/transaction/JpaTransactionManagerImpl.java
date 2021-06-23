@@ -46,6 +46,8 @@ import google.registry.util.Retrier;
 import google.registry.util.SystemSleeper;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
@@ -71,7 +73,6 @@ import javax.persistence.TemporalType;
 import javax.persistence.TypedQuery;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.metamodel.EntityType;
-import javax.persistence.metamodel.SingularAttribute;
 import org.joda.time.DateTime;
 
 /** Implementation of {@link JpaTransactionManager} for JPA compatible database. */
@@ -643,11 +644,23 @@ public class JpaTransactionManagerImpl implements JpaTransactionManager {
   private static ImmutableSet<EntityId> getEntityIdsFromIdContainer(
       EntityType<?> entityType, Object idContainer) {
     return entityType.getIdClassAttributes().stream()
-        .map(SingularAttribute::getName)
         .map(
-            idName -> {
-              Object idValue = getFieldValue(idContainer, idName);
-              return new EntityId(idName, idValue);
+            attribute -> {
+              // The object may use either Java getters or field names to represent the ID object.
+              // Attempt the Java getter, then fall back to the field name if that fails.
+              String methodName = attribute.getJavaMember().getName();
+              try {
+                Method method = idContainer.getClass().getDeclaredMethod(methodName);
+                method.setAccessible(true);
+                Object idValue = method.invoke(idContainer);
+                return new EntityId(attribute.getName(), idValue);
+              } catch (NoSuchMethodException
+                  | IllegalAccessException
+                  | InvocationTargetException e) {
+                String idName = attribute.getName();
+                Object idValue = getFieldValue(idContainer, idName);
+                return new EntityId(idName, idValue);
+              }
             })
         .collect(toImmutableSet());
   }
