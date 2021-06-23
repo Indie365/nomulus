@@ -442,7 +442,7 @@ public class DatabaseHelper {
    * Deletes "domain" and all history records, billing events, poll messages and subordinate hosts.
    */
   public static void deleteTestDomain(DomainBase domain, DateTime now) {
-    Iterable<BillingEvent> billingEvents = getBillingEvents();
+    Iterable<BillingEvent> billingEvents = getBillingEvents(domain);
     Iterable<? extends HistoryEntry> historyEntries =
         HistoryEntryDao.loadHistoryObjectsForResource(domain.createVKey());
     Iterable<PollMessage> pollMessages = loadAllOf(PollMessage.class);
@@ -790,13 +790,13 @@ public class DatabaseHelper {
     return transactIfJpaTm(
         () ->
             Iterables.concat(
-                tm().loadAllOf(BillingEvent.OneTime.class).stream()
+                tm().loadAllOfStream(BillingEvent.OneTime.class)
                     .filter(oneTime -> oneTime.getDomainRepoId().equals(resource.getRepoId()))
                     .collect(toImmutableList()),
-                tm().loadAllOf(BillingEvent.Recurring.class).stream()
+                tm().loadAllOfStream(BillingEvent.Recurring.class)
                     .filter(recurring -> recurring.getDomainRepoId().equals(resource.getRepoId()))
                     .collect(toImmutableList()),
-                tm().loadAllOf(BillingEvent.Cancellation.class).stream()
+                tm().loadAllOfStream(BillingEvent.Cancellation.class)
                     .filter(
                         cancellation -> cancellation.getDomainRepoId().equals(resource.getRepoId()))
                     .collect(toImmutableList())));
@@ -1349,6 +1349,10 @@ public class DatabaseHelper {
   public static <T> ImmutableMap<VKey<? extends T>, T> loadByKeysIfPresent(
       Iterable<? extends VKey<? extends T>> keys) {
     return transactIfJpaTm(() -> tm().loadByKeysIfPresent(keys));
+  }
+
+  public static boolean existsInDatabase(Object object) {
+    return transactIfJpaTm(() -> tm().exists(object));
   }
 
   /**
