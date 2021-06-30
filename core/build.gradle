@@ -221,6 +221,8 @@ dependencies {
   gradleLint.ignore('unused-dependency') {
     compile deps['com.google.gwt:gwt-user']
   }
+  compile deps['com.google.cloud:google-cloud-core']
+  compile deps['com.google.cloud:google-cloud-storage']
   compile deps['com.google.http-client:google-http-client']
   compile deps['com.google.http-client:google-http-client-appengine']
   compile deps['com.google.http-client:google-http-client-jackson2']
@@ -315,6 +317,7 @@ dependencies {
   annotationProcessor project(':processor')
   testAnnotationProcessor project(':processor')
 
+  testCompile(deps['com.google.cloud:google-cloud-nio'])
   testCompile deps['com.google.appengine:appengine-testing']
   testCompile deps['com.google.guava:guava-testlib']
   testCompile deps['com.google.monitoring-client:contrib']
@@ -366,6 +369,8 @@ dependencies {
   compile deps['org.flywaydb:flyway-core']
 
   closureCompiler deps['com.google.javascript:closure-compiler']
+
+
 }
 
 task jaxbToJava {
