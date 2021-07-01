@@ -109,7 +109,9 @@ public class ReplayCommitLogsToSqlAction implements Runnable {
     try {
       replayFiles();
       response.setStatus(HttpServletResponse.SC_OK);
-      logger.atInfo().log("ReplayCommitLogsToSqlAction completed successfully.");
+      String message = "ReplayCommitLogsToSqlAction completed successfully.";
+      response.setPayload(message);
+      logger.atInfo().log(message);
     } finally {
       lock.ifPresent(Lock::release);
     }
