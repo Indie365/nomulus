@@ -160,9 +160,7 @@ class DualDatabaseTestInvocationContextProvider implements TestTemplateInvocatio
 
   static void restoreTmAfterDualDatabaseTest(ExtensionContext context) {
     if (isDualDatabaseTest(context)) {
-      TransactionManager original =
-          (TransactionManager) context.getStore(NAMESPACE).get(ORIGINAL_TM_KEY);
-      TransactionManagerFactory.setTm(original);
+      TransactionManagerFactory.removeTmOverride();
     }
   }
 
