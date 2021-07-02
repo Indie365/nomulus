@@ -26,6 +26,8 @@ import com.google.common.net.MediaType;
 import google.registry.testing.FakeClock;
 import google.registry.testing.FakeSleeper;
 import google.registry.util.EmailMessage.Attachment;
+import java.util.Arrays;
+import java.util.List;
 import javax.mail.BodyPart;
 import javax.mail.Message;
 import javax.mail.Message.RecipientType;
@@ -68,7 +70,26 @@ class SendEmailServiceTest {
   }
 
   @Test
-  void testSuccess_bcc() throws Exception {
+  void testSuccess_addBccs() throws Exception {
+    EmailMessage.Builder contentBuilder = EmailMessage.newBuilder();
+    contentBuilder.setFrom(new InternetAddress("test@example.com"))
+        .setSubject("test subject")
+        .setBody("test body");
+    List<String> emails = Arrays.asList("bcc@example.com", "bcc1@example.com", "bcc2@example.com");
+    for (String email : emails) {
+      contentBuilder.addBcc(new InternetAddress(email));
+    }
+    sendEmailService.sendEmail(contentBuilder.build());
+    Message message = getMessage();
+    assertThat(message.getRecipients(RecipientType.BCC))
+        .asList()
+        .containsExactly(
+            new InternetAddress("bcc@example.com"), new InternetAddress("bcc1@example.com"),
+            new InternetAddress("bcc2@example.com"));
+  }
+
+  @Test
+  void testSuccess_setBccs() throws Exception {
     EmailMessage content =
         createBuilder()
             .setBccs(
@@ -82,6 +103,56 @@ class SendEmailServiceTest {
         .asList()
         .containsExactly(
             new InternetAddress("bcc@example.com"), new InternetAddress("bcc2@example.com"));
+  }
+
+  @Test
+  void testSuccess_emptyBcc() throws Exception {
+    EmailMessage content = createBuilder().setBccs(ImmutableList.of()).build();
+    sendEmailService.sendEmail(content);
+    assertThat(getMessage().getRecipients(RecipientType.BCC)).isNull();
+  }
+
+  @Test
+  void testSuccess_addCcs() throws Exception {
+    EmailMessage.Builder contentBuilder = EmailMessage.newBuilder();
+    contentBuilder.setFrom(new InternetAddress("test@example.com"))
+        .setSubject("test subject")
+        .setBody("test body");
+    List<String> emails = Arrays.asList("cc@example.com", "cc1@example.com", "cc2@example.com");
+    for (String email : emails) {
+      contentBuilder.addCc(new InternetAddress(email));
+    }
+    sendEmailService.sendEmail(contentBuilder.build());
+    Message message = getMessage();
+    assertThat(message.getRecipients(RecipientType.CC))
+        .asList()
+        .containsExactly(
+            new InternetAddress("cc@example.com"), new InternetAddress("cc1@example.com"),
+            new InternetAddress("cc2@example.com"));
+  }
+
+  @Test
+  void testSuccess_setCcs() throws Exception {
+    EmailMessage content =
+        createBuilder()
+            .setCcs(
+                ImmutableList.of(
+                    new InternetAddress("cc@example.com"), new InternetAddress("cc2@example.com")))
+            .build();
+    sendEmailService.sendEmail(content);
+    Message message = getMessage();
+    assertThat(message.getRecipients(RecipientType.CC))
+        .asList()
+        .containsExactly(
+            new InternetAddress("cc@example.com"), new InternetAddress("cc2@example.com"));
+  }
+
+  @Test
+  void testSuccess_emptyCC() throws Exception {
+    EmailMessage content = createBuilder().setCcs(ImmutableList.of()).build();
+    sendEmailService.sendEmail(content);
+    Message message = getMessage();
+    assertThat(message.getRecipients(RecipientType.CC)).isNull();
   }
 
   @Test
