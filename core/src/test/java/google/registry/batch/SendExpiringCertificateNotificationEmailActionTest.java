@@ -24,13 +24,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
 import google.registry.batch.SendExpiringCertificateNotificationEmailAction.CertificateType;
+import google.registry.batch.SendExpiringCertificateNotificationEmailAction.RegistrarInfo;
 import google.registry.flows.certs.CertificateChecker;
 import google.registry.model.registrar.Registrar;
 import google.registry.model.registrar.RegistrarAddress;
 import google.registry.model.registrar.RegistrarContact;
 import google.registry.model.registrar.RegistrarContact.Type;
 import google.registry.testing.AppEngineExtension;
-import google.registry.testing.DatabaseHelper;
 import google.registry.testing.FakeClock;
 import google.registry.testing.InjectExtension;
 import google.registry.util.SelfSignedCaCertificate;
@@ -167,17 +167,71 @@ class SendExpiringCertificateNotificationEmailActionTest {
   @Test
   void sendNotificationEmails_allEmailsBeingAttemptedToSend_mixedOfCertificates() {
   }
+  //
+  // @Test
+  // void updateLastNotificationSentDate_updatedSuccessfully_primaryCertificate() throws Exception {
+  //   X509Certificate expiringCertificate =
+  //       SelfSignedCaCertificate.create(
+  //               "www.example.tld",
+  //               DateTime.parse("2020-09-02T00:00:00Z"),
+  //               DateTime.parse("2021-06-02T00:00:00Z"))
+  //           .cert();
+  //   Registrar registrar = createRegistrar("testClientId", "registrar", expiringCertificate, null);
+  //   persistResource(registrar);
+  //   action.updateLastNotificationSentDate(registrar, DateTime.parse("2021-06-02T00:00:00Z"), CertificateType.PRIMARY);
+  //   System.out.println(registrar.toString());
+  //   // assertThat(registrar.getLastExpiringCertNotificationSentDate()).isEqualTo(clock.nowUtc());
+  // }
+  //
+  // @Test
+  // void updateLastNotificationSentDate_updatedSuccessfully_failOverCertificate() throws Exception {
+  //   X509Certificate expiringCertificate =
+  //       SelfSignedCaCertificate.create(
+  //               "www.example.tld",
+  //               DateTime.parse("2020-09-02T00:00:00Z"),
+  //               DateTime.parse("2021-06-01T00:00:00Z"))
+  //           .cert();
+  //   Registrar registrar = createRegistrar("testClientId", "registrar", null, expiringCertificate);
+  //   persistResource(registrar);
+  //   action.updateLastNotificationSentDate(registrar, clock.nowUtc(), CertificateType.FAILOVER);
+  //   // assertThat(registrar.getLastExpiringFailoverCertNotificationSentDate())
+  //   //     .isEqualTo(clock.nowUtc());
+  //   System.out.println(registrar.toString());
+  // }
 
   @Test
-  void updateLastNotificationSentDate_updatedSuccessfully() {
+  void updateLastNotificationSentDate_noUpdates_noLastNotificationSentDate() throws Exception {
+    DateTime prevLastUpdated = registrar.getLastExpiringFailoverCertNotificationSentDate();
+    X509Certificate expiringCertificate =
+        SelfSignedCaCertificate.create(
+                "www.example.tld",
+                DateTime.parse("2020-09-02T00:00:00Z"),
+                DateTime.parse("2021-06-01T00:00:00Z"))
+            .cert();
+    Registrar registrar = createRegistrar("testClientId", "registrar", null, expiringCertificate);
+    persistResource(registrar);
+    action.updateLastNotificationSentDate(registrar, null, CertificateType.FAILOVER);
+    assertThat(registrar.getLastExpiringFailoverCertNotificationSentDate())
+        .isEqualTo(prevLastUpdated);
   }
 
   @Test
-  void updateLastNotificationSentDate_noUpdates_noLastNotificationSentDate() {
-  }
-
-  @Test
-  void updateLastNotificationSentDate_noUpdates_tmTransactionError() {
+  void updateLastNotificationSentDate_noUpdates_invalidCertificateType() throws Exception {
+    X509Certificate expiringCertificate =
+        SelfSignedCaCertificate.create(
+                "www.example.tld",
+                DateTime.parse("2020-09-02T00:00:00Z"),
+                DateTime.parse("2021-06-01T00:00:00Z"))
+            .cert();
+    Registrar registrar = createRegistrar("testClientId", "registrar", null, expiringCertificate);
+    persistResource(registrar);
+    IllegalArgumentException thrown =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                action.updateLastNotificationSentDate(
+                    registrar, clock.nowUtc(), CertificateType.valueOf("randomType")));
+    assertThat(thrown).hasMessageThat().contains("No enum constant");
   }
 
   @Test
@@ -205,8 +259,8 @@ class SendExpiringCertificateNotificationEmailActionTest {
       persistResource(reg);
     }
 
-    ImmutableList<Registrar> results = action.getRegistrarsWithExpiringCertificates();
-    assertThat(results.size()).isEqualTo(numOfRegistrarsWithExpiringCertificates);
+   ImmutableList<RegistrarInfo> results = action.getRegistrarsWithExpiringCertificates();
+   assertThat(results.size()).isEqualTo(numOfRegistrarsWithExpiringCertificates);
   }
 
   @Test
@@ -235,8 +289,8 @@ class SendExpiringCertificateNotificationEmailActionTest {
       persistResource(reg);
     }
 
-    ImmutableList<Registrar> results = action.getRegistrarsWithExpiringCertificates();
-    assertThat(results.size()).isEqualTo(numOfRegistrarsWithExpiringCertificates);
+   ImmutableList<RegistrarInfo> results = action.getRegistrarsWithExpiringCertificates();
+   assertThat(results.size()).isEqualTo(numOfRegistrarsWithExpiringCertificates);
   }
 
   @Test
@@ -253,8 +307,8 @@ class SendExpiringCertificateNotificationEmailActionTest {
       Registrar reg = createRegistrar("oldcert" + i, "name" + i, expiringCertificate, null);
       persistResource(reg);
     }
-    ImmutableList<Registrar> results = action.getRegistrarsWithExpiringCertificates();
-    assertThat(results.size()).isEqualTo(numOfRegistrarsWithExpiringCertificates);
+   ImmutableList<RegistrarInfo> results = action.getRegistrarsWithExpiringCertificates();
+   assertThat(results.size()).isEqualTo(numOfRegistrarsWithExpiringCertificates);
   }
 
   @Test
@@ -272,15 +326,13 @@ class SendExpiringCertificateNotificationEmailActionTest {
     }
     int numOfRegistrarsWithExpiringCertificates = 0;
 
-    ImmutableList<Registrar> results = action.getRegistrarsWithExpiringCertificates();
-    assertThat(results.size()).isEqualTo(numOfRegistrarsWithExpiringCertificates);
+   ImmutableList<RegistrarInfo> results = action.getRegistrarsWithExpiringCertificates();
+   assertThat(results.size()).isEqualTo(numOfRegistrarsWithExpiringCertificates);
   }
 
   @Test
   void getRegistrarsWithExpiringCertificates_noRegistrarsInDatabase() {
-    ImmutableList<Registrar> results = action.getRegistrarsWithExpiringCertificates();
-    int numOfRegistrars = 0;
-    assertThat(results.size()).isEqualTo(numOfRegistrars);
+    assertThat(action.getRegistrarsWithExpiringCertificates()).isEmpty();
   }
 
   @Test
@@ -364,7 +416,7 @@ class SendExpiringCertificateNotificationEmailActionTest {
   }
 
   @Test
-  void getEmailBody_returnsTexForPrimary() {
+  void getEmailBody_returnsEmailBodyText() {
     String registrarName = "good registrar";
     String certExpirationDateStr = "2021-06-15";
     CertificateType certificateType = CertificateType.PRIMARY;
@@ -377,29 +429,22 @@ class SendExpiringCertificateNotificationEmailActionTest {
   }
 
   @Test
-  void getEmailBody_returnsTexForFailOver() {
-    String registrarName = "good registrar";
-    String certExpirationDateStr = "2021-06-15";
-    CertificateType certificateType = CertificateType.FAILOVER;
-    String emailBody =
-        action.getEmailBody(
-            registrarName, certificateType, DateTime.parse(certExpirationDateStr).toDate());
-    assertThat(emailBody).contains(registrarName);
-    assertThat(emailBody).contains(certificateType.getDisplayName());
-    assertThat(emailBody).contains(certExpirationDateStr);
-  }
-
-  @Test
-  void getEmailBody_throwsNullPointerException_noExpirationDate() {
-    assertThrows(
+  void getEmailBody_throwsIllegalArgumentException_noExpirationDate() {
+    IllegalArgumentException thrown = assertThrows(
         IllegalArgumentException.class,
         () -> action.getEmailBody("good registrar", CertificateType.FAILOVER, null));
+    assertThat(thrown)
+        .hasMessageThat()
+        .contains("Expiration Date cannot be null");
   }
 
   @Test
-  void getEmailBody_throwsNullPointerException_noCertificateType() {
-    assertThrows(
+  void getEmailBody_throwsIllegalArgumentException_noCertificateType() {
+    IllegalArgumentException thrown = assertThrows(
         IllegalArgumentException.class,
         () -> action.getEmailBody("good registrar", null, DateTime.parse("2021-06-15").toDate()));
+    assertThat(thrown)
+        .hasMessageThat()
+        .contains("Certificate Type cannot be null");
   }
 }
