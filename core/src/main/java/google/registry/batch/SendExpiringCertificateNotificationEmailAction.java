@@ -214,7 +214,7 @@ public class SendExpiringCertificateNotificationEmailAction implements Runnable 
   }
 
   /**
-   * Returns a list of email addresses of the registrar that should receive the notification email
+   * Returns a list of email addresses of the registrar that should receive a notification email
    */
   @VisibleForTesting
   ImmutableSet<InternetAddress> getEmailAddresses(Registrar registrar, Type contactType) {
