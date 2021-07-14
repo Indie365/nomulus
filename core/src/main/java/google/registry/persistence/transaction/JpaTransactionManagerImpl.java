@@ -19,6 +19,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static google.registry.model.ofy.DatastoreTransactionManager.toSqlEntity;
+import static google.registry.persistence.transaction.TransactionManagerFactory.assertNotReadOnlyMode;
 import static google.registry.util.PreconditionsUtils.checkArgumentNotNull;
 import static java.util.AbstractMap.SimpleEntry;
 import static java.util.stream.Collectors.joining;
@@ -121,22 +122,25 @@ public class JpaTransactionManagerImpl implements JpaTransactionManager {
 
   @Override
   public EntityManager getEntityManager() {
-    if (transactionInfo.get().entityManager == null) {
+    EntityManager entityManager = transactionInfo.get().entityManager;
+    if (entityManager == null) {
       throw new PersistenceException(
           "No EntityManager has been initialized. getEntityManager() must be invoked in the scope"
               + " of a transaction");
     }
-    return transactionInfo.get().entityManager;
+    return TransactionManagerFactory.isReadOnlyMode()
+        ? new ReadOnlyEntityManager(entityManager)
+        : entityManager;
   }
 
   @Override
   public <T> TypedQuery<T> query(String sqlString, Class<T> resultClass) {
-    return new DetachingTypedQuery(getEntityManager().createQuery(sqlString, resultClass));
+    return new DetachingTypedQuery<>(getEntityManager().createQuery(sqlString, resultClass));
   }
 
   @Override
   public <T> TypedQuery<T> query(CriteriaQuery<T> criteriaQuery) {
-    return new DetachingTypedQuery(getEntityManager().createQuery(criteriaQuery));
+    return new DetachingTypedQuery<>(getEntityManager().createQuery(criteriaQuery));
   }
 
   @Override
@@ -325,13 +329,7 @@ public class JpaTransactionManagerImpl implements JpaTransactionManager {
   @Override
   public void put(Object entity) {
     checkArgumentNotNull(entity, "entity must be specified");
-    if (isEntityOfIgnoredClass(entity)) {
-      return;
-    }
-    assertInTransaction();
-    // Necessary due to the changes in HistoryEntry representation during the migration to SQL
-    Object toPersist = toSqlEntity(entity);
-    transactionInfo.get().updateObject(toPersist);
+    internalPut(entity);
   }
 
   @Override
@@ -533,6 +531,50 @@ public class JpaTransactionManagerImpl implements JpaTransactionManager {
     return elements.stream().findFirst().map(this::detach);
   }
 
+  /**
+   * Sets the current migration schedule without checking for read-only status.
+   *
+   * <p>This avoids getting "stuck" in read-only mode and should only be used in {@link
+   * DatabaseMigrationStateSchedule}. It bypasses the standard writing paths + checks.
+   */
+  @Override
+  public void setDatabaseMigrationScheduleUnchecked(DatabaseMigrationStateSchedule schedule) {
+    assertInTransaction();
+    TransactionInfo txn = transactionInfo.get();
+    Object merged = txn.entityManager.merge(schedule);
+    txn.objectsToSave.add(merged);
+    txn.addUpdate(schedule);
+  }
+
+  /**
+   * Loads the current migration schedule without checking for read-only status.
+   *
+   * <p>This avoids any recursive-load issues when loading the schedule and should only be used in
+   * {@link DatabaseMigrationStateSchedule}.
+   */
+  @Override
+  public Optional<DatabaseMigrationStateSchedule> loadDatabaseMigrationScheduleUnchecked() {
+    assertInTransaction();
+    EntityManager entityManager = transactionInfo.get().entityManager;
+    return entityManager
+        .createQuery(
+            String.format("FROM %s", getEntityType(DatabaseMigrationStateSchedule.class).getName()),
+            DatabaseMigrationStateSchedule.class)
+        .setMaxResults(1)
+        .getResultStream()
+        .findFirst();
+  }
+
+  private void internalPut(Object entity) {
+    if (isEntityOfIgnoredClass(entity)) {
+      return;
+    }
+    assertInTransaction();
+    // Necessary due to the changes in HistoryEntry representation during the migration to SQL
+    Object toPersist = toSqlEntity(entity);
+    transactionInfo.get().updateObject(toPersist);
+  }
+
   private int internalDelete(VKey<?> key) {
     checkArgumentNotNull(key, "key must be specified");
     assertInTransaction();
@@ -596,7 +638,7 @@ public class JpaTransactionManagerImpl implements JpaTransactionManager {
 
   @Override
   public <T> QueryComposer<T> createQueryComposer(Class<T> entity) {
-    return new JpaQueryComposerImpl<T>(entity);
+    return new JpaQueryComposerImpl<>(entity);
   }
 
   @Override
@@ -607,6 +649,38 @@ public class JpaTransactionManagerImpl implements JpaTransactionManager {
   @Override
   public boolean isOfy() {
     return false;
+  }
+
+  @Override
+  public void putIgnoringReadOnly(Object entity) {
+    checkArgumentNotNull(entity);
+    if (isEntityOfIgnoredClass(entity)) {
+      return;
+    }
+    assertInTransaction();
+    // Necessary due to the changes in HistoryEntry representation during the migration to SQL
+    Object toPersist = toSqlEntity(entity);
+    TransactionInfo txn = transactionInfo.get();
+    Object merged = txn.entityManager.merge(toPersist);
+    txn.objectsToSave.add(merged);
+    txn.addUpdate(toPersist);
+  }
+
+  @Override
+  public void deleteIgnoringReadOnly(VKey<?> key) {
+    checkArgumentNotNull(key, "key must be specified");
+    assertInTransaction();
+    if (IGNORED_ENTITY_CLASSES.contains(key.getKind())) {
+      return;
+    }
+    EntityType<?> entityType = getEntityType(key.getKind());
+    ImmutableSet<EntityId> entityIds = getEntityIdsFromSqlKey(entityType, key.getSqlKey());
+    String sql =
+        String.format("DELETE FROM %s WHERE %s", entityType.getName(), getAndClause(entityIds));
+    Query query = transactionInfo.get().entityManager.createQuery(sql);
+    entityIds.forEach(entityId -> query.setParameter(entityId.name, entityId.value));
+    transactionInfo.get().addDelete(key);
+    query.executeUpdate();
   }
 
   @Override
@@ -824,6 +898,7 @@ public class JpaTransactionManagerImpl implements JpaTransactionManager {
 
     /** Does the full "update" on an object including all internal housekeeping. */
     private void updateObject(Object object) {
+      assertNotReadOnlyMode();
       Object merged = entityManager.merge(object);
       objectsToSave.add(merged);
       addUpdate(object);
@@ -831,6 +906,7 @@ public class JpaTransactionManagerImpl implements JpaTransactionManager {
 
     /** Does the full "insert" on a new object including all internal housekeeping. */
     private void insertObject(Object object) {
+      assertNotReadOnlyMode();
       entityManager.persist(object);
       objectsToSave.add(object);
       addUpdate(object);
