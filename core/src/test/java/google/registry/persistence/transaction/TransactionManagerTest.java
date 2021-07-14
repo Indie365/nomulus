@@ -32,6 +32,7 @@ import google.registry.model.ofy.DatastoreTransactionManager;
 import google.registry.model.ofy.Ofy;
 import google.registry.persistence.VKey;
 import google.registry.testing.AppEngineExtension;
+import google.registry.testing.DatabaseHelper;
 import google.registry.testing.DualDatabaseTest;
 import google.registry.testing.FakeClock;
 import google.registry.testing.InjectExtension;
@@ -404,6 +405,17 @@ public class TransactionManagerTest {
               e.data = "some other data!";
             });
     assertThat(tm().transact(() -> tm().loadByKey(theEntity.key())).data).isEqualTo("foo");
+  }
+
+  @TestOfyAndSql
+  void testReadOnly_writeFails() {
+    DatabaseHelper.setMigrationScheduleToDatastorePrimaryReadOnly(fakeClock);
+    assertThat(
+            assertThrows(
+                IllegalStateException.class, () -> tm().transact(() -> tm().put(theEntity))))
+        .hasMessageThat()
+        .isEqualTo("Transaction manager currently in read-only mode");
+    DatabaseHelper.removeDatabaseMigrationSchedule();
   }
 
   private static void assertEntityExists(TestEntity entity) {

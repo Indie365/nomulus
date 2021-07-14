@@ -126,22 +126,29 @@ public class JpaTransactionManagerImpl implements JpaTransactionManager {
           "No EntityManager has been initialized. getEntityManager() must be invoked in the scope"
               + " of a transaction");
     }
-    return transactionInfo.get().entityManager;
+    EntityManager entityManager = transactionInfo.get().entityManager;
+    if (TransactionManagerFactory.isReadOnlyMode()) {
+      return new ReadOnlyEntityManager(entityManager);
+    }
+    return entityManager;
   }
 
   @Override
   public <T> TypedQuery<T> query(String sqlString, Class<T> resultClass) {
-    return new DetachingTypedQuery(getEntityManager().createQuery(sqlString, resultClass));
+    return wrapTypedQueryIfReadOnly(
+        new DetachingTypedQuery<>(getEntityManager().createQuery(sqlString, resultClass)));
   }
 
   @Override
   public <T> TypedQuery<T> query(CriteriaQuery<T> criteriaQuery) {
-    return new DetachingTypedQuery(getEntityManager().createQuery(criteriaQuery));
+    return wrapTypedQueryIfReadOnly(
+        new DetachingTypedQuery<>(getEntityManager().createQuery(criteriaQuery)));
   }
 
   @Override
   public Query query(String sqlString) {
-    return getEntityManager().createQuery(sqlString);
+    Query query = getEntityManager().createQuery(sqlString);
+    return TransactionManagerFactory.isReadOnlyMode() ? new ReadOnlyQuery(query) : query;
   }
 
   @Override
@@ -296,6 +303,7 @@ public class JpaTransactionManagerImpl implements JpaTransactionManager {
   @Override
   public void insert(Object entity) {
     checkArgumentNotNull(entity, "entity must be specified");
+    TransactionManagerFactory.assertNotReadOnlyMode();
     if (isEntityOfIgnoredClass(entity)) {
       return;
     }
@@ -307,6 +315,7 @@ public class JpaTransactionManagerImpl implements JpaTransactionManager {
 
   @Override
   public void insertAll(ImmutableCollection<?> entities) {
+    TransactionManagerFactory.assertNotReadOnlyMode();
     checkArgumentNotNull(entities, "entities must be specified");
     assertInTransaction();
     entities.forEach(this::insert);
@@ -314,17 +323,20 @@ public class JpaTransactionManagerImpl implements JpaTransactionManager {
 
   @Override
   public void insertWithoutBackup(Object entity) {
+    TransactionManagerFactory.assertNotReadOnlyMode();
     insert(entity);
   }
 
   @Override
   public void insertAllWithoutBackup(ImmutableCollection<?> entities) {
+    TransactionManagerFactory.assertNotReadOnlyMode();
     insertAll(entities);
   }
 
   @Override
   public void put(Object entity) {
     checkArgumentNotNull(entity, "entity must be specified");
+    TransactionManagerFactory.assertNotReadOnlyMode();
     if (isEntityOfIgnoredClass(entity)) {
       return;
     }
@@ -337,6 +349,7 @@ public class JpaTransactionManagerImpl implements JpaTransactionManager {
   @Override
   public void putAll(Object... entities) {
     checkArgumentNotNull(entities, "entities must be specified");
+    TransactionManagerFactory.assertNotReadOnlyMode();
     assertInTransaction();
     for (Object entity : entities) {
       put(entity);
@@ -346,23 +359,27 @@ public class JpaTransactionManagerImpl implements JpaTransactionManager {
   @Override
   public void putAll(ImmutableCollection<?> entities) {
     checkArgumentNotNull(entities, "entities must be specified");
+    TransactionManagerFactory.assertNotReadOnlyMode();
     assertInTransaction();
     entities.forEach(this::put);
   }
 
   @Override
   public void putWithoutBackup(Object entity) {
+    TransactionManagerFactory.assertNotReadOnlyMode();
     put(entity);
   }
 
   @Override
   public void putAllWithoutBackup(ImmutableCollection<?> entities) {
+    TransactionManagerFactory.assertNotReadOnlyMode();
     putAll(entities);
   }
 
   @Override
   public void update(Object entity) {
     checkArgumentNotNull(entity, "entity must be specified");
+    TransactionManagerFactory.assertNotReadOnlyMode();
     if (isEntityOfIgnoredClass(entity)) {
       return;
     }
@@ -375,6 +392,7 @@ public class JpaTransactionManagerImpl implements JpaTransactionManager {
 
   @Override
   public void updateAll(ImmutableCollection<?> entities) {
+    TransactionManagerFactory.assertNotReadOnlyMode();
     checkArgumentNotNull(entities, "entities must be specified");
     assertInTransaction();
     entities.forEach(this::update);
@@ -382,16 +400,19 @@ public class JpaTransactionManagerImpl implements JpaTransactionManager {
 
   @Override
   public void updateAll(Object... entities) {
+    TransactionManagerFactory.assertNotReadOnlyMode();
     updateAll(ImmutableList.of(entities));
   }
 
   @Override
   public void updateWithoutBackup(Object entity) {
+    TransactionManagerFactory.assertNotReadOnlyMode();
     update(entity);
   }
 
   @Override
   public void updateAllWithoutBackup(ImmutableCollection<?> entities) {
+    TransactionManagerFactory.assertNotReadOnlyMode();
     updateAll(entities);
   }
 
@@ -533,6 +554,37 @@ public class JpaTransactionManagerImpl implements JpaTransactionManager {
     return elements.stream().findFirst().map(this::detach);
   }
 
+  /**
+   * Sets the current migration schedule without checking for read-only status.
+   *
+   * <p>This avoids getting "stuck" in read-only mode and should only be used in {@link
+   * DatabaseMigrationStateSchedule}.
+   */
+  @Override
+  public void setDatabaseMigrationScheduleUnchecked(DatabaseMigrationStateSchedule schedule) {
+    assertInTransaction();
+    transactionInfo.get().updateObject(schedule);
+  }
+
+  /**
+   * Loads the current migration schedule without checking for read-only status.
+   *
+   * <p>This avoids any recursive-load issues when loading the schedule and should only be used in
+   * {@link DatabaseMigrationStateSchedule}.
+   */
+  @Override
+  public Optional<DatabaseMigrationStateSchedule> loadDatabaseMigrationScheduleUnchecked() {
+    assertInTransaction();
+    EntityManager entityManager = transactionInfo.get().entityManager;
+    return entityManager
+        .createQuery(
+            String.format("FROM %s", getEntityType(DatabaseMigrationStateSchedule.class).getName()),
+            DatabaseMigrationStateSchedule.class)
+        .setMaxResults(1)
+        .getResultStream()
+        .findFirst();
+  }
+
   private int internalDelete(VKey<?> key) {
     checkArgumentNotNull(key, "key must be specified");
     assertInTransaction();
@@ -552,18 +604,21 @@ public class JpaTransactionManagerImpl implements JpaTransactionManager {
 
   @Override
   public void delete(VKey<?> key) {
+    TransactionManagerFactory.assertNotReadOnlyMode();
     internalDelete(key);
   }
 
   @Override
   public void delete(Iterable<? extends VKey<?>> vKeys) {
     checkArgumentNotNull(vKeys, "vKeys must be specified");
+    TransactionManagerFactory.assertNotReadOnlyMode();
     vKeys.forEach(this::internalDelete);
   }
 
   @Override
   public <T> T delete(T entity) {
     checkArgumentNotNull(entity, "entity must be specified");
+    TransactionManagerFactory.assertNotReadOnlyMode();
     if (isEntityOfIgnoredClass(entity)) {
       return entity;
     }
@@ -581,16 +636,19 @@ public class JpaTransactionManagerImpl implements JpaTransactionManager {
 
   @Override
   public void deleteWithoutBackup(VKey<?> key) {
+    TransactionManagerFactory.assertNotReadOnlyMode();
     delete(key);
   }
 
   @Override
   public void deleteWithoutBackup(Iterable<? extends VKey<?>> keys) {
+    TransactionManagerFactory.assertNotReadOnlyMode();
     delete(keys);
   }
 
   @Override
   public void deleteWithoutBackup(Object entity) {
+    TransactionManagerFactory.assertNotReadOnlyMode();
     delete(entity);
   }
 
@@ -611,6 +669,7 @@ public class JpaTransactionManagerImpl implements JpaTransactionManager {
 
   @Override
   public <T> void assertDelete(VKey<T> key) {
+    TransactionManagerFactory.assertNotReadOnlyMode();
     if (internalDelete(key) != 1) {
       throw new IllegalArgumentException(
           String.format("Error deleting the entity of the key: %s", key.getSqlKey()));
@@ -749,6 +808,12 @@ public class JpaTransactionManagerImpl implements JpaTransactionManager {
   /** Removes the replay-SQL-to-Datastore override; the migration schedule will then be used. */
   public static void removeReplaySqlToDsOverrideForTest() {
     replaySqlToDatastoreOverrideForTest.set(Optional.empty());
+  }
+
+  private <T> TypedQuery<T> wrapTypedQueryIfReadOnly(TypedQuery<T> typedQuery) {
+    return TransactionManagerFactory.isReadOnlyMode()
+        ? new ReadOnlyTypedQuery<>(typedQuery)
+        : typedQuery;
   }
 
   private static class TransactionInfo {

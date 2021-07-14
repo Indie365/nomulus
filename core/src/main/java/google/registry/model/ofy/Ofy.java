@@ -39,6 +39,7 @@ import com.googlecode.objectify.cmd.Saver;
 import google.registry.model.annotations.NotBackedUp;
 import google.registry.model.annotations.VirtualEntity;
 import google.registry.model.ofy.ReadOnlyWork.KillTransactionException;
+import google.registry.persistence.transaction.TransactionManagerFactory;
 import google.registry.util.Clock;
 import google.registry.util.NonFinalForTesting;
 import google.registry.util.Sleeper;
@@ -131,6 +132,7 @@ public class Ofy {
    * <p>We only allow this in transactions so commit logs can be written in tandem with the delete.
    */
   public Deleter delete() {
+    TransactionManagerFactory.assertNotReadOnlyMode();
     return new AugmentedDeleter() {
       @Override
       protected void handleDeletion(Iterable<Key<?>> keys) {
@@ -148,6 +150,7 @@ public class Ofy {
    * <p>No backups get written.
    */
   public Deleter deleteWithoutBackup() {
+    TransactionManagerFactory.assertNotReadOnlyMode();
     return new AugmentedDeleter() {
       @Override
       protected void handleDeletion(Iterable<Key<?>> keys) {
@@ -163,6 +166,7 @@ public class Ofy {
    * <p>We only allow this in transactions so commit logs can be written in tandem with the save.
    */
   public Saver save() {
+    TransactionManagerFactory.assertNotReadOnlyMode();
     return new AugmentedSaver() {
       @Override
       protected void handleSave(Iterable<?> entities) {
@@ -182,6 +186,7 @@ public class Ofy {
    * <p>No backups get written.
    */
   public Saver saveWithoutBackup() {
+    TransactionManagerFactory.assertNotReadOnlyMode();
     return new AugmentedSaver() {
       @Override
       protected void handleSave(Iterable<?> entities) {

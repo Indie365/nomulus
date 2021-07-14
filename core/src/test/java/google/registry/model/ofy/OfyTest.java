@@ -61,9 +61,11 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 /** Tests for our wrapper around Objectify. */
 public class OfyTest {
 
+  private final FakeClock fakeClock = new FakeClock(DateTime.parse("2000-01-01TZ"));
+
   @RegisterExtension
   public final AppEngineExtension appEngine =
-      AppEngineExtension.builder().withDatastoreAndCloudSql().build();
+      AppEngineExtension.builder().withDatastoreAndCloudSql().withClock(fakeClock).build();
 
   /** An entity to use in save and delete tests. */
   private HistoryEntry someObject;
@@ -433,5 +435,15 @@ public class OfyTest {
     assertThat(ran).isTrue();
     // Test the normal loading again to verify that we've restored the original session unchanged.
     assertThat(auditedOfy().load().entity(someObject).now()).isEqualTo(someObject.asHistoryEntry());
+  }
+
+  @Test
+  void testReadOnly_failsWrite() {
+    Ofy ofy = new Ofy(fakeClock);
+    DatabaseHelper.setMigrationScheduleToDatastorePrimaryReadOnly(fakeClock);
+    assertThat(assertThrows(IllegalStateException.class, () -> ofy.save().entity(someObject).now()))
+        .hasMessageThat()
+        .isEqualTo("Transaction manager currently in read-only mode");
+    DatabaseHelper.removeDatabaseMigrationSchedule();
   }
 }
