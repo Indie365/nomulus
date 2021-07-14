@@ -187,7 +187,7 @@ public class DatabaseMigrationStateSchedule extends CrossTldSingleton implements
   private DatabaseMigrationStateSchedule() {}
 
   @VisibleForTesting
-  DatabaseMigrationStateSchedule(
+  public DatabaseMigrationStateSchedule(
       TimedTransitionProperty<MigrationState, MigrationStateTransition> migrationTransitions) {
     this.migrationTransitions = migrationTransitions;
   }
@@ -204,7 +204,7 @@ public class DatabaseMigrationStateSchedule extends CrossTldSingleton implements
             MigrationState.DATASTORE_ONLY,
             "migrationTransitionMap must start with DATASTORE_ONLY");
     validateTransitionAtCurrentTime(transitions);
-    jpaTm().put(new DatabaseMigrationStateSchedule(transitions));
+    jpaTm().putIgnoringReadOnly(new DatabaseMigrationStateSchedule(transitions));
     CACHE.invalidateAll();
   }
 
