@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
+import javax.inject.Provider;
 import org.joda.time.DateTime;
 
 /** Utility class to list commit logs diff files stored on GCS. */
@@ -44,7 +45,7 @@ class GcsDiffFileLister {
 
   @Inject GcsUtils gcsUtils;
 
-  @Inject @Backups ListeningExecutorService executor;
+  @Inject @Backups Provider<ListeningExecutorService> executorProvider;
   @Inject GcsDiffFileLister() {}
 
   /**
@@ -102,6 +103,7 @@ class GcsDiffFileLister {
     }
     DateTime lastUpperBoundTime = START_OF_TIME;
 
+    ListeningExecutorService executor = executorProvider.get();
     for (String strippedFilename : strippedFilenames) {
       final String filename = DIFF_FILE_PREFIX + strippedFilename;
       DateTime upperBoundTime = DateTime.parse(strippedFilename);
