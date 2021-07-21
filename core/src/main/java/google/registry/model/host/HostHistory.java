@@ -35,6 +35,8 @@ import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.IdClass;
 import javax.persistence.PostLoad;
+import javax.persistence.PrePersist;
+import javax.persistence.PreUpdate;
 
 /**
  * A persisted history entry representing an EPP modification to a host.
@@ -136,9 +138,12 @@ public class HostHistory extends HistoryEntry implements SqlEntity {
   }
 
   // Used to fill out the hostBase field during asynchronous replay
-  public static void beforeSqlSave(HostHistory hostHistory) {
-    hostHistory.hostBase =
-        jpaTm().loadByKey(VKey.createSql(HostResource.class, hostHistory.getHostRepoId()));
+  @PreUpdate
+  @PrePersist
+  public void beforeSqlSave() {
+    if (hostBase == null) {
+      hostBase = jpaTm().getEntityManager().find(HostResource.class, getHostRepoId());
+    }
   }
 
   /** Class to represent the composite primary key of {@link HostHistory} entity. */

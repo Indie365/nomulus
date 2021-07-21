@@ -219,13 +219,7 @@ public class ReplayCommitLogsToSqlAction implements Runnable {
     Object ofyPojo = auditedOfy().toPojo(entity);
     if (ofyPojo instanceof DatastoreEntity) {
       DatastoreEntity datastoreEntity = (DatastoreEntity) ofyPojo;
-      datastoreEntity
-          .toSqlEntity()
-          .ifPresent(
-              sqlEntity -> {
-                ReplaySpecializer.beforeSqlSave(sqlEntity);
-                jpaTm().put(sqlEntity);
-              });
+      datastoreEntity.toSqlEntity().ifPresent(jpaTm()::put);
     } else {
       // this should never happen, but we shouldn't fail on it
       logger.atSevere().log(

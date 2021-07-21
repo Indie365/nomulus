@@ -26,6 +26,8 @@ import google.registry.model.common.EntityGroupRoot;
 import google.registry.persistence.VKey;
 import google.registry.schema.replay.DatastoreAndSqlEntity;
 import google.registry.schema.replay.EntityTest.EntityForTesting;
+import javax.persistence.PrePersist;
+import javax.persistence.PreUpdate;
 import javax.persistence.Transient;
 
 /** A test model object that can be persisted in any entity group. */
@@ -75,7 +77,9 @@ public class TestObject extends ImmutableObject implements DatastoreAndSqlEntity
     beforeSqlDeleteCallCount++;
   }
 
-  public static void beforeSqlSave(TestObject testObject) {
+  @PrePersist
+  @PreUpdate
+  public void beforeSqlSave() {
     beforeSqlSaveCallCount++;
   }
 

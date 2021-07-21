@@ -35,6 +35,8 @@ import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.IdClass;
 import javax.persistence.PostLoad;
+import javax.persistence.PrePersist;
+import javax.persistence.PreUpdate;
 
 /**
  * A persisted history entry representing an EPP modification to a contact.
@@ -136,9 +138,12 @@ public class ContactHistory extends HistoryEntry implements SqlEntity {
   }
 
   // Used to fill out the contactBase field during asynchronous replay
-  public static void beforeSqlSave(ContactHistory contactHistory) {
-    contactHistory.contactBase =
-        jpaTm().loadByKey(VKey.createSql(ContactResource.class, contactHistory.getContactRepoId()));
+  @PreUpdate
+  @PrePersist
+  public void beforeSqlSave() {
+    if (contactBase == null) {
+      contactBase = jpaTm().getEntityManager().find(ContactResource.class, getContactRepoId());
+    }
   }
 
   /** Class to represent the composite primary key of {@link ContactHistory} entity. */
