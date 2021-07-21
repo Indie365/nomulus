@@ -45,6 +45,7 @@ import google.registry.request.auth.Auth;
 import google.registry.schema.replay.DatastoreEntity;
 import google.registry.schema.replay.DatastoreOnlyEntity;
 import google.registry.schema.replay.NonReplicatedEntity;
+import google.registry.schema.replay.ReplaySpecializedSqlEntity;
 import google.registry.schema.replay.ReplaySpecializer;
 import google.registry.schema.replay.SqlReplayCheckpoint;
 import google.registry.util.Clock;
@@ -223,7 +224,9 @@ public class ReplayCommitLogsToSqlAction implements Runnable {
           .toSqlEntity()
           .ifPresent(
               sqlEntity -> {
-                ReplaySpecializer.beforeSqlSave(sqlEntity);
+                if (sqlEntity instanceof ReplaySpecializedSqlEntity) {
+                  ((ReplaySpecializedSqlEntity) sqlEntity).beforeSqlSave();
+                }
                 jpaTm().put(sqlEntity);
               });
     } else {

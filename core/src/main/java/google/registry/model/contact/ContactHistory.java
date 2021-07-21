@@ -24,7 +24,7 @@ import google.registry.model.contact.ContactHistory.ContactHistoryId;
 import google.registry.model.reporting.HistoryEntry;
 import google.registry.persistence.VKey;
 import google.registry.schema.replay.DatastoreEntity;
-import google.registry.schema.replay.SqlEntity;
+import google.registry.schema.replay.ReplaySpecializedSqlEntity;
 import java.io.Serializable;
 import java.util.Optional;
 import javax.annotation.Nullable;
@@ -59,7 +59,7 @@ import javax.persistence.PostLoad;
 @EntitySubclass
 @Access(AccessType.FIELD)
 @IdClass(ContactHistoryId.class)
-public class ContactHistory extends HistoryEntry implements SqlEntity {
+public class ContactHistory extends HistoryEntry implements ReplaySpecializedSqlEntity {
 
   // Store ContactBase instead of ContactResource so we don't pick up its @Id
   // Nullable for the sake of pre-Registry-3.0 history objects
@@ -136,9 +136,11 @@ public class ContactHistory extends HistoryEntry implements SqlEntity {
   }
 
   // Used to fill out the contactBase field during asynchronous replay
-  public static void beforeSqlSave(ContactHistory contactHistory) {
-    contactHistory.contactBase =
-        jpaTm().loadByKey(VKey.createSql(ContactResource.class, contactHistory.getContactRepoId()));
+  @Override
+  public void beforeSqlSave() {
+    if (contactBase == null) {
+      contactBase = jpaTm().getEntityManager().find(ContactResource.class, getContactRepoId());
+    }
   }
 
   /** Class to represent the composite primary key of {@link ContactHistory} entity. */

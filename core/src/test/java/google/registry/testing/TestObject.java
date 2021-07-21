@@ -26,13 +26,15 @@ import google.registry.model.common.EntityGroupRoot;
 import google.registry.persistence.VKey;
 import google.registry.schema.replay.DatastoreAndSqlEntity;
 import google.registry.schema.replay.EntityTest.EntityForTesting;
+import google.registry.schema.replay.ReplaySpecializedSqlEntity;
 import javax.persistence.Transient;
 
 /** A test model object that can be persisted in any entity group. */
 @Entity
 @javax.persistence.Entity
 @EntityForTesting
-public class TestObject extends ImmutableObject implements DatastoreAndSqlEntity {
+public class TestObject extends ImmutableObject
+    implements DatastoreAndSqlEntity, ReplaySpecializedSqlEntity {
 
   public static int beforeSqlSaveCallCount;
   public static int beforeSqlDeleteCallCount;
@@ -75,7 +77,8 @@ public class TestObject extends ImmutableObject implements DatastoreAndSqlEntity
     beforeSqlDeleteCallCount++;
   }
 
-  public static void beforeSqlSave(TestObject testObject) {
+  @Override
+  public void beforeSqlSave() {
     beforeSqlSaveCallCount++;
   }
 

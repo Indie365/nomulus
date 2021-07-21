@@ -24,7 +24,7 @@ import google.registry.model.host.HostHistory.HostHistoryId;
 import google.registry.model.reporting.HistoryEntry;
 import google.registry.persistence.VKey;
 import google.registry.schema.replay.DatastoreEntity;
-import google.registry.schema.replay.SqlEntity;
+import google.registry.schema.replay.ReplaySpecializedSqlEntity;
 import java.io.Serializable;
 import java.util.Optional;
 import javax.annotation.Nullable;
@@ -60,7 +60,7 @@ import javax.persistence.PostLoad;
 @EntitySubclass
 @Access(AccessType.FIELD)
 @IdClass(HostHistoryId.class)
-public class HostHistory extends HistoryEntry implements SqlEntity {
+public class HostHistory extends HistoryEntry implements ReplaySpecializedSqlEntity {
 
   // Store HostBase instead of HostResource so we don't pick up its @Id
   // Nullable for the sake of pre-Registry-3.0 history objects
@@ -136,9 +136,11 @@ public class HostHistory extends HistoryEntry implements SqlEntity {
   }
 
   // Used to fill out the hostBase field during asynchronous replay
-  public static void beforeSqlSave(HostHistory hostHistory) {
-    hostHistory.hostBase =
-        jpaTm().loadByKey(VKey.createSql(HostResource.class, hostHistory.getHostRepoId()));
+  @Override
+  public void beforeSqlSave() {
+    if (hostBase == null) {
+      hostBase = jpaTm().getEntityManager().find(HostResource.class, getHostRepoId());
+    }
   }
 
   /** Class to represent the composite primary key of {@link HostHistory} entity. */
