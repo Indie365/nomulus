@@ -13,9 +13,6 @@ KmsSecretRevision
 Modification
 OneTime
 PollMessage
-PremiumList
-PremiumListEntry
-PremiumListRevision
 Recurring
 Registrar
 RegistrarContact

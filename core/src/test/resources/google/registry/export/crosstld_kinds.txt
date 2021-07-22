@@ -4,9 +4,6 @@ Cursor
 DatabaseMigrationStateSchedule
 KmsSecret
 KmsSecretRevision
-PremiumList
-PremiumListEntry
-PremiumListRevision
 Registrar
 RegistrarContact
 Registry

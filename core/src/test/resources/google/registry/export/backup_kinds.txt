@@ -17,9 +17,6 @@ LastSqlTransaction
 Modification
 OneTime
 PollMessage
-PremiumList
-PremiumListEntry
-PremiumListRevision
 RdeRevision
 Recurring
 Registrar
