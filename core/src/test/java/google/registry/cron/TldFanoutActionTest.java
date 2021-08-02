@@ -15,27 +15,25 @@
 package google.registry.cron;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.Iterables.getLast;
 import static com.google.common.truth.Truth.assertThat;
+import static google.registry.testing.CloudTasksHelper.assertNoTasksEnqueued;
+import static google.registry.testing.CloudTasksHelper.assertTasksEnqueued;
 import static google.registry.testing.DatabaseHelper.createTlds;
 import static google.registry.testing.DatabaseHelper.persistResource;
-import static google.registry.testing.TaskQueueHelper.assertNoTasksEnqueued;
-import static google.registry.testing.TaskQueueHelper.assertTasksEnqueued;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.google.appengine.api.taskqueue.dev.QueueStateInfo.TaskStateInfo;
-import com.google.appengine.tools.development.testing.LocalTaskQueueTestConfig;
-import com.google.common.base.Joiner;
+import com.google.cloud.tasks.v2.HttpMethod;
+import com.google.cloud.tasks.v2.Task;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableSet;
 import google.registry.model.tld.Registry;
 import google.registry.model.tld.Registry.TldType;
 import google.registry.testing.AppEngineExtension;
+import google.registry.testing.CloudTasksHelper.TaskMatcher;
+import google.registry.testing.FakeClock;
 import google.registry.testing.FakeResponse;
-import google.registry.testing.TaskQueueHelper.TaskMatcher;
-import google.registry.util.Retrier;
-import google.registry.util.TaskQueueUtils;
+import google.registry.util.CloudTasksUtils;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -49,27 +47,14 @@ class TldFanoutActionTest {
   private static final String ENDPOINT = "/the/servlet";
   private static final String QUEUE = "the-queue";
   private final FakeResponse response = new FakeResponse();
+  private final CloudTasksUtils cloudTasksUtils = CloudTasksUtils.creatForTest();
 
   @RegisterExtension
   final AppEngineExtension appEngine =
-      AppEngineExtension.builder()
-          .withDatastoreAndCloudSql()
-          .withTaskQueue(
-              Joiner.on('\n')
-                  .join(
-                      "<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
-                      "<queue-entries>",
-                      "  <queue>",
-                      "    <name>the-queue</name>",
-                      "    <rate>1/s</rate>",
-                      "  </queue>",
-                      "</queue-entries>"))
-          .build();
+      AppEngineExtension.builder().withDatastoreAndCloudSql().build();
 
   private static ImmutableListMultimap<String, String> getParamsMap(String... keysAndValues) {
     ImmutableListMultimap.Builder<String, String> params = new ImmutableListMultimap.Builder<>();
-    params.put("queue", QUEUE);
-    params.put("endpoint", ENDPOINT);
     for (int i = 0; i < keysAndValues.length; i += 2) {
       params.put(keysAndValues[i], keysAndValues[i + 1]);
     }
@@ -78,13 +63,15 @@ class TldFanoutActionTest {
 
   private void run(ImmutableListMultimap<String, String> params) {
     TldFanoutAction action = new TldFanoutAction();
+    action.clock = new FakeClock();
     action.params = params;
-    action.endpoint = getLast(params.get("endpoint"));
-    action.queue = getLast(params.get("queue"));
-    action.excludes = params.containsKey("exclude")
-        ? ImmutableSet.copyOf(Splitter.on(',').split(params.get("exclude").get(0)))
-        : ImmutableSet.of();
-    action.taskQueueUtils = new TaskQueueUtils(new Retrier(null, 1));
+    action.endpoint = ENDPOINT;
+    action.queue = QUEUE;
+    action.excludes =
+        params.containsKey("exclude")
+            ? ImmutableSet.copyOf(Splitter.on(',').split(params.get("exclude").get(0)))
+            : ImmutableSet.of();
+    action.cloudTasksUtils = cloudTasksUtils;
     action.response = response;
     action.runInEmpty = params.containsKey("runInEmpty");
     action.forEachRealTld = params.containsKey("forEachRealTld");
@@ -99,20 +86,23 @@ class TldFanoutActionTest {
     persistResource(Registry.get("example").asBuilder().setTldType(TldType.TEST).build());
   }
 
-  private static void assertTasks(String... tasks) {
+  private void assertTasks(String... tasks) {
     assertTasksEnqueued(
+        cloudTasksUtils,
         QUEUE,
-        Stream.of(tasks).map(
-            namespace ->
-                new TaskMatcher()
-                    .url(ENDPOINT)
-                    .header("content-type", "application/x-www-form-urlencoded")
-                    .param("tld", namespace))
-        .collect(toImmutableList()));
+        Stream.of(tasks)
+            .map(
+                namespace ->
+                    new TaskMatcher()
+                        .url(ENDPOINT)
+                        .header("content-type", "application/x-www-form-urlencoded")
+                        .param("tld", namespace))
+            .collect(toImmutableList()));
   }
 
-  private static void assertTaskWithoutTld() {
+  private void assertTaskWithoutTld() {
     assertTasksEnqueued(
+        cloudTasksUtils,
         QUEUE,
         new TaskMatcher()
             .url(ENDPOINT)
@@ -120,9 +110,10 @@ class TldFanoutActionTest {
   }
 
   @Test
-  void testSuccess_methodPostIsDefault() {
+  void testSuccess_methodPostAndServiceBackendAreDefault() {
     run(getParamsMap("runInEmpty", ""));
-    assertTasksEnqueued(QUEUE, new TaskMatcher().method("POST"));
+    assertTasksEnqueued(
+        cloudTasksUtils, QUEUE, new TaskMatcher().method(HttpMethod.POST).service("backend"));
   }
 
   @Test
@@ -150,9 +141,10 @@ class TldFanoutActionTest {
 
   @Test
   void testSuccess_forEachTestTldAndForEachRealTld() {
-    run(getParamsMap(
-        "forEachTestTld", "",
-        "forEachRealTld", ""));
+    run(
+        getParamsMap(
+            "forEachTestTld", "",
+            "forEachRealTld", ""));
     assertTasks("com", "net", "org", "example");
   }
 
@@ -164,26 +156,29 @@ class TldFanoutActionTest {
 
   @Test
   void testSuccess_excludeRealTlds() {
-    run(getParamsMap(
-        "forEachRealTld", "",
-        "exclude", "com,net"));
+    run(
+        getParamsMap(
+            "forEachRealTld", "",
+            "exclude", "com,net"));
     assertTasks("org");
   }
 
   @Test
   void testSuccess_excludeTestTlds() {
-    run(getParamsMap(
-        "forEachTestTld", "",
-        "exclude", "example"));
-    assertNoTasksEnqueued(QUEUE);
+    run(
+        getParamsMap(
+            "forEachTestTld", "",
+            "exclude", "example"));
+    assertNoTasksEnqueued(cloudTasksUtils, QUEUE);
   }
 
   @Test
   void testSuccess_excludeNonexistentTlds() {
-    run(getParamsMap(
-        "forEachTestTld", "",
-        "forEachRealTld", "",
-        "exclude", "foo"));
+    run(
+        getParamsMap(
+            "forEachTestTld", "",
+            "forEachRealTld", "",
+            "exclude", "foo"));
     assertTasks("com", "net", "org", "example");
   }
 
@@ -223,26 +218,24 @@ class TldFanoutActionTest {
   @Test
   void testSuccess_additionalArgsFlowThroughToPostParams() {
     run(getParamsMap("forEachTestTld", "", "newkey", "newval"));
-    assertTasksEnqueued(QUEUE,
-        new TaskMatcher().url("/the/servlet").param("newkey", "newval"));
+    assertTasksEnqueued(
+        cloudTasksUtils, QUEUE, new TaskMatcher().url("/the/servlet").param("newkey", "newval"));
   }
 
   @Test
   void testSuccess_returnHttpResponse() {
     run(getParamsMap("forEachRealTld", "", "endpoint", "/the/servlet"));
 
-    List<TaskStateInfo> taskList =
-        LocalTaskQueueTestConfig.getLocalTaskQueue().getQueueStateInfo().get(QUEUE).getTaskInfo();
+    List<Task> taskList = cloudTasksUtils.getTestTasksFor(QUEUE);
 
     assertThat(taskList).hasSize(3);
-    String expectedResponse = String.format(
-        "OK: Launched the following 3 tasks in queue the-queue\n"
-            + "- Task: '%s', tld: 'com', endpoint: '/the/servlet'\n"
-            + "- Task: '%s', tld: 'net', endpoint: '/the/servlet'\n"
-            + "- Task: '%s', tld: 'org', endpoint: '/the/servlet'\n",
-        taskList.get(0).getTaskName(),
-        taskList.get(1).getTaskName(),
-        taskList.get(2).getTaskName());
+    String expectedResponse =
+        String.format(
+            "OK: Launched the following 3 tasks in queue the-queue\n"
+                + "- Task: '%s', tld: 'com', endpoint: '/the/servlet', service: 'BACKEND'\n"
+                + "- Task: '%s', tld: 'net', endpoint: '/the/servlet', service: 'BACKEND'\n"
+                + "- Task: '%s', tld: 'org', endpoint: '/the/servlet', service: 'BACKEND'\n",
+            taskList.get(0).getName(), taskList.get(1).getName(), taskList.get(2).getName());
     assertThat(response.getPayload()).isEqualTo(expectedResponse);
   }
 
@@ -250,14 +243,14 @@ class TldFanoutActionTest {
   void testSuccess_returnHttpResponse_runInEmpty() {
     run(getParamsMap("runInEmpty", "", "endpoint", "/the/servlet"));
 
-    List<TaskStateInfo> taskList =
-        LocalTaskQueueTestConfig.getLocalTaskQueue().getQueueStateInfo().get(QUEUE).getTaskInfo();
+    List<Task> taskList = cloudTasksUtils.getTestTasksFor(QUEUE);
 
     assertThat(taskList).hasSize(1);
-    String expectedResponse = String.format(
-        "OK: Launched the following 1 tasks in queue the-queue\n"
-            + "- Task: '%s', tld: '', endpoint: '/the/servlet'\n",
-        taskList.get(0).getTaskName());
+    String expectedResponse =
+        String.format(
+            "OK: Launched the following 1 tasks in queue the-queue\n"
+                + "- Task: '%s', tld: '', endpoint: '/the/servlet', service: 'BACKEND'\n",
+            taskList.get(0).getName());
     assertThat(response.getPayload()).isEqualTo(expectedResponse);
   }
 }
