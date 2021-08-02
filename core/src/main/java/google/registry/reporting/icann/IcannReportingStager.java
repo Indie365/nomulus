@@ -253,23 +253,23 @@ public class IcannReportingStager {
       throws IOException {
     // Upload resulting CSV file to GCS
     byte[] reportBytes = reportCsv.getBytes(UTF_8);
-    String reportFilename =
+    String reportFilepath =
         String.format(
-            "%s-%s-%s.csv",
+            "%s/%s-%s-%s.csv",
+            subdir,
             tld,
             Ascii.toLowerCase(reportType.toString()),
             DateTimeFormat.forPattern("yyyyMM").print(yearMonth));
-    String reportBucketname = String.format("%s/%s", reportingBucket, subdir);
-    final BlobId gcsFilename = BlobId.of(reportBucketname, reportFilename);
+    final BlobId gcsFilename = BlobId.of(reportingBucket, reportFilepath);
     gcsUtils.createFromBytes(gcsFilename, reportBytes);
     logger.atInfo().log("Wrote %d bytes to file location %s", reportBytes.length, gcsFilename);
-    return reportFilename;
+    return reportFilepath;
   }
 
   /** Creates and stores a manifest file on GCS, indicating which reports were generated. */
   void createAndUploadManifest(String subdir, ImmutableList<String> filenames) throws IOException {
-    String reportBucketname = String.format("%s/%s", reportingBucket, subdir);
-    final BlobId gcsFilename = BlobId.of(reportBucketname, MANIFEST_FILE_NAME);
+    String manifestFilepath = String.format("%s/%s", subdir, MANIFEST_FILE_NAME);
+    final BlobId gcsFilename = BlobId.of(reportingBucket, manifestFilepath);
     StringBuilder manifestString = new StringBuilder();
     filenames.forEach((filename) -> manifestString.append(filename).append("\n"));
     gcsUtils.createFromBytes(gcsFilename, manifestString.toString().getBytes(UTF_8));
