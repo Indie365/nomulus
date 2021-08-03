@@ -189,7 +189,7 @@ public class ReplayCommitLogsToSqlAction implements Runnable {
             searchStartTime.toString("yyyy-MM-dd HH"));
       }
       for (BlobInfo file : fileBatch) {
-        jpaTm().transact(() -> processFile(file));
+        processFile(file);
         filesProcessed++;
         if (clock.nowUtc().isAfter(replayTimeoutTime)) {
           return String.format(
@@ -208,7 +208,7 @@ public class ReplayCommitLogsToSqlAction implements Runnable {
       allTransactions.forEach(this::replayTransaction);
       // if we succeeded, set the last-seen time
       DateTime checkpoint = DateTime.parse(metadata.getName().substring(DIFF_FILE_PREFIX.length()));
-      SqlReplayCheckpoint.set(checkpoint);
+      jpaTm().transact(() -> SqlReplayCheckpoint.set(checkpoint));
       logger.atInfo().log(
           "Replayed %d transactions from commit log file %s with size %d B.",
           allTransactions.size(), metadata.getName(), metadata.getSize());
@@ -219,16 +219,19 @@ public class ReplayCommitLogsToSqlAction implements Runnable {
   }
 
   private void replayTransaction(ImmutableList<VersionedEntity> transaction) {
-    transaction.stream()
-        .sorted(ReplayCommitLogsToSqlAction::compareByWeight)
-        .forEach(
-            versionedEntity -> {
-              if (versionedEntity.getEntity().isPresent()) {
-                handleEntityPut(versionedEntity.getEntity().get());
-              } else {
-                handleEntityDelete(versionedEntity);
-              }
-            });
+    jpaTm()
+        .transact(
+            () ->
+                transaction.stream()
+                    .sorted(ReplayCommitLogsToSqlAction::compareByWeight)
+                    .forEach(
+                        versionedEntity -> {
+                          if (versionedEntity.getEntity().isPresent()) {
+                            handleEntityPut(versionedEntity.getEntity().get());
+                          } else {
+                            handleEntityDelete(versionedEntity);
+                          }
+                        }));
   }
 
   private void handleEntityPut(Entity entity) {
