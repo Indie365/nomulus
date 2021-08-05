@@ -1,7 +1,5 @@
 ClaimsList
 ClaimsListSingleton
-Cursor
-DatabaseMigrationStateSchedule
 Registrar
 RegistrarContact
 Registry
