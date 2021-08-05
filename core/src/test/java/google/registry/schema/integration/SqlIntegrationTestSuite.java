@@ -18,6 +18,7 @@ import static com.google.common.truth.Truth.assert_;
 
 import google.registry.model.billing.BillingEventTest;
 import google.registry.model.common.CursorTest;
+import google.registry.model.common.DatabaseMigrationStateScheduleTest;
 import google.registry.model.contact.ContactResourceTest;
 import google.registry.model.domain.DomainBaseSqlTest;
 import google.registry.model.domain.token.AllocationTokenTest;
@@ -85,6 +86,7 @@ import org.junit.runner.RunWith;
   ContactHistoryTest.class,
   ContactResourceTest.class,
   CursorTest.class,
+  DatabaseMigrationStateScheduleTest.class,
   DomainBaseSqlTest.class,
   DomainHistoryTest.class,
   HostHistoryTest.class,
