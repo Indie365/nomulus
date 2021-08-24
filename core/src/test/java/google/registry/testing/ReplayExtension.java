@@ -81,7 +81,8 @@ public class ReplayExtension implements BeforeEachCallback, AfterEachCallback {
    * Create a replay extension that replays from SQL to cloud datastore when running in SQL mode.
    */
   public static ReplayExtension createWithDoubleReplay(FakeClock clock) {
-    return new ReplayExtension(clock, true, new ReplicateToDatastoreAction(clock));
+    return new ReplayExtension(
+        clock, true, new ReplicateToDatastoreAction(clock, new FakeResponse()));
   }
 
   @Override
@@ -199,10 +200,7 @@ public class ReplayExtension implements BeforeEachCallback, AfterEachCallback {
     do {
       transactionBatch = sqlToDsReplicator.getTransactionBatch();
       for (TransactionEntity txn : transactionBatch) {
-        if (sqlToDsReplicator.applyTransaction(txn)) {
-          throw new RuntimeException(
-              "Error when replaying to Datastore in tests; see logs for more details");
-        }
+        sqlToDsReplicator.applyTransaction(txn);
         if (compare) {
           ofyTm().transact(() -> compareSqlTransaction(txn));
         }

@@ -19,6 +19,10 @@ import static google.registry.persistence.transaction.TransactionManagerFactory.
 import static google.registry.persistence.transaction.TransactionManagerFactory.ofyTm;
 import static google.registry.testing.LogsSubject.assertAboutLogs;
 import static google.registry.util.DateTimeUtils.START_OF_TIME;
+import static javax.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
+import static javax.servlet.http.HttpServletResponse.SC_NO_CONTENT;
+import static javax.servlet.http.HttpServletResponse.SC_OK;
+import static org.junit.Assert.assertThrows;
 
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableSortedMap;
@@ -36,6 +40,7 @@ import google.registry.persistence.transaction.TransactionEntity;
 import google.registry.testing.AppEngineExtension;
 import google.registry.testing.DatabaseHelper;
 import google.registry.testing.FakeClock;
+import google.registry.testing.FakeResponse;
 import google.registry.testing.InjectExtension;
 import java.util.List;
 import java.util.logging.Level;
@@ -63,11 +68,13 @@ public class ReplicateToDatastoreActionTest {
 
   @RegisterExtension final InjectExtension injectExtension = new InjectExtension();
 
-  private final ReplicateToDatastoreAction task = new ReplicateToDatastoreAction(fakeClock);
+  private FakeResponse fakeResponse;
+  private ReplicateToDatastoreAction task;
   private final TestLogHandler logHandler = new TestLogHandler();
 
   @BeforeEach
   public void setUp() {
+    resetTask();
     injectExtension.setStaticField(Ofy.class, "clock", fakeClock);
     // Use a single bucket to expose timestamp inversion problems.
     injectExtension.setStaticField(
@@ -108,10 +115,12 @@ public class ReplicateToDatastoreActionTest {
               jpaTm().delete(bar.key());
               jpaTm().insert(baz);
             });
+    resetTask();
     task.run();
 
     assertThat(ofyTm().transact(() -> ofyTm().loadByKeyIfPresent(bar.key()).isPresent())).isFalse();
     assertThat(ofyTm().transact(() -> ofyTm().loadByKey(baz.key()))).isEqualTo(baz);
+    assertThat(fakeResponse.getStatus()).isEqualTo(SC_OK);
   }
 
   @RetryingTest(4)
@@ -129,11 +138,13 @@ public class ReplicateToDatastoreActionTest {
 
     // Write "bar"
     jpaTm().transact(() -> jpaTm().insert(bar));
+    resetTask();
     task.run();
 
     // If we replayed only the most recent transaction, we should have "bar" but not "foo".
     assertThat(ofyTm().transact(() -> ofyTm().loadByKey(bar.key()))).isEqualTo(bar);
     assertThat(ofyTm().transact(() -> ofyTm().loadByKeyIfPresent(foo.key()).isPresent())).isFalse();
+    assertThat(fakeResponse.getStatus()).isEqualTo(SC_OK);
   }
 
   @RetryingTest(4)
@@ -152,14 +163,14 @@ public class ReplicateToDatastoreActionTest {
     assertThat(txns2).hasSize(2);
 
     // Apply the first batch.
-    assertThat(task.applyTransaction(txns1.get(0))).isFalse();
+    task.applyTransaction(txns1.get(0));
 
     // Remove the foo record so we can ensure that this transaction doesn't get doublle-played.
     ofyTm().transact(() -> ofyTm().delete(foo.key()));
 
     // Apply the second batch.
     for (TransactionEntity txn : txns2) {
-      assertThat(task.applyTransaction(txn)).isFalse();
+      task.applyTransaction(txn);
     }
 
     // Verify that the first transaction didn't get replayed but the second one did.
@@ -182,12 +193,27 @@ public class ReplicateToDatastoreActionTest {
 
     List<TransactionEntity> txns = task.getTransactionBatch();
     assertThat(txns).hasSize(1);
-    assertThat(task.applyTransaction(txns.get(0))).isTrue();
+    assertThat(assertThrows(IllegalStateException.class, () -> task.applyTransaction(txns.get(0))))
+        .hasMessageThat()
+        .isEqualTo("Missing transaction: last txn id = -1, next available txn = 1");
+  }
+
+  @Test
+  void testMissingTransactions_fullTask() {
+    // Write a transaction (should have a transaction id of 1).
+    TestEntity foo = new TestEntity("foo");
+    jpaTm().transact(() -> jpaTm().insert(foo));
+
+    // Force the last transaction id back to -1 so that we look for transaction 0.
+    ofyTm().transact(() -> ofyTm().insert(new LastSqlTransaction(-1)));
+    task.run();
+    assertThat(fakeResponse.getStatus()).isEqualTo(SC_INTERNAL_SERVER_ERROR);
+    assertThat(fakeResponse.getPayload()).isEqualTo("Errored out replaying files.");
     assertAboutLogs()
         .that(logHandler)
-        .hasLogAtLevelWithMessage(
-            Level.SEVERE,
-            "Missing transaction: last transaction id = -1, next available transaction = 1");
+        .hasSevereLogWithCause(
+            new IllegalStateException(
+                "Missing transaction: last txn id = -1, next available txn = 1"));
   }
 
   @Test
@@ -218,6 +244,12 @@ public class ReplicateToDatastoreActionTest {
             Level.INFO,
             "Skipping ReplicateToDatastoreAction because we are in migration phase "
                 + "DATASTORE_PRIMARY_READ_ONLY.");
+    assertThat(fakeResponse.getStatus()).isEqualTo(SC_NO_CONTENT);
+  }
+
+  private void resetTask() {
+    fakeResponse = new FakeResponse();
+    task = new ReplicateToDatastoreAction(fakeClock, fakeResponse);
   }
 
   @Entity(name = "ReplicationTestEntity")
