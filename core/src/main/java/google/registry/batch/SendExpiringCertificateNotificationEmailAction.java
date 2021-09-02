@@ -151,6 +151,11 @@ public class SendExpiringCertificateNotificationEmailAction implements Runnable 
     }
     try {
       ImmutableSet<InternetAddress> recipients = getEmailAddresses(registrar, Type.TECH);
+      logger.atInfo().log(
+          "Registrar %s should receive an email that its %s SSL certificate will expire on %s.",
+          registrar.getRegistrarName(),
+          certificateType.getDisplayName(),
+          DATE_FORMATTER.print(lastExpiringCertNotificationSentDate));
       if (recipients.isEmpty()) {
         logger.atWarning().log(
             "Registrar %s contains no email addresses to receive notification email.",
@@ -170,11 +175,6 @@ public class SendExpiringCertificateNotificationEmailAction implements Runnable 
               .setRecipients(recipients)
               .setCcs(getEmailAddresses(registrar, Type.ADMIN))
               .build());
-      logger.atInfo().log(
-          "Sent an email to inform registrar %s that its %s SSL certificate will expire on %s.",
-          registrar.getRegistrarName(),
-          certificateType.getDisplayName(),
-          DATE_FORMATTER.print(lastExpiringCertNotificationSentDate));
       /*
        * A duration time offset is used here to ensure that date comparison between two
        * successive dates is always greater than 1 day. This date is set as last updated date,
