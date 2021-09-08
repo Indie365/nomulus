@@ -459,7 +459,7 @@ sslCertificateValidation:
   expirationWarningEmailSubjectText: "[Important] Expiring SSL certificate for Google Registry EPP connection"
   # Text for expiring certificate notification email body that accepts 3 parameters:
   # registrar name, certificate type, and expiration date, respectively.
-  expirationWarningEmailBodyText: >
+  expirationWarningEmailBodyText: |
     Dear %1$s,
 
     We would like to inform you that your %2$s SSL certificate will expire at
