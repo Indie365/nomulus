@@ -15,13 +15,16 @@
 package google.registry.beam.common;
 
 import static google.registry.beam.common.RegistryPipelineOptions.toRegistryPipelineComponent;
+import static google.registry.model.ofy.ObjectifyService.auditedOfy;
 
+import com.google.apphosting.api.ApiProxy;
 import com.google.auto.service.AutoService;
 import com.google.common.flogger.FluentLogger;
 import dagger.Lazy;
 import google.registry.config.RegistryEnvironment;
 import google.registry.persistence.transaction.JpaTransactionManager;
 import google.registry.persistence.transaction.TransactionManagerFactory;
+import google.registry.util.PlaceholderEnvironment;
 import org.apache.beam.sdk.harness.JvmInitializer;
 import org.apache.beam.sdk.options.PipelineOptions;
 
@@ -43,10 +46,13 @@ public class RegistryPipelineWorkerInitializer implements JvmInitializer {
     if (environment == null || environment.equals(RegistryEnvironment.UNITTEST)) {
       return;
     }
-    logger.atInfo().log("Setting up RegistryEnvironment: %s", environment);
-    environment.setup();
+    //logger.atInfo().log("Setting up RegistryEnvironment: %s", environment);
+    //environment.setup();
     Lazy<JpaTransactionManager> transactionManagerLazy =
         toRegistryPipelineComponent(registryOptions).getJpaTransactionManager();
     TransactionManagerFactory.setJpaTmOnBeamWorker(transactionManagerLazy::get);
+    ApiProxy.setEnvironmentForCurrentThread(PlaceholderEnvironment.get());
+    ApiProxy.setEnvironmentFactory(PlaceholderEnvironment::get);
+    auditedOfy();
   }
 }

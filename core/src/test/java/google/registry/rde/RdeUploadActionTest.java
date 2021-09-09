@@ -25,8 +25,6 @@ import static google.registry.testing.DatabaseHelper.createTld;
 import static google.registry.testing.DatabaseHelper.persistResource;
 import static google.registry.testing.DatabaseHelper.persistSimpleResource;
 import static google.registry.testing.SystemInfo.hasCommand;
-import static google.registry.testing.TaskQueueHelper.assertNoTasksEnqueued;
-import static google.registry.testing.TaskQueueHelper.assertTasksEnqueued;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.joda.time.Duration.standardDays;
 import static org.joda.time.Duration.standardHours;
@@ -62,6 +60,8 @@ import google.registry.request.HttpException.NoContentException;
 import google.registry.request.RequestParameters;
 import google.registry.testing.AppEngineExtension;
 import google.registry.testing.BouncyCastleProviderExtension;
+import google.registry.testing.CloudTasksHelper;
+import google.registry.testing.CloudTasksHelper.TaskMatcher;
 import google.registry.testing.DualDatabaseTest;
 import google.registry.testing.FakeClock;
 import google.registry.testing.FakeKeyringModule;
@@ -69,17 +69,16 @@ import google.registry.testing.FakeResponse;
 import google.registry.testing.FakeSleeper;
 import google.registry.testing.GpgSystemCommandExtension;
 import google.registry.testing.Lazies;
-import google.registry.testing.TaskQueueHelper.TaskMatcher;
 import google.registry.testing.TestOfyAndSql;
 import google.registry.testing.sftp.SftpServerExtension;
 import google.registry.util.Retrier;
-import google.registry.util.TaskQueueUtils;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.Socket;
 import java.net.URI;
+import java.util.Optional;
 import org.bouncycastle.openpgp.PGPPublicKey;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.BeforeEach;
@@ -100,6 +99,12 @@ public class RdeUploadActionTest {
       BlobId.of("bucket", "tld_2010-10-17_full_S1_R0.xml.length");
   private static final BlobId REPORT_FILE =
       BlobId.of("bucket", "tld_2010-10-17_full_S1_R0-report.xml.ghostryde");
+  private static final BlobId GHOSTRYDE_FILE_WITH_PREFIX =
+      BlobId.of("bucket", "job-name/tld_2010-10-17_full_S1_R0.xml.ghostryde");
+  private static final BlobId LENGTH_FILE_WITH_PREFIX =
+      BlobId.of("bucket", "job-name/tld_2010-10-17_full_S1_R0.xml.length");
+  private static final BlobId REPORT_FILE_WITH_PREFIX =
+      BlobId.of("bucket", "job-name/tld_2010-10-17_full_S1_R0-report.xml.ghostryde");
 
   private static final BlobId GHOSTRYDE_R1_FILE =
       BlobId.of("bucket", "tld_2010-10-17_full_S1_R1.xml.ghostryde");
@@ -109,6 +114,7 @@ public class RdeUploadActionTest {
       BlobId.of("bucket", "tld_2010-10-17_full_S1_R1-report.xml.ghostryde");
 
   private final GcsUtils gcsUtils = new GcsUtils(LocalStorageHelper.getOptions());
+  private final CloudTasksHelper cloudTasksHelper = new CloudTasksHelper();
 
   @RegisterExtension final SftpServerExtension sftpd = new SftpServerExtension();
 
@@ -157,8 +163,9 @@ public class RdeUploadActionTest {
       action.stagingDecryptionKey = keyring.getRdeStagingDecryptionKey();
       action.reportQueue = QueueFactory.getQueue("rde-report");
       action.runner = runner;
-      action.taskQueueUtils = new TaskQueueUtils(new Retrier(null, 1));
+      action.cloudTasksUtils = cloudTasksHelper.getTestCloudTasksUtils();
       action.retrier = new Retrier(new FakeSleeper(clock), 3);
+      action.prefix = Optional.empty();
       return action;
     }
   }
@@ -182,14 +189,19 @@ public class RdeUploadActionTest {
 
     createTld("tld");
     PGPPublicKey encryptKey = new FakeKeyringModule().get().getRdeStagingEncryptionKey();
+    gcsUtils.createFromBytes(
+        GHOSTRYDE_FILE_WITH_PREFIX, Ghostryde.encode(DEPOSIT_XML.read(), encryptKey));
     gcsUtils.createFromBytes(GHOSTRYDE_FILE, Ghostryde.encode(DEPOSIT_XML.read(), encryptKey));
     gcsUtils.createFromBytes(GHOSTRYDE_R1_FILE, Ghostryde.encode(DEPOSIT_XML.read(), encryptKey));
+    gcsUtils.createFromBytes(
+        LENGTH_FILE_WITH_PREFIX, Long.toString(DEPOSIT_XML.size()).getBytes(UTF_8));
     gcsUtils.createFromBytes(LENGTH_FILE, Long.toString(DEPOSIT_XML.size()).getBytes(UTF_8));
     gcsUtils.createFromBytes(LENGTH_R1_FILE, Long.toString(DEPOSIT_XML.size()).getBytes(UTF_8));
+    gcsUtils.createFromBytes(
+        REPORT_FILE_WITH_PREFIX, Ghostryde.encode(REPORT_XML.read(), encryptKey));
     gcsUtils.createFromBytes(REPORT_FILE, Ghostryde.encode(REPORT_XML.read(), encryptKey));
     gcsUtils.createFromBytes(REPORT_R1_FILE, Ghostryde.encode(REPORT_XML.read(), encryptKey));
-    tm()
-        .transact(
+    tm().transact(
             () -> {
               RdeRevision.saveRevision("lol", DateTime.parse("2010-10-17TZ"), FULL, 0);
               RdeRevision.saveRevision("tld", DateTime.parse("2010-10-17TZ"), FULL, 0);
@@ -210,11 +222,39 @@ public class RdeUploadActionTest {
     RdeUploadAction action = createAction(null);
     action.tld = "lol";
     action.run();
-    verify(runner).lockRunAndRollForward(
-        action, Registry.get("lol"), standardSeconds(23), CursorType.RDE_UPLOAD, standardDays(1));
-    assertTasksEnqueued("rde-report", new TaskMatcher()
-        .url(RdeReportAction.PATH)
-        .param(RequestParameters.PARAM_TLD, "lol"));
+    verify(runner)
+        .lockRunAndRollForward(
+            action,
+            Registry.get("lol"),
+            standardSeconds(23),
+            CursorType.RDE_UPLOAD,
+            standardDays(1));
+    cloudTasksHelper.assertTasksEnqueued(
+        "rde-report",
+        new TaskMatcher().url(RdeReportAction.PATH).param(RequestParameters.PARAM_TLD, "lol"));
+    verifyNoMoreInteractions(runner);
+  }
+
+  @TestOfyAndSql
+  void testRun_withPrefix() {
+    createTld("lol");
+    RdeUploadAction action = createAction(null);
+    action.prefix = Optional.of("job-name/");
+    action.tld = "lol";
+    action.run();
+    verify(runner)
+        .lockRunAndRollForward(
+            action,
+            Registry.get("lol"),
+            standardSeconds(23),
+            CursorType.RDE_UPLOAD,
+            standardDays(1));
+    cloudTasksHelper.assertTasksEnqueued(
+        "rde-report",
+        new TaskMatcher()
+            .url(RdeReportAction.PATH)
+            .param(RequestParameters.PARAM_TLD, "lol")
+            .param(RdeModule.PARAM_PREFIX, "job-name/"));
     verifyNoMoreInteractions(runner);
   }
 
@@ -231,7 +271,7 @@ public class RdeUploadActionTest {
     assertThat(response.getStatus()).isEqualTo(200);
     assertThat(response.getContentType()).isEqualTo(PLAIN_TEXT_UTF_8);
     assertThat(response.getPayload()).isEqualTo("OK tld 2010-10-17T00:00:00.000Z\n");
-    assertNoTasksEnqueued("rde-upload");
+    cloudTasksHelper.assertNoTasksEnqueued("rde-upload");
     assertThat(folder.list())
         .asList()
         .containsExactly("tld_2010-10-17_full_S1_R0.ryde", "tld_2010-10-17_full_S1_R0.sig");
@@ -262,7 +302,7 @@ public class RdeUploadActionTest {
     assertThat(response.getStatus()).isEqualTo(200);
     assertThat(response.getContentType()).isEqualTo(PLAIN_TEXT_UTF_8);
     assertThat(response.getPayload()).isEqualTo("OK tld 2010-10-17T00:00:00.000Z\n");
-    assertNoTasksEnqueued("rde-upload");
+    cloudTasksHelper.assertNoTasksEnqueued("rde-upload");
     // Assert that both files are written to SFTP and GCS, and that the contents are identical.
     String rydeFilename = "tld_2010-10-17_full_S1_R0.ryde";
     String sigFilename = "tld_2010-10-17_full_S1_R0.sig";
@@ -270,6 +310,32 @@ public class RdeUploadActionTest {
     assertThat(gcsUtils.readBytesFrom(BlobId.of("bucket", rydeFilename)))
         .isEqualTo(Files.toByteArray(new File(folder, rydeFilename)));
     assertThat(gcsUtils.readBytesFrom(BlobId.of("bucket", sigFilename)))
+        .isEqualTo(Files.toByteArray(new File(folder, sigFilename)));
+  }
+
+  @TestOfyAndSql
+  void testRunWithLock_copiesOnGcs_withPrefix() throws Exception {
+    int port = sftpd.serve("user", "password", folder);
+    URI uploadUrl = URI.create(String.format("sftp://user:password@localhost:%d/", port));
+    DateTime stagingCursor = DateTime.parse("2010-10-18TZ");
+    DateTime uploadCursor = DateTime.parse("2010-10-17TZ");
+    persistResource(Cursor.create(RDE_STAGING, stagingCursor, Registry.get("tld")));
+    RdeUploadAction action = createAction(uploadUrl);
+    action.prefix = Optional.of("job-name/");
+    action.runWithLock(uploadCursor);
+    assertThat(response.getStatus()).isEqualTo(200);
+    assertThat(response.getContentType()).isEqualTo(PLAIN_TEXT_UTF_8);
+    assertThat(response.getPayload()).isEqualTo("OK tld 2010-10-17T00:00:00.000Z\n");
+    cloudTasksHelper.assertNoTasksEnqueued("rde-upload");
+    // Assert that both files are written to SFTP and GCS, and that the contents are identical.
+    String rydeFilename = "tld_2010-10-17_full_S1_R0.ryde";
+    String rydeGcsFilename = "job-name/tld_2010-10-17_full_S1_R0.ryde";
+    String sigFilename = "tld_2010-10-17_full_S1_R0.sig";
+    String sigGcsFilename = "job-name/tld_2010-10-17_full_S1_R0.sig";
+    assertThat(folder.list()).asList().containsExactly(rydeFilename, sigFilename);
+    assertThat(gcsUtils.readBytesFrom(BlobId.of("bucket", rydeGcsFilename)))
+        .isEqualTo(Files.toByteArray(new File(folder, rydeFilename)));
+    assertThat(gcsUtils.readBytesFrom(BlobId.of("bucket", sigGcsFilename)))
         .isEqualTo(Files.toByteArray(new File(folder, sigFilename)));
   }
 
@@ -285,7 +351,7 @@ public class RdeUploadActionTest {
     assertThat(response.getStatus()).isEqualTo(200);
     assertThat(response.getContentType()).isEqualTo(PLAIN_TEXT_UTF_8);
     assertThat(response.getPayload()).isEqualTo("OK tld 2010-10-17T00:00:00.000Z\n");
-    assertNoTasksEnqueued("rde-upload");
+    cloudTasksHelper.assertNoTasksEnqueued("rde-upload");
     assertThat(folder.list())
         .asList()
         .containsExactly("tld_2010-10-17_full_S1_R1.ryde", "tld_2010-10-17_full_S1_R1.sig");
@@ -327,7 +393,7 @@ public class RdeUploadActionTest {
         .isEqualTo(
             "Waiting on RdeStagingAction for TLD tld to send 2010-10-17T00:00:00.000Z upload; last"
                 + " RDE staging completion was at 1970-01-01T00:00:00.000Z");
-    assertNoTasksEnqueued("rde-upload");
+    cloudTasksHelper.assertNoTasksEnqueued("rde-upload");
     assertThat(folder.list()).isEmpty();
   }
 

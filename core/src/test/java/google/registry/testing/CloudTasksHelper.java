@@ -23,13 +23,8 @@ import static com.google.common.truth.Truth.assertWithMessage;
 import static google.registry.util.DiffUtils.prettyPrintEntityDeepDiff;
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.joining;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
-import com.google.cloud.tasks.v2.CloudTasksClient;
 import com.google.cloud.tasks.v2.HttpMethod;
-import com.google.cloud.tasks.v2.QueueName;
 import com.google.cloud.tasks.v2.Task;
 import com.google.common.base.Ascii;
 import com.google.common.base.Joiner;
@@ -37,14 +32,17 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableMultiset;
 import com.google.common.collect.LinkedListMultimap;
+import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Multimaps;
 import com.google.common.net.HttpHeaders;
 import com.google.common.net.MediaType;
 import com.google.common.truth.Truth8;
 import google.registry.model.ImmutableObject;
 import google.registry.util.CloudTasksUtils;
 import google.registry.util.Retrier;
+import java.io.Serializable;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
@@ -54,6 +52,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import javax.annotation.Nonnull;
@@ -66,29 +67,22 @@ import javax.annotation.Nonnull;
  * and more Task Queue API usage is migrated to Cloud Tasks we may replicate more methods from the
  * latter.
  */
-public class CloudTasksHelper {
+public class CloudTasksHelper implements Serializable {
+
+  private static AtomicInteger nextInstanceId = new AtomicInteger(0);
+  protected static ConcurrentMap<Integer, ListMultimap<String, Task>> testTasks =
+      new ConcurrentHashMap<Integer, ListMultimap<String, Task>>();
 
   private static final String PROJECT_ID = "test-project";
   private static final String LOCATION_ID = "test-location";
 
   private final Retrier retrier = new Retrier(new FakeSleeper(new FakeClock()), 1);
-  private final LinkedListMultimap<String, Task> testTasks = LinkedListMultimap.create();
-  private final CloudTasksClient mockClient = mock(CloudTasksClient.class);
+  private final int instanceId = nextInstanceId.getAndIncrement();
   private final CloudTasksUtils cloudTasksUtils =
-      new CloudTasksUtils(retrier, PROJECT_ID, LOCATION_ID, () -> mockClient);
+      new CloudTasksUtils(retrier, PROJECT_ID, LOCATION_ID, new FakeCloudTasksClient());
 
   public CloudTasksHelper() {
-    when(mockClient.createTask(any(QueueName.class), any(Task.class)))
-        .thenAnswer(
-            invocation -> {
-              QueueName queue = invocation.getArgument(0);
-              Task task = invocation.getArgument(1);
-              if (task.getName().isEmpty()) {
-                task = task.toBuilder().setName(String.format("test-%d", testTasks.size())).build();
-              }
-              testTasks.put(queue.getQueue(), task);
-              return task;
-            });
+    testTasks.put(instanceId, Multimaps.synchronizedListMultimap(LinkedListMultimap.create()));
   }
 
   public CloudTasksUtils getTestCloudTasksUtils() {
@@ -96,7 +90,7 @@ public class CloudTasksHelper {
   }
 
   public List<Task> getTestTasksFor(String queue) {
-    return testTasks.get(queue);
+    return testTasks.get(instanceId).get(queue);
   }
 
   /**
@@ -157,6 +151,20 @@ public class CloudTasksHelper {
                     .collect(joining("\n")))
             .fail();
       }
+    }
+  }
+
+  private class FakeCloudTasksClient extends CloudTasksUtils.SerializableCloudTasksClient {
+
+    @Override
+    public Task enqueue(String projectId, String locationId, String queueName, Task task) {
+      if (task.getName().isEmpty()) {
+        task = task.toBuilder().setName(String.format("test-%d", testTasks.size())).build();
+      }
+      synchronized (testTasks) {
+        testTasks.get(instanceId).put(queueName, task);
+      }
+      return task;
     }
   }
 
