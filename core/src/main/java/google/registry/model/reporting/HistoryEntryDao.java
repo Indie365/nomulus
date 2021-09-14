@@ -24,6 +24,7 @@ import static google.registry.util.DateTimeUtils.START_OF_TIME;
 
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
 import google.registry.model.EppResource;
 import google.registry.model.contact.ContactHistory;
@@ -48,6 +49,16 @@ import org.joda.time.DateTime;
  * is currently considered the primary database.
  */
 public class HistoryEntryDao {
+
+  public static ImmutableMap<Class<? extends EppResource>, Class<? extends HistoryEntry>>
+      RESOURCE_TYPES_TO_HISTORY_TYPES =
+          ImmutableMap.of(
+              ContactResource.class,
+              ContactHistory.class,
+              DomainBase.class,
+              DomainHistory.class,
+              HostResource.class,
+              HostHistory.class);
 
   /** Loads all history objects in the times specified, including all types. */
   public static ImmutableList<HistoryEntry> loadAllHistoryObjects(
@@ -193,15 +204,11 @@ public class HistoryEntryDao {
 
   private static Class<? extends HistoryEntry> getHistoryClassFromParent(
       Class<? extends EppResource> parent) {
-    if (parent.equals(ContactResource.class)) {
-      return ContactHistory.class;
-    } else if (parent.equals(DomainBase.class)) {
-      return DomainHistory.class;
-    } else if (parent.equals(HostResource.class)) {
-      return HostHistory.class;
+    if (!RESOURCE_TYPES_TO_HISTORY_TYPES.containsKey(parent)) {
+      throw new IllegalArgumentException(
+          String.format("Unknown history type for parent %s", parent.getName()));
     }
-    throw new IllegalArgumentException(
-        String.format("Unknown history type for parent %s", parent.getName()));
+    return RESOURCE_TYPES_TO_HISTORY_TYPES.get(parent);
   }
 
   private static String getRepoIdFieldNameFromHistoryClass(
