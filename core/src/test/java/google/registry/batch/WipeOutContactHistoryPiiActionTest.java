@@ -82,9 +82,9 @@ class WipeOutContactHistoryPiiActionTest {
                   .build())
           .setFaxNumber(new ContactPhoneNumber.Builder().setPhoneNumber("+1.7035555556").build())
           .setEmailAddress("jdoe@example.com")
-          .setPersistedCurrentSponsorClientId("TheRegistrar")
-          .setCreationClientId("NewRegistrar")
-          .setLastEppUpdateClientId("NewRegistrar")
+          .setPersistedCurrentSponsorRegistrarId("TheRegistrar")
+          .setCreationRegistrarId("NewRegistrar")
+          .setLastEppUpdateRegistrarId("NewRegistrar")
           .setCreationTimeForTest(DateTime.parse("1999-04-03T22:00:00.0Z"))
           .setLastEppUpdateTime(DateTime.parse("1999-12-03T09:00:00.0Z"))
           .setLastTransferTime(DateTime.parse("2000-04-08T09:00:00.0Z"))
@@ -173,7 +173,21 @@ class WipeOutContactHistoryPiiActionTest {
   }
 
   @TestSqlOnly
-  void processData_testSmallDataSet_Success() {
+  void processData_testOneBatch_Success() {
+    ImmutableList<ContactHistory> expectedToBeWipedOut =
+        persistLotsOfContactHistoryEntities(20, 20, 0, defaultContactResource);
+    jpaTm()
+        .transact(
+            () -> {
+              ScrollableResults data =
+                  action.getAllHistoryEntriesOlderThan(minMonthsBeforeWipedOut);
+              assertThat(action.processData(data)).isEqualTo(expectedToBeWipedOut.size());
+              ;
+            });
+  }
+
+  @TestSqlOnly
+  void processData_testMoreThanOneBatch_smallDataSet_Success() {
     ImmutableList<ContactHistory> expectedToBeWipedOut =
         persistLotsOfContactHistoryEntities(450, 20, 0, defaultContactResource);
     jpaTm()
@@ -187,7 +201,7 @@ class WipeOutContactHistoryPiiActionTest {
   }
 
   @TestSqlOnly
-  void processData_testLargeDataSet_Success() {
+  void processData_testMoreThanOneBatch_largetDataSet_Success() {
     ImmutableList<ContactHistory> expectedToBeWipedOut =
         persistLotsOfContactHistoryEntities(10000, 25, 3, defaultContactResource);
     jpaTm()
@@ -200,10 +214,54 @@ class WipeOutContactHistoryPiiActionTest {
             });
   }
 
-  /**
-   * persists a number of hitory entries with the same set up, same contact info but different
-   * modification time
-   */
+  @TestSqlOnly
+  void processData_mixOfWipedAndUpwipedData_Success() {
+    int expectedMonthsFromNow1 = 20;
+    ImmutableList<ContactHistory> expectedToBeWipedOut1 =
+        persistLotsOfContactHistoryEntities(20, expectedMonthsFromNow1, 0, defaultContactResource);
+    jpaTm()
+        .transact(
+            () -> {
+              ScrollableResults data =
+                  action.getAllHistoryEntriesOlderThan(minMonthsBeforeWipedOut);
+              assertThat(action.processData(data)).isEqualTo(expectedToBeWipedOut1.size());
+              for (int i = 1; data.next(); i = (i + 1) % batchSize) {
+                ContactHistory contactHistory = (ContactHistory) data.get(0);
+                assertThat(contactHistory.getModificationTime())
+                    .isEqualTo(clock.nowUtc().minusMonths(expectedMonthsFromNow1));
+
+                if (i == 0) {
+                  // reset batch builder and flush the session to avoid OOM issue
+                  jpaTm().getEntityManager().flush();
+                  jpaTm().getEntityManager().clear();
+                }
+              }
+            });
+    int expectedMonthsFromNow2 = 21;
+    ImmutableList<ContactHistory> expectedToWipedOut2 =
+        persistLotsOfContactHistoryEntities(10, expectedMonthsFromNow2, 0, defaultContactResource);
+    // Since pii fields of data from expectedToBeWipedOut1 have been wiped, only ContactHistory
+    // entities from expectedToWipedOut2 are expected to show up and be wiped.
+    jpaTm()
+        .transact(
+            () -> {
+              ScrollableResults data =
+                  action.getAllHistoryEntriesOlderThan(minMonthsBeforeWipedOut);
+              assertThat(action.processData(data)).isEqualTo(expectedToWipedOut2.size());
+              for (int i = 1; data.next(); i = (i + 1) % batchSize) {
+                ContactHistory contactHistory = (ContactHistory) data.get(0);
+                assertThat(contactHistory.getModificationTime())
+                    .isEqualTo(clock.nowUtc().minusMonths(expectedMonthsFromNow2));
+                if (i == 0) {
+                  // reset batch builder and flush the session to avoid OOM issue
+                  jpaTm().getEntityManager().flush();
+                  jpaTm().getEntityManager().clear();
+                }
+              }
+            });
+  }
+
+  /** persists a number of ContactHistory entities for load and query testing. */
   ImmutableList<ContactHistory> persistLotsOfContactHistoryEntities(
       int numOfEntities, int minusMonths, int minusDays, ContactResource contact) {
     ImmutableList.Builder<ContactHistory> expectedEntitesBuilder = new ImmutableList.Builder<>();
@@ -212,7 +270,7 @@ class WipeOutContactHistoryPiiActionTest {
           persistResource(
               new ContactHistory()
                   .asBuilder()
-                  .setClientId("NewRegistrar")
+                  .setRegistrarId("NewRegistrar")
                   .setModificationTime(clock.nowUtc().minusMonths(minusMonths).minusDays(minusDays))
                   .setType(ContactHistory.Type.CONTACT_DELETE)
                   .setContact(persistResource(contact))
@@ -223,18 +281,17 @@ class WipeOutContactHistoryPiiActionTest {
 
   @TestSqlOnly
   void wipeOutContactHistoryPii_success() {
-    ImmutableList.Builder<ContactHistory> data = new ImmutableList.Builder<>();
     ContactHistory contactHistory =
         persistResource(
             new ContactHistory()
                 .asBuilder()
-                .setClientId("NewRegistrar")
+                .setRegistrarId("NewRegistrar")
                 .setModificationTime(clock.nowUtc().minusMonths(minMonthsBeforeWipedOut + 1))
                 .setContact(persistResource(defaultContactResource))
                 .setType(ContactHistory.Type.CONTACT_DELETE)
                 .build());
 
-    jpaTm().transact(() -> action.wipeOutContactHistoryPii(data.add(contactHistory).build()));
+    jpaTm().transact(() -> action.wipeOutContactHistoryPii(contactHistory));
 
     jpaTm()
         .transact(
