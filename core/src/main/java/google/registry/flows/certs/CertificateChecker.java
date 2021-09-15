@@ -238,13 +238,13 @@ public class CertificateChecker {
     }
     /*
      * Client should receive a notification if :
-     *    1) client has never received notification and the certificate has entered
-     *    the expiring period, OR
+     *    1) client has never received notification (lastExpiringNotificationSentDate is initially
+     *    set to START_OF_TIME) and the certificate has entered the expiring period, OR
      *    2) client has received notification but the interval between now and
      *    lastExpiringNotificationSentDate is greater than expirationWarningIntervalDays.
      */
     return !lastValidDate.after(now.plusDays(expirationWarningDays).toDate())
-        && (lastExpiringNotificationSentDate == null
+        && (lastExpiringNotificationSentDate == START_OF_TIME
             || !lastExpiringNotificationSentDate
                 .plusDays(expirationWarningIntervalDays)
                 .toDate()
