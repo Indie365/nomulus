@@ -114,7 +114,7 @@ public class RdeIO {
               "Write to GCS",
               ParDo.of(new RdeWriter(gcsUtils(), rdeBucket(), stagingKeyBytes(), validationMode())))
           .apply("Update cursors", ParDo.of(new CursorUpdater()))
-          .apply("Enqueue load action", ParDo.of(new UploadEnqueuer(cloudTasksUtils())));
+          .apply("Enqueue upload action", ParDo.of(new UploadEnqueuer(cloudTasksUtils())));
       return PDone.in(input.getPipeline());
     }
   }
