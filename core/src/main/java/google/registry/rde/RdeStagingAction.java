@@ -40,7 +40,7 @@ import google.registry.beam.rde.RdePipeline;
 import google.registry.config.RegistryConfig.Config;
 import google.registry.config.RegistryEnvironment;
 import google.registry.gcs.GcsUtils;
-import google.registry.keyring.api.KeyModule;
+import google.registry.keyring.api.KeyModule.Key;
 import google.registry.mapreduce.MapreduceRunner;
 import google.registry.mapreduce.inputs.EppResourceInputs;
 import google.registry.mapreduce.inputs.NullInput;
@@ -236,7 +236,8 @@ public final class RdeStagingAction implements Runnable {
   @Inject @Parameter(RdeModule.PARAM_WATERMARKS) ImmutableSet<DateTime> watermarks;
   @Inject @Parameter(RdeModule.PARAM_REVISION) Optional<Integer> revision;
   @Inject @Parameter(RdeModule.PARAM_LENIENT) boolean lenient;
-  @Inject @KeyModule.Key("rdeStagingEncryptionKey") byte[] stagingKeyBytes;
+  @Inject @Key("rdeStagingEncryptionKey") byte[] stagingKeyBytes;
+
   @Inject Dataflow dataflow;
 
   @Inject RdeStagingAction() {}

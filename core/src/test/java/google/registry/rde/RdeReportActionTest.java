@@ -92,7 +92,8 @@ public class RdeReportActionTest {
   private final URLFetchService urlFetchService = mock(URLFetchService.class);
   private final ArgumentCaptor<HTTPRequest> request = ArgumentCaptor.forClass(HTTPRequest.class);
   private final HTTPResponse httpResponse = mock(HTTPResponse.class);
-
+  private final PGPPublicKey encryptKey =
+      new FakeKeyringModule().get().getRdeStagingEncryptionKey();
   private final GcsUtils gcsUtils = new GcsUtils(LocalStorageHelper.getOptions());
   private final BlobId reportFile =
       BlobId.of("tub", "test_2006-06-06_full_S1_R0-report.xml.ghostryde");
@@ -119,16 +120,12 @@ public class RdeReportActionTest {
 
   @BeforeEach
   void beforeEach() throws Exception {
-    PGPPublicKey encryptKey = new FakeKeyringModule().get().getRdeStagingEncryptionKey();
     createTld("test");
     persistResource(
         Cursor.create(RDE_REPORT, DateTime.parse("2006-06-06TZ"), Registry.get("test")));
     persistResource(
         Cursor.create(RDE_UPLOAD, DateTime.parse("2006-06-07TZ"), Registry.get("test")));
     gcsUtils.createFromBytes(reportFile, Ghostryde.encode(REPORT_XML.read(), encryptKey));
-    gcsUtils.createFromBytes(
-        BlobId.of("tub", "job-name/test_2006-06-06_full_S1_R0-report.xml.ghostryde"),
-        Ghostryde.encode(REPORT_XML.read(), encryptKey));
     tm().transact(() -> RdeRevision.saveRevision("test", DateTime.parse("2006-06-06TZ"), FULL, 0));
   }
 
@@ -175,6 +172,10 @@ public class RdeReportActionTest {
     when(urlFetchService.fetch(request.capture())).thenReturn(httpResponse);
     RdeReportAction action = createAction();
     action.prefix = Optional.of("job-name/");
+    gcsUtils.delete(reportFile);
+    gcsUtils.createFromBytes(
+        BlobId.of("tub", "job-name/test_2006-06-06_full_S1_R0-report.xml.ghostryde"),
+        Ghostryde.encode(REPORT_XML.read(), encryptKey));
     action.runWithLock(loadRdeReportCursor());
     assertThat(response.getStatus()).isEqualTo(200);
     assertThat(response.getContentType()).isEqualTo(PLAIN_TEXT_UTF_8);

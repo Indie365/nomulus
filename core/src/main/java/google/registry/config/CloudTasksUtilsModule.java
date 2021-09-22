@@ -50,6 +50,7 @@ public abstract class CloudTasksUtilsModule {
     return new CloudTasksUtils(retrier, projectId, locationId, client);
   }
 
+  // Provides a supplier instead of using a Dagger @Provider because the latter is not serializable.
   @Provides
   public static Supplier<CloudTasksClient> provideCloudTasksClientSupplier(
       @DefaultCredential GoogleCredentialsBundle credentials) {

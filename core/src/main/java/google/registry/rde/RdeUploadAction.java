@@ -29,7 +29,6 @@ import static google.registry.util.DateTimeUtils.START_OF_TIME;
 import static google.registry.util.DateTimeUtils.isBeforeOrAt;
 import static java.util.Arrays.asList;
 
-import com.google.appengine.api.taskqueue.Queue;
 import com.google.cloud.storage.BlobId;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.HashMultimap;
@@ -68,7 +67,6 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.util.Optional;
 import javax.inject.Inject;
-import javax.inject.Named;
 import org.bouncycastle.openpgp.PGPKeyPair;
 import org.bouncycastle.openpgp.PGPPrivateKey;
 import org.bouncycastle.openpgp.PGPPublicKey;
@@ -123,7 +121,6 @@ public final class RdeUploadAction implements Runnable, EscrowTask {
   @Inject @Key("rdeReceiverKey") PGPPublicKey receiverKey;
   @Inject @Key("rdeSigningKey") PGPKeyPair signingKey;
   @Inject @Key("rdeStagingDecryptionKey") PGPPrivateKey stagingDecryptionKey;
-  @Inject @Named("rde-report") Queue reportQueue;
   @Inject RdeUploadAction() {}
 
   @Override

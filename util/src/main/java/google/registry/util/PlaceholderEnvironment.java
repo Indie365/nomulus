@@ -18,6 +18,7 @@ import com.google.apphosting.api.ApiProxy.Environment;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 
+/** A placeholder GAE environment class that is used when masquerading a thread as a GAE thread. */
 public final class PlaceholderEnvironment implements Environment {
 
   private static final PlaceholderEnvironment INSTANCE = new PlaceholderEnvironment();

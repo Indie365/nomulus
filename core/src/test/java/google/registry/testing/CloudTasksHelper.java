@@ -29,6 +29,7 @@ import com.google.cloud.tasks.v2.Task;
 import com.google.common.base.Ascii;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableMultiset;
 import com.google.common.collect.LinkedListMultimap;
@@ -66,12 +67,26 @@ import javax.annotation.Nonnull;
  * helper methods because we have not yet encountered all the use cases with Cloud Tasks. As more
  * and more Task Queue API usage is migrated to Cloud Tasks we may replicate more methods from the
  * latter.
+ *
+ * <p>Note the use of {@link AtomicInteger} {@code nextInstanceId} here. When a {@link
+ * FakeCloudTasksClient} instance, and by extension the {@link CloudTasksHelper} instance that
+ * contains it is serialized/deserialized, as happens in a Beam pipeline, we to want to push tasks
+ * to the same test task container that the original instance pushes to, so that we can make
+ * assertions on them by accessing the original instance. We cannot make the test task container
+ * itself static because we do not want tasks enqueued in previous tests to interfere with latter
+ * tests, when they run on the same JVM (and therefore share the same static class members). To
+ * solve this we put the test container in a static map whose keys are the instance IDs. An
+ * explicitly created new {@link CloudTasksHelper} (as would be created for a new test method) would
+ * have a new ID allocated to it, and therefore stores its tasks in a distinct container. A
+ * deserialized {@link CloudTasksHelper}, on the other hand, will have the same instance ID and
+ * share the same test class container with its progenitor.
  */
 public class CloudTasksHelper implements Serializable {
 
-  private static AtomicInteger nextInstanceId = new AtomicInteger(0);
+  private static final long serialVersionUID = -8949359648199614677L;
+  private static final AtomicInteger nextInstanceId = new AtomicInteger(0);
   protected static ConcurrentMap<Integer, ListMultimap<String, Task>> testTasks =
-      new ConcurrentHashMap<Integer, ListMultimap<String, Task>>();
+      new ConcurrentHashMap<>();
 
   private static final String PROJECT_ID = "test-project";
   private static final String LOCATION_ID = "test-location";
@@ -89,8 +104,8 @@ public class CloudTasksHelper implements Serializable {
     return cloudTasksUtils;
   }
 
-  public List<Task> getTestTasksFor(String queue) {
-    return testTasks.get(instanceId).get(queue);
+  public ImmutableList<Task> getTestTasksFor(String queue) {
+    return ImmutableList.copyOf(testTasks.get(instanceId).get(queue));
   }
 
   /**
@@ -156,14 +171,14 @@ public class CloudTasksHelper implements Serializable {
 
   private class FakeCloudTasksClient extends CloudTasksUtils.SerializableCloudTasksClient {
 
+    private static final long serialVersionUID = 6661964844791720639L;
+
     @Override
     public Task enqueue(String projectId, String locationId, String queueName, Task task) {
       if (task.getName().isEmpty()) {
         task = task.toBuilder().setName(String.format("test-%d", testTasks.size())).build();
       }
-      synchronized (testTasks) {
-        testTasks.get(instanceId).put(queueName, task);
-      }
+      testTasks.get(instanceId).put(queueName, task);
       return task;
     }
   }

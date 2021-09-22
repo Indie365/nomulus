@@ -39,7 +39,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
-import com.google.appengine.api.taskqueue.QueueFactory;
 import com.google.appengine.api.utils.SystemProperty;
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.contrib.nio.testing.LocalStorageHelper;
@@ -135,6 +134,8 @@ public class RdeUploadActionTest {
   public final AppEngineExtension appEngine =
       AppEngineExtension.builder().withDatastoreAndCloudSql().withTaskQueue().build();
 
+  private final PGPPublicKey encryptKey =
+      new FakeKeyringModule().get().getRdeStagingEncryptionKey();
   private final FakeResponse response = new FakeResponse();
   private final EscrowTaskRunner runner = mock(EscrowTaskRunner.class);
   private final FakeClock clock = new FakeClock(DateTime.parse("2010-10-17TZ"));
@@ -161,7 +162,6 @@ public class RdeUploadActionTest {
       action.receiverKey = keyring.getRdeReceiverKey();
       action.signingKey = keyring.getRdeSigningKey();
       action.stagingDecryptionKey = keyring.getRdeStagingDecryptionKey();
-      action.reportQueue = QueueFactory.getQueue("rde-report");
       action.runner = runner;
       action.cloudTasksUtils = cloudTasksHelper.getTestCloudTasksUtils();
       action.retrier = new Retrier(new FakeSleeper(clock), 3);
@@ -188,17 +188,10 @@ public class RdeUploadActionTest {
     SystemProperty.environment.set(SystemProperty.Environment.Value.Development);
 
     createTld("tld");
-    PGPPublicKey encryptKey = new FakeKeyringModule().get().getRdeStagingEncryptionKey();
-    gcsUtils.createFromBytes(
-        GHOSTRYDE_FILE_WITH_PREFIX, Ghostryde.encode(DEPOSIT_XML.read(), encryptKey));
     gcsUtils.createFromBytes(GHOSTRYDE_FILE, Ghostryde.encode(DEPOSIT_XML.read(), encryptKey));
     gcsUtils.createFromBytes(GHOSTRYDE_R1_FILE, Ghostryde.encode(DEPOSIT_XML.read(), encryptKey));
-    gcsUtils.createFromBytes(
-        LENGTH_FILE_WITH_PREFIX, Long.toString(DEPOSIT_XML.size()).getBytes(UTF_8));
     gcsUtils.createFromBytes(LENGTH_FILE, Long.toString(DEPOSIT_XML.size()).getBytes(UTF_8));
     gcsUtils.createFromBytes(LENGTH_R1_FILE, Long.toString(DEPOSIT_XML.size()).getBytes(UTF_8));
-    gcsUtils.createFromBytes(
-        REPORT_FILE_WITH_PREFIX, Ghostryde.encode(REPORT_XML.read(), encryptKey));
     gcsUtils.createFromBytes(REPORT_FILE, Ghostryde.encode(REPORT_XML.read(), encryptKey));
     gcsUtils.createFromBytes(REPORT_R1_FILE, Ghostryde.encode(REPORT_XML.read(), encryptKey));
     tm().transact(
@@ -236,11 +229,20 @@ public class RdeUploadActionTest {
   }
 
   @TestOfyAndSql
-  void testRun_withPrefix() {
+  void testRun_withPrefix() throws Exception {
     createTld("lol");
     RdeUploadAction action = createAction(null);
     action.prefix = Optional.of("job-name/");
     action.tld = "lol";
+    gcsUtils.delete(GHOSTRYDE_FILE);
+    gcsUtils.createFromBytes(
+        GHOSTRYDE_FILE_WITH_PREFIX, Ghostryde.encode(DEPOSIT_XML.read(), encryptKey));
+    gcsUtils.delete(LENGTH_FILE);
+    gcsUtils.createFromBytes(
+        LENGTH_FILE_WITH_PREFIX, Long.toString(DEPOSIT_XML.size()).getBytes(UTF_8));
+    gcsUtils.delete(REPORT_FILE);
+    gcsUtils.createFromBytes(
+        REPORT_FILE_WITH_PREFIX, Ghostryde.encode(REPORT_XML.read(), encryptKey));
     action.run();
     verify(runner)
         .lockRunAndRollForward(
@@ -322,6 +324,15 @@ public class RdeUploadActionTest {
     persistResource(Cursor.create(RDE_STAGING, stagingCursor, Registry.get("tld")));
     RdeUploadAction action = createAction(uploadUrl);
     action.prefix = Optional.of("job-name/");
+    gcsUtils.delete(GHOSTRYDE_FILE);
+    gcsUtils.createFromBytes(
+        GHOSTRYDE_FILE_WITH_PREFIX, Ghostryde.encode(DEPOSIT_XML.read(), encryptKey));
+    gcsUtils.delete(LENGTH_FILE);
+    gcsUtils.createFromBytes(
+        LENGTH_FILE_WITH_PREFIX, Long.toString(DEPOSIT_XML.size()).getBytes(UTF_8));
+    gcsUtils.delete(REPORT_FILE);
+    gcsUtils.createFromBytes(
+        REPORT_FILE_WITH_PREFIX, Ghostryde.encode(REPORT_XML.read(), encryptKey));
     action.runWithLock(uploadCursor);
     assertThat(response.getStatus()).isEqualTo(200);
     assertThat(response.getContentType()).isEqualTo(PLAIN_TEXT_UTF_8);
