@@ -37,11 +37,9 @@ import google.registry.model.domain.DomainHistory;
 import google.registry.model.domain.RegistryLock;
 import google.registry.model.registrar.Registrar;
 import google.registry.model.reporting.HistoryEntry;
-import google.registry.testing.DeterministicStringGenerator;
 import google.registry.testing.DualDatabaseTest;
 import google.registry.testing.TestOfyAndSql;
 import google.registry.tools.CommandTestCase;
-import google.registry.util.StringGenerator.Alphabets;
 import java.util.Optional;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -57,7 +55,6 @@ class BackfillRegistryLocksCommandTest extends CommandTestCase<BackfillRegistryL
     createTld("tld");
     command.registryAdminClientId = "adminreg";
     command.clock = fakeClock;
-    command.stringGenerator = new DeterministicStringGenerator(Alphabets.BASE_58);
   }
 
   @TestOfyAndSql
@@ -113,7 +110,7 @@ class BackfillRegistryLocksCommandTest extends CommandTestCase<BackfillRegistryL
                 .setRepoId(domain.getRepoId())
                 .setDomainName(domain.getDomainName())
                 .setLockCompletionTime(fakeClock.nowUtc())
-                .setVerificationCode(command.stringGenerator.createString(32))
+                .setVerificationCode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
                 .build());
 
     fakeClock.advanceBy(Duration.standardDays(1));

@@ -37,11 +37,12 @@ import google.registry.persistence.VKey;
 import google.registry.tools.CommandWithRemoteApi;
 import google.registry.tools.ConfirmingCommand;
 import google.registry.util.Clock;
+import google.registry.util.RandomStringGenerator;
 import google.registry.util.StringGenerator;
+import java.security.SecureRandom;
 import java.util.Comparator;
 import java.util.List;
 import javax.inject.Inject;
-import javax.inject.Named;
 import org.joda.time.DateTime;
 
 /**
@@ -60,6 +61,8 @@ public class BackfillRegistryLocksCommand extends ConfirmingCommand
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
   private static final int VERIFICATION_CODE_LENGTH = 32;
+  private static final StringGenerator STRING_GENERATOR =
+      new RandomStringGenerator(StringGenerator.Alphabets.BASE_58, new SecureRandom());
 
   @Parameter(
       names = {"--domain_roids"},
@@ -72,10 +75,6 @@ public class BackfillRegistryLocksCommand extends ConfirmingCommand
   @Inject
   @Config("registryAdminClientId")
   String registryAdminClientId;
-
-  @Inject
-  @Named("base58StringGenerator")
-  StringGenerator stringGenerator;
 
   private ImmutableList<DomainBase> lockedDomains;
 
@@ -94,7 +93,7 @@ public class BackfillRegistryLocksCommand extends ConfirmingCommand
 
   @Override
   protected String execute() {
-    ImmutableSet.Builder<DomainBase> failedDomainsBuilder = new ImmutableSet.Builder<>();
+    ImmutableSet.Builder<String> failedDomainsBuilder = new ImmutableSet.Builder<>();
     jpaTm()
         .transact(
             () -> {
@@ -109,16 +108,16 @@ public class BackfillRegistryLocksCommand extends ConfirmingCommand
                           .setLockCompletionTime(
                               getLockCompletionTimestamp(domainBase, jpaTm().getTransactionTime()))
                           .setVerificationCode(
-                              stringGenerator.createString(VERIFICATION_CODE_LENGTH))
+                              STRING_GENERATOR.createString(VERIFICATION_CODE_LENGTH))
                           .build());
                 } catch (Throwable t) {
                   logger.atSevere().withCause(t).log(
                       "Error when creating lock object for domain %s.", domainBase.getDomainName());
-                  failedDomainsBuilder.add(domainBase);
+                  failedDomainsBuilder.add(domainBase.getDomainName());
                 }
               }
             });
-    ImmutableSet<DomainBase> failedDomains = failedDomainsBuilder.build();
+    ImmutableSet<String> failedDomains = failedDomainsBuilder.build();
     if (failedDomains.isEmpty()) {
       return String.format(
           "Successfully created lock objects for %d domains.", lockedDomains.size());
@@ -126,7 +125,7 @@ public class BackfillRegistryLocksCommand extends ConfirmingCommand
       return String.format(
           "Successfully created lock objects for %d domains. We failed to create locks "
               + "for the following domains: %s",
-          lockedDomains.size() - failedDomains.size(), lockedDomains);
+          lockedDomains.size() - failedDomains.size(), failedDomains);
     }
   }
 
