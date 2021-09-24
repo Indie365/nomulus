@@ -43,7 +43,6 @@ public class SqlEntityTest {
   @BeforeEach
   void setup() throws Exception {
     TransactionManagerFactory.setTmForTest(TransactionManagerFactory.jpaTm());
-    AppEngineExtension.loadInitialData();
   }
 
   @AfterEach
