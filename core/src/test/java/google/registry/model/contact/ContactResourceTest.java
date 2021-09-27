@@ -152,11 +152,6 @@ public class ContactResourceTest extends EntityTestCase {
 
   @TestSqlOnly
   void testCloudSqlPersistence_succeed() {
-    saveRegistrar("registrar1");
-    saveRegistrar("registrar2");
-    saveRegistrar("registrar3");
-    saveRegistrar("gaining");
-    saveRegistrar("losing");
     ContactResource persisted = loadByEntity(originalContact);
     ContactResource fixed =
         originalContact
