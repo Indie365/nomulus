@@ -164,7 +164,8 @@ final class UniformRapidSuspensionCommand extends MutatingEppToolCommand {
             newDsData != null ? DsRecord.convertToSoy(newDsData) : new SoyListData(),
             "reason",
             (undo ? "Undo " : "") + "Uniform Rapid Suspension",
-            "autorenews", Boolean.toString(autorenews)));
+            "autorenews",
+            Boolean.toString(autorenews)));
   }
 
   private ImmutableSortedSet<String> getExistingNameservers(DomainBase domain) {
