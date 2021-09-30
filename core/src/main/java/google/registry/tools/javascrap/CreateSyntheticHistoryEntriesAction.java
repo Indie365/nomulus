@@ -21,6 +21,7 @@ import static google.registry.persistence.transaction.TransactionManagerFactory.
 import static google.registry.persistence.transaction.TransactionManagerFactory.ofyTm;
 
 import com.google.appengine.tools.mapreduce.Mapper;
+import com.google.common.base.CaseFormat;
 import com.google.common.collect.ImmutableList;
 import com.googlecode.objectify.Key;
 import google.registry.config.RegistryConfig.Config;
@@ -29,16 +30,12 @@ import google.registry.mapreduce.inputs.EppResourceInputs;
 import google.registry.model.EppResource;
 import google.registry.model.domain.DomainHistory;
 import google.registry.model.reporting.HistoryEntry;
-import google.registry.persistence.transaction.CriteriaQueryBuilder;
 import google.registry.rde.RdeStagingAction;
 import google.registry.request.Action;
 import google.registry.request.Response;
 import google.registry.request.auth.Auth;
 import google.registry.tools.server.GenerateZoneFilesAction;
-import java.util.Optional;
 import javax.inject.Inject;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
 
 /**
  * A mapreduce that creates synthetic history objects in SQL for all {@link EppResource} objects.
@@ -105,8 +102,7 @@ public class CreateSyntheticHistoryEntriesAction implements Runnable {
         .sendLinkToMapreduceConsole(response);
   }
 
-  // Lifted from HistoryEntryDao
-  private static Optional<? extends HistoryEntry> mostRecentHistoryFromSql(EppResource resource) {
+  private static boolean resourceAtPointInTimeExists(EppResource resource) {
     return jpaTm()
         .transact(
             () -> {
@@ -115,17 +111,18 @@ public class CreateSyntheticHistoryEntriesAction implements Runnable {
                   getHistoryClassFromParent(resource.getClass());
               // The field representing repo ID unfortunately varies by history class
               String repoIdFieldName = getRepoIdFieldNameFromHistoryClass(historyClass);
-              CriteriaBuilder criteriaBuilder = jpaTm().getEntityManager().getCriteriaBuilder();
-              CriteriaQuery<? extends HistoryEntry> criteriaQuery =
-                  CriteriaQueryBuilder.create(historyClass)
-                      .where(repoIdFieldName, criteriaBuilder::equal, resource.getRepoId())
-                      .orderByDesc("modificationTime")
-                      .build();
-              return jpaTm()
-                  .criteriaQuery(criteriaQuery)
-                  .setMaxResults(1)
-                  .getResultStream()
-                  .findFirst();
+              String snakeCaseFieldName =
+                  CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, repoIdFieldName);
+              return (boolean)
+                  jpaTm()
+                      .getEntityManager()
+                      .createNativeQuery(
+                          String.format(
+                              "SELECT EXISTS (SELECT 1 FROM \"%s\" WHERE %s = :repoId AND"
+                                  + " creation_time IS NOT NULL)",
+                              historyClass.getSimpleName(), snakeCaseFieldName))
+                      .setParameter("repoId", resource.getRepoId())
+                      .getSingleResult();
             });
   }
 
@@ -164,10 +161,7 @@ public class CreateSyntheticHistoryEntriesAction implements Runnable {
       EppResource eppResource = auditedOfy().load().key(resourceKey).now();
       // Only save new history entries if the most recent history for this object in SQL does not
       // have the resource at that point in time already
-      Optional<? extends HistoryEntry> maybeHistory = mostRecentHistoryFromSql(eppResource);
-      if (maybeHistory
-          .map(history -> !history.getResourceAtPointInTime().isPresent())
-          .orElse(true)) {
+      if (!resourceAtPointInTimeExists(eppResource)) {
         ofyTm()
             .transact(
                 () ->
