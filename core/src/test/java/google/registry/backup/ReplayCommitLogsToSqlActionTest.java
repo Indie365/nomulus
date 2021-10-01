@@ -73,10 +73,12 @@ import google.registry.persistence.transaction.JpaTransactionManager;
 import google.registry.persistence.transaction.TransactionManagerFactory;
 import google.registry.testing.AppEngineExtension;
 import google.registry.testing.DatabaseHelper;
+import google.registry.testing.DualDatabaseTest;
 import google.registry.testing.FakeClock;
 import google.registry.testing.FakeResponse;
 import google.registry.testing.InjectExtension;
 import google.registry.testing.TestObject;
+import google.registry.testing.TestOfyOnly;
 import google.registry.util.RequestStatusChecker;
 import java.io.IOException;
 import java.util.concurrent.Executors;
@@ -85,7 +87,6 @@ import org.joda.time.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.ArgumentCaptor;
@@ -96,6 +97,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 /** Tests for {@link ReplayCommitLogsToSqlAction}. */
 @ExtendWith(MockitoExtension.class)
+@DualDatabaseTest
 public class ReplayCommitLogsToSqlActionTest {
 
   private final FakeClock fakeClock = new FakeClock(DateTime.parse("2000-01-01TZ"));
@@ -162,7 +164,7 @@ public class ReplayCommitLogsToSqlActionTest {
     DatabaseHelper.removeDatabaseMigrationSchedule();
   }
 
-  @Test
+  @TestOfyOnly
   void testReplay_multipleDiffFiles() throws Exception {
     insertInDb(TestObject.create("previous to keep"), TestObject.create("previous to delete"));
     DateTime now = fakeClock.nowUtc();
@@ -209,7 +211,7 @@ public class ReplayCommitLogsToSqlActionTest {
     assertExpectedIds("previous to keep", "b", "d", "e", "f");
   }
 
-  @Test
+  @TestOfyOnly
   void testReplay_noManifests() throws Exception {
     DateTime now = fakeClock.nowUtc();
     insertInDb(TestObject.create("previous to keep"));
@@ -220,7 +222,7 @@ public class ReplayCommitLogsToSqlActionTest {
     assertExpectedIds("previous to keep");
   }
 
-  @Test
+  @TestOfyOnly
   void testReplay_dryRun() throws Exception {
     action.dryRun = true;
     DateTime now = fakeClock.nowUtc();
@@ -246,7 +248,7 @@ public class ReplayCommitLogsToSqlActionTest {
                 + "[commit_diff_until_1999-12-31T23:59:00.000Z]");
   }
 
-  @Test
+  @TestOfyOnly
   void testReplay_manifestWithNoDeletions() throws Exception {
     DateTime now = fakeClock.nowUtc();
     insertInDb(TestObject.create("previous to keep"));
@@ -264,7 +266,7 @@ public class ReplayCommitLogsToSqlActionTest {
     assertExpectedIds("previous to keep", "a", "b");
   }
 
-  @Test
+  @TestOfyOnly
   void testReplay_manifestWithNoMutations() throws Exception {
     DateTime now = fakeClock.nowUtc();
     insertInDb(TestObject.create("previous to keep"), TestObject.create("previous to delete"));
@@ -281,7 +283,7 @@ public class ReplayCommitLogsToSqlActionTest {
     assertExpectedIds("previous to keep");
   }
 
-  @Test
+  @TestOfyOnly
   void testReplay_mutateExistingEntity() throws Exception {
     DateTime now = fakeClock.nowUtc();
     insertInDb(TestObject.create("existing", "a"));
@@ -300,7 +302,7 @@ public class ReplayCommitLogsToSqlActionTest {
   }
 
   // This should be harmless
-  @Test
+  @TestOfyOnly
   void testReplay_deleteMissingEntity() throws Exception {
     DateTime now = fakeClock.nowUtc();
     insertInDb(TestObject.create("previous to keep", "a"));
@@ -317,7 +319,7 @@ public class ReplayCommitLogsToSqlActionTest {
     assertExpectedIds("previous to keep");
   }
 
-  @Test
+  @TestOfyOnly
   void testReplay_doesNotChangeUpdateTime() throws Exception {
     // Save the contact with an earlier updateTimestamp
     ContactResource contactResource = persistActiveContact("contactfoobar");
@@ -342,7 +344,7 @@ public class ReplayCommitLogsToSqlActionTest {
         .isEqualExceptFields(contactResource, "revisions");
   }
 
-  @Test
+  @TestOfyOnly
   @SuppressWarnings({"unchecked", "rawtypes"})
   void testReplay_properlyWeighted() throws Exception {
     DateTime now = fakeClock.nowUtc();
@@ -386,7 +388,7 @@ public class ReplayCommitLogsToSqlActionTest {
     inOrder.verify(spy).putIgnoringReadOnly(any(SqlReplayCheckpoint.class));
   }
 
-  @Test
+  @TestOfyOnly
   @SuppressWarnings({"unchecked", "rawtypes"})
   void testReplay_properlyWeighted_doesNotApplyCrossTransactions() throws Exception {
     DateTime now = fakeClock.nowUtc();
@@ -429,7 +431,7 @@ public class ReplayCommitLogsToSqlActionTest {
         .isEqualTo("replay@example.tld");
   }
 
-  @Test
+  @TestOfyOnly
   void testSuccess_nonReplicatedEntity_isNotReplayed() {
     DateTime now = fakeClock.nowUtc();
 
@@ -469,7 +471,7 @@ public class ReplayCommitLogsToSqlActionTest {
     verify(spy, times(2)).putIgnoringReadOnly(any());
   }
 
-  @Test
+  @TestOfyOnly
   void testSuccess_nonReplicatedEntity_isNotDeleted() throws Exception {
     DateTime now = fakeClock.nowUtc();
     // spy the txn manager so we can verify it's never called
@@ -492,7 +494,7 @@ public class ReplayCommitLogsToSqlActionTest {
     verify(spy, times(0)).delete(any(VKey.class));
   }
 
-  @Test
+  @TestOfyOnly
   void testFailure_notEnabled() {
     jpaTm().transact(() -> DatabaseMigrationStateSchedule.set(DEFAULT_TRANSITION_MAP.toValueMap()));
     action.run();
@@ -503,7 +505,7 @@ public class ReplayCommitLogsToSqlActionTest {
                 + " DATASTORE_ONLY.");
   }
 
-  @Test
+  @TestOfyOnly
   void testFailure_cannotAcquireLock() {
     Truth8.assertThat(
             Lock.acquire(
@@ -520,7 +522,7 @@ public class ReplayCommitLogsToSqlActionTest {
         .isEqualTo("Can't acquire SQL commit log replay lock, aborting.");
   }
 
-  @Test
+  @TestOfyOnly
   void testSuccess_beforeSqlSaveCallback() throws Exception {
     DateTime now = fakeClock.nowUtc();
     Key<CommitLogBucket> bucketKey = getBucketKey(1);
@@ -535,7 +537,7 @@ public class ReplayCommitLogsToSqlActionTest {
     assertThat(TestObject.beforeSqlSaveCallCount).isEqualTo(1);
   }
 
-  @Test
+  @TestOfyOnly
   void testSuccess_deleteSqlCallback() throws Exception {
     DateTime now = fakeClock.nowUtc();
     jpaTm().transact(() -> SqlReplayCheckpoint.set(now.minusMinutes(1).minusMillis(1)));
@@ -550,7 +552,7 @@ public class ReplayCommitLogsToSqlActionTest {
     assertThat(TestObject.beforeSqlDeleteCallCount).isEqualTo(1);
   }
 
-  @Test
+  @TestOfyOnly
   void testSuccess_cascadingDelete() throws Exception {
     DateTime now = fakeClock.nowUtc();
     jpaTm().transact(() -> SqlReplayCheckpoint.set(now.minusMinutes(1).minusMillis(1)));
@@ -574,7 +576,7 @@ public class ReplayCommitLogsToSqlActionTest {
     assertThat(jpaTm().transact(() -> jpaTm().loadAllOf(DelegationSignerData.class))).isEmpty();
   }
 
-  @Test
+  @TestOfyOnly
   void testReplay_duringReadOnly() throws Exception {
     DateTime now = fakeClock.nowUtc();
     jpaTm()
@@ -602,7 +604,7 @@ public class ReplayCommitLogsToSqlActionTest {
                     .isEqualTo("a"));
   }
 
-  @Test
+  @TestOfyOnly
   void testReplay_deleteAndResaveCascade_withOtherDeletion_noErrors() throws Exception {
     createTld("tld");
     DateTime now = fakeClock.nowUtc();
