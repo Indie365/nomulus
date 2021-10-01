@@ -23,17 +23,19 @@ import google.registry.model.ofy.CommitLogManifest;
 import google.registry.model.ofy.CommitLogMutation;
 import google.registry.model.ofy.Ofy;
 import google.registry.testing.DatabaseHelper;
+import google.registry.testing.DualDatabaseTest;
 import google.registry.testing.FakeClock;
 import google.registry.testing.FakeResponse;
 import google.registry.testing.InjectExtension;
+import google.registry.testing.TestOfyOnly;
 import google.registry.testing.mapreduce.MapreduceTestCase;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 /** Unit tests for {@link DeleteOldCommitLogsAction}. */
+@DualDatabaseTest
 public class DeleteOldCommitLogsActionTest
     extends MapreduceTestCase<DeleteOldCommitLogsAction> {
 
@@ -106,7 +108,7 @@ public class DeleteOldCommitLogsActionTest
   }
 
   /** Check that with very short maxAge, only the referenced elements remain. */
-  @Test
+  @TestOfyOnly
   void test_shortMaxAge() throws Exception {
     runMapreduce(Duration.millis(1));
 
@@ -120,7 +122,7 @@ public class DeleteOldCommitLogsActionTest
   }
 
   /** Check that with very long maxAge, all the elements remain. */
-  @Test
+  @TestOfyOnly
   void test_longMaxAge() throws Exception {
 
     ImmutableList<CommitLogManifest> initialManifests = ofyLoadType(CommitLogManifest.class);
