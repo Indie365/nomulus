@@ -42,6 +42,8 @@ import google.registry.model.domain.DomainHistory;
 import google.registry.model.index.EppResourceIndex;
 import google.registry.model.reporting.HistoryEntry;
 import google.registry.testing.AppEngineExtension;
+import google.registry.testing.DualDatabaseTest;
+import google.registry.testing.TestOfyOnly;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
@@ -52,10 +54,10 @@ import java.util.Set;
 import org.joda.money.Money;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 /** Tests {@link ChildEntityInput} */
+@DualDatabaseTest
 class ChildEntityInputTest {
 
   private static final DateTime now = DateTime.now(DateTimeZone.UTC);
@@ -169,7 +171,7 @@ class ChildEntityInputTest {
     }
   }
 
-  @Test
+  @TestOfyOnly
   void testSuccess_childEntityReader_multipleParentsAndChildren() throws Exception {
     setupResources();
     setupSecondDomainBases();
@@ -206,12 +208,12 @@ class ChildEntityInputTest {
             recurringB);
   }
 
-  @Test
+  @TestOfyOnly
   void testSuccess_childEntityInput_polymorphicBaseType() {
     createChildEntityInput(ImmutableSet.of(EppResource.class), ImmutableSet.of(BillingEvent.class));
   }
 
-  @Test
+  @TestOfyOnly
   void testSuccess_childEntityReader_multipleChildTypes() throws Exception {
     setupResources();
     InputReader<ImmutableObject> reader =
@@ -244,7 +246,7 @@ class ChildEntityInputTest {
     return seen.build();
   }
 
-  @Test
+  @TestOfyOnly
   void testSuccess_childEntityReader_filterParentTypes() throws Exception {
     setupResources();
     InputReader<ImmutableObject> reader =
@@ -257,7 +259,7 @@ class ChildEntityInputTest {
     assertThat(getAllFromReader(reader)).containsExactly(contactHistoryEntry.asHistoryEntry());
   }
 
-  @Test
+  @TestOfyOnly
   void testSuccess_childEntityReader_polymorphicChildFiltering() throws Exception {
     setupResources();
     InputReader<ImmutableObject> reader =
@@ -269,7 +271,7 @@ class ChildEntityInputTest {
     assertThat(getAllFromReader(reader)).containsExactly(oneTimeA);
   }
 
-  @Test
+  @TestOfyOnly
   void testSuccess_childEntityReader_polymorphicChildClass() throws Exception {
     setupResources();
     InputReader<ImmutableObject> reader =
@@ -281,7 +283,7 @@ class ChildEntityInputTest {
     assertThat(getAllFromReader(reader)).containsExactly(oneTimeA, recurringA);
   }
 
-  @Test
+  @TestOfyOnly
   void testSuccess_childEntityReader_noneReturned() throws Exception {
     createTld("tld");
     InputReader<ImmutableObject> reader =
@@ -293,7 +295,7 @@ class ChildEntityInputTest {
     assertThat(getAllFromReader(reader)).isEmpty();
   }
 
-  @Test
+  @TestOfyOnly
   void testSuccess_childEntityReader_readerCountMatchesBucketCount() throws Exception {
     assertThat(
             EppResourceInputs.createChildEntityInput(
@@ -303,7 +305,7 @@ class ChildEntityInputTest {
         .hasSize(3);
   }
 
-  @Test
+  @TestOfyOnly
   void testSuccess_childEntityReader_oneReaderPerBucket() throws Exception {
     createTld("tld");
     Set<ImmutableObject> historyEntries = new HashSet<>();
@@ -338,7 +340,7 @@ class ChildEntityInputTest {
     assertThat(seen).containsExactlyElementsIn(historyEntries);
   }
 
-  @Test
+  @TestOfyOnly
   void testSuccess_childEntityReader_survivesAcrossSerialization() throws Exception {
     setupResources();
     Set<ImmutableObject> seen = new HashSet<>();

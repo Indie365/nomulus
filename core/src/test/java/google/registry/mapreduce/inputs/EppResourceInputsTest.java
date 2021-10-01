@@ -37,6 +37,8 @@ import google.registry.model.domain.DomainBase;
 import google.registry.model.host.HostResource;
 import google.registry.model.index.EppResourceIndex;
 import google.registry.testing.AppEngineExtension;
+import google.registry.testing.DualDatabaseTest;
+import google.registry.testing.TestOfyOnly;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
@@ -44,10 +46,10 @@ import java.io.ObjectOutputStream;
 import java.util.HashSet;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 /** Tests {@link EppResourceInputs} */
+@DualDatabaseTest
 class EppResourceInputsTest {
 
   private static final double EPSILON = 0.0001;
@@ -68,12 +70,12 @@ class EppResourceInputsTest {
     }
   }
 
-  @Test
+  @TestOfyOnly
   void testSuccess_keyInputType_polymorphicBaseType() {
     createKeyInput(EppResource.class);
   }
 
-  @Test
+  @TestOfyOnly
   void testFailure_keyInputType_noInheritanceBetweenTypes_eppResource() {
     IllegalArgumentException thrown =
         assertThrows(
@@ -82,7 +84,7 @@ class EppResourceInputsTest {
     assertThat(thrown).hasMessageThat().contains("inheritance");
   }
 
-  @Test
+  @TestOfyOnly
   void testFailure_entityInputType_noInheritanceBetweenTypes_eppResource() {
     IllegalArgumentException thrown =
         assertThrows(
@@ -91,7 +93,7 @@ class EppResourceInputsTest {
     assertThat(thrown).hasMessageThat().contains("inheritance");
   }
 
-  @Test
+  @TestOfyOnly
   void testFailure_entityInputType_noInheritanceBetweenTypes_subclasses() {
     IllegalArgumentException thrown =
         assertThrows(
@@ -100,13 +102,13 @@ class EppResourceInputsTest {
     assertThat(thrown).hasMessageThat().contains("inheritance");
   }
 
-  @Test
+  @TestOfyOnly
   void testReaderCountMatchesBucketCount() throws Exception {
     assertThat(createKeyInput(DomainBase.class).createReaders()).hasSize(3);
     assertThat(createEntityInput(DomainBase.class).createReaders()).hasSize(3);
   }
 
-  @Test
+  @TestOfyOnly
   void testKeyInput_oneReaderPerBucket() throws Exception {
     createTld("tld");
     Set<Key<DomainBase>> domains = new HashSet<>();
@@ -129,7 +131,7 @@ class EppResourceInputsTest {
     assertThat(seen).containsExactlyElementsIn(domains);
   }
 
-  @Test
+  @TestOfyOnly
   void testEntityInput_oneReaderPerBucket() throws Exception {
     createTld("tld");
     Set<DomainBase> domains = new HashSet<>();
@@ -153,7 +155,7 @@ class EppResourceInputsTest {
     assertThat(seen).containsExactlyElementsIn(domains);
   }
 
-  @Test
+  @TestOfyOnly
   void testSuccess_keyReader_survivesAcrossSerialization() throws Exception {
     createTld("tld");
     DomainBase domainA = persistEppResourceInFirstBucket(newDomainBase("a.tld"));
@@ -177,7 +179,7 @@ class EppResourceInputsTest {
     assertThrows(NoSuchElementException.class, reader::next);
   }
 
-  @Test
+  @TestOfyOnly
   void testSuccess_entityReader_survivesAcrossSerialization() throws Exception {
     createTld("tld");
     DomainBase domainA = persistEppResourceInFirstBucket(newDomainBase("a.tld"));
@@ -203,7 +205,7 @@ class EppResourceInputsTest {
     assertThrows(NoSuchElementException.class, deserializedReader::next);
   }
 
-  @Test
+  @TestOfyOnly
   void testSuccess_entityReader_filtersOnMultipleTypes() throws Exception {
     createTld("tld");
     DomainBase domain = persistEppResourceInFirstBucket(newDomainBase("a.tld"));
@@ -225,7 +227,7 @@ class EppResourceInputsTest {
     assertThrows(NoSuchElementException.class, reader::next);
   }
 
-  @Test
+  @TestOfyOnly
   void testSuccess_entityReader_noFilteringWhenUsingEppResource() throws Exception {
     createTld("tld");
     ContactResource contact = persistEppResourceInFirstBucket(newContactResource("contact"));
