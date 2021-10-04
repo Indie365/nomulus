@@ -42,6 +42,7 @@ class ActivityReportingQueryBuilderTest {
   private ActivityReportingQueryBuilder createQueryBuilder() {
     return new ActivityReportingQueryBuilder(
         "domain-registry-alpha",
+        "icann_reporting",
         new BasicDnsCountQueryCoordinator(
             new BasicDnsCountQueryCoordinator.Params(null, "domain-registry-alpha")));
   }
