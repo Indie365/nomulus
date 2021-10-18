@@ -116,6 +116,13 @@ public class CreateSyntheticHistoryEntriesAction implements Runnable {
                   CaseFormat.LOWER_CAMEL.to(
                       CaseFormat.LOWER_UNDERSCORE,
                       getRepoIdFieldNameFromHistoryClass(historyClass));
+              // Use READ COMMITTED isolation level so that any long-living queries don't cause
+              // collection of read-locks to spiral out of control (as would happen with a
+              // SERIALIZABLE isolation level)
+              jpaTm()
+                  .getEntityManager()
+                  .createNativeQuery("SET TRANSACTION ISOLATION LEVEL READ COMMITTED")
+                  .executeUpdate();
               // The "history" fields in the *History objects are all prefixed with "history_". If
               // any of the non-"history_" fields are non-null, that means that that row contains
               // a representation of that EppResource at that point in time. We use creation_time as
