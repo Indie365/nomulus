@@ -16,9 +16,13 @@ package google.registry.util;
 
 import static com.google.common.truth.Truth.assertThat;
 import static google.registry.util.SerializeUtils.deserialize;
+import static google.registry.util.SerializeUtils.parse;
 import static google.registry.util.SerializeUtils.serialize;
+import static google.registry.util.SerializeUtils.stringify;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.io.Serializable;
+import javax.mail.internet.AddressException;
 import org.junit.jupiter.api.Test;
 
 /** Unit tests for {@link SerializeUtils}. */
@@ -60,5 +64,28 @@ class SerializeUtilsTest {
             IllegalArgumentException.class,
             () -> deserialize(String.class, new byte[] {(byte) 0xff}));
     assertThat(thrown).hasMessageThat().contains("Unable to deserialize: objectBytes=FF");
+  }
+
+  @Test
+  void testStringifyParse_serializableValue_maintainsValue() {
+    Serializable value = "testValue";
+    assertThat(parse(String.class, stringify(value))).isEqualTo(value);
+  }
+
+  @Test
+  void testStringifyParse_stringValue_maintainsValue() throws AddressException {
+    assertThat(parse(Serializable.class, stringify("hello"))).isEqualTo("hello");
+  }
+
+  @Test
+  void testStringifyParse_longValue_maintainsValue() throws AddressException {
+    long value = 12345;
+    assertThat(parse(Serializable.class, stringify(value))).isEqualTo(value);
+  }
+
+  @Test
+  void testStringify_nullValue_throwsException() {
+    NullPointerException thrown = assertThrows(NullPointerException.class, () -> stringify(null));
+    assertThat(thrown).hasMessageThat().contains("Object cannot be null");
   }
 }
