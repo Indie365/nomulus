@@ -26,9 +26,6 @@ import google.registry.model.domain.DomainBase;
 import google.registry.model.registrar.RegistrarContact;
 import google.registry.testing.AppEngineExtension;
 import google.registry.testing.TestObject;
-import google.registry.util.SerializeUtils;
-import java.io.Serializable;
-import java.util.Base64;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -133,20 +130,12 @@ class VKeyTest {
     assertThat(vkey.getSqlKey()).isEqualTo("ROID-1");
   }
 
-  @Test
-  void testSerializeUtils_Vkey_success() throws Exception {
-    Serializable sqlkey = 11111;
-    VKey<TestObject> vkey = VKey.createSql(TestObject.class, sqlkey);
-    byte[] bytes = SerializeUtils.serialize(vkey);
-    String sqlKeyString = Base64.getEncoder().encodeToString(bytes);
-    byte[] converted = Base64.getDecoder().decode(sqlKeyString);
-    VKey<TestObject> newVkey = SerializeUtils.deserialize(VKey.class, converted);
-    assertThat(newVkey).isEqualTo(vkey);
-  }
-  // test with sql only keys
-  // different ways to create sql key: 1) long 2) string
-  // try with more than one kind of class
-  // maybe try to have parent kind as well
+  /**
+   * Test with sqlKeys only Vkeys a sqlKey should be serialiable. Key.create() can take 1) long, or
+   * 2) string
+   *
+   * <p>Vkeys with parent keys should be tested as well
+   */
   @Test
   void testStringifyThenCreate_sqlKeyOnly_testObject_stringKey_success() throws Exception {
     VKey<TestObject> vkey = VKey.createSql(TestObject.class, "foo");
@@ -179,8 +168,12 @@ class VKeyTest {
     assertThat(newKey).isEqualTo(vkey);
   }
 
-  // try different ways to create ofykey
-  // try with different class type
+  /**
+   * Test with ofyKey only Vkeys There should be test cases that test with 1) different Key.create()
+   * 2) object type
+   *
+   * <p>Vkeys with parent keys should be tested as well
+   */
   @Test
   void testStringifyThenCreate_ofyKeyOnly_testObject_success() throws Exception {
     Key<TestObject> key = Key.create(TestObject.class, "tmpKey");
@@ -220,7 +213,12 @@ class VKeyTest {
     assertThat(vkey).isEqualTo(newVkey);
   }
 
-  // test with vkey with both ofy and sql key
+  /**
+   * Test with Vkeys that contain both sqlKey and ofyKey There should be test cases that test with
+   * 1) different Key.create() 2) object type
+   *
+   * <p>Vkeys with parent keys should be tested as well
+   */
   @Test
   void testStringifyThenCreate_sqlAndofyKey_success() throws Exception {
     VKey<TestObject> originalKey1 =
@@ -228,30 +226,15 @@ class VKeyTest {
     String originalKeyString1 = originalKey1.stringify();
     VKey<TestObject> newKey1 = VKey.create(originalKeyString1);
     assertThat(originalKey1).isEqualTo(newKey1);
-
-    VKey<TestObject> originalKey2 =
-        VKey.create(TestObject.class, "sqlkey", Key.create(TestObject.create("test")));
-    String originalKeyString2 = originalKey2.stringify();
-    VKey<TestObject> newKey2 = VKey.create(originalKeyString2);
-    assertThat(originalKey2).isEqualTo(newKey2);
   }
 
   @Test
   void testStringifyThenCreate_symmetricVkeyViaLong_success() throws Exception {
-    // TODO: figure out why it doesnt work when replacing "foo" with 123, or any long
-
-    // VKey<DomainBase> originalKey =
-    //     new VKey<DomainBase>(DomainBase.class, Key.create(DomainBase.class, 123456), 123456);
-    // String originalKeyString = originalKey.stringify();
-    // VKey<DomainBase> newKey= VKey.create(originalKeyString);
-    // assertThat(originalKey).isEqualTo(newKey);
-    //
-    // long key = 12234;
-    // VKey<DomainBase> originalKey = VKey.create(DomainBase.class,key, Key.create(DomainBase.class,
-    // key) );
-    // String originalKeyString = originalKey.stringify();
-    // VKey<DomainBase> newKey= VKey.create(originalKeyString);
-    // assertThat(originalKey).isEqualTo(newKey);
+    VKey<DomainBase> originalKey =
+        new VKey<DomainBase>(DomainBase.class, Key.create(DomainBase.class, 123456), 123456);
+    String originalKeyString = originalKey.stringify();
+    VKey<DomainBase> newKey = VKey.create(originalKeyString);
+    assertThat(originalKey).isEqualTo(newKey);
   }
 
   @Test
