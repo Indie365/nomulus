@@ -28,7 +28,6 @@ import google.registry.testing.AppEngineExtension;
 import google.registry.testing.TestObject;
 import google.registry.util.SerializeUtils;
 import java.io.Serializable;
-import java.util.Base64;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -137,12 +136,10 @@ class VKeyTest {
   void testSerializeUtils_Vkey_success() throws Exception {
     Serializable sqlkey = 11111;
     VKey<TestObject> vkey = VKey.createSql(TestObject.class, sqlkey);
-    byte[] bytes = SerializeUtils.serialize(vkey);
-    String sqlKeyString = Base64.getEncoder().encodeToString(bytes);
-    byte[] converted = Base64.getDecoder().decode(sqlKeyString);
-    VKey<TestObject> newVkey = SerializeUtils.deserialize(VKey.class, converted);
+    VKey<TestObject> newVkey = SerializeUtils.parse(VKey.class, SerializeUtils.stringify(vkey));
     assertThat(newVkey).isEqualTo(vkey);
   }
+
   // test with sql only keys
   // different ways to create sql key: 1) long 2) string
   // try with more than one kind of class
@@ -238,20 +235,11 @@ class VKeyTest {
 
   @Test
   void testStringifyThenCreate_symmetricVkeyViaLong_success() throws Exception {
-    // TODO: figure out why it doesnt work when replacing "foo" with 123, or any long
-
-    // VKey<DomainBase> originalKey =
-    //     new VKey<DomainBase>(DomainBase.class, Key.create(DomainBase.class, 123456), 123456);
-    // String originalKeyString = originalKey.stringify();
-    // VKey<DomainBase> newKey= VKey.create(originalKeyString);
-    // assertThat(originalKey).isEqualTo(newKey);
-    //
-    // long key = 12234;
-    // VKey<DomainBase> originalKey = VKey.create(DomainBase.class,key, Key.create(DomainBase.class,
-    // key) );
-    // String originalKeyString = originalKey.stringify();
-    // VKey<DomainBase> newKey= VKey.create(originalKeyString);
-    // assertThat(originalKey).isEqualTo(newKey);
+    VKey<DomainBase> originalKey =
+        new VKey<DomainBase>(DomainBase.class, Key.create(DomainBase.class, 123456), 123456);
+    String originalKeyString = originalKey.stringify();
+    VKey<DomainBase> newKey = VKey.create(originalKeyString);
+    assertThat(originalKey).isEqualTo(newKey);
   }
 
   @Test
