@@ -374,7 +374,7 @@ public final class DomainDeleteFlow implements TransactionalFlow {
         .setResponseData(
             ImmutableList.of(
                 DomainPendingActionNotificationResponse.create(
-                    existingDomain.getDomainName(), true, trid, deletionTime)))
+                    existingDomain.getDomainName(), false, trid, now)))
         .build();
   }
 
