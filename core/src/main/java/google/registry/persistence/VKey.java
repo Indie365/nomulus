@@ -125,6 +125,35 @@ public class VKey<T> extends ImmutableObject implements Serializable {
     return new VKey<T>(kind, Key.create(kind, name), name);
   }
 
+  /** Construct a {@link VKey} from the string representation of a key. */
+  public static <T> VKey<T> create(String keyString) throws Exception {
+    if (!keyString.startsWith(CLASS_TYPE + KV_SEPARATOR)) {
+      // to handle the existing ofy key string
+      return fromWebsafeKey(keyString);
+    } else {
+      ImmutableMap<String, String> kvs =
+          ImmutableMap.copyOf(
+              Splitter.on(DELIMITER).withKeyValueSeparator(KV_SEPARATOR).split(keyString));
+      checkNotNull(kvs.get(CLASS_TYPE), "Class type is not specified");
+      Class classType = Class.forName(kvs.get(CLASS_TYPE));
+
+      if (kvs.containsKey(SQL_LOOKUP_KEY) && kvs.containsKey(OFY_LOOKUP_KEY)) {
+        Key ofyKey = Key.create(kvs.get(OFY_LOOKUP_KEY));
+        Serializable sqlKey = SerializeUtils.parse(Serializable.class, kvs.get(SQL_LOOKUP_KEY));
+        return VKey.create(classType, sqlKey, ofyKey);
+
+      } else if (kvs.containsKey(SQL_LOOKUP_KEY)) {
+        Serializable sqlKey = SerializeUtils.parse(Serializable.class, kvs.get(SQL_LOOKUP_KEY));
+        return VKey.createSql(classType, sqlKey);
+
+      } else if (kvs.containsKey(OFY_LOOKUP_KEY)) {
+        return VKey.createOfy(classType, Key.create(kvs.get(OFY_LOOKUP_KEY)));
+      } else {
+        throw new Exception("No valid keys in key string");
+      }
+    }
+  }
+
   /**
    * Returns a clone with an ofy key restored from {@code ancestors}.
    *
@@ -235,7 +264,17 @@ public class VKey<T> extends ImmutableObject implements Serializable {
     return VKeyTranslatorFactory.createVKey(key);
   }
 
-  /** Construct a string representation of a Vkey */
+  /**
+   * Construct a VKey from the string representation of an ofy key.
+   *
+   * <p>TODO(b/184350590): After migration, we'll want remove the ofy key dependency from this.
+   */
+  @Nullable
+  public static <T> VKey<T> fromWebsafeKey(String ofyKeyRepr) {
+    return from(Key.create(ofyKeyRepr));
+  }
+
+  /** Construct the string representation of a {@link VKey}. */
   public String stringify() {
     // class type is required to create a vkey
     String key = CLASS_TYPE + KV_SEPARATOR + getKind().getName();
@@ -247,47 +286,4 @@ public class VKey<T> extends ImmutableObject implements Serializable {
     }
     return key;
   }
-
-  /** Construct a Vkey from the string representation of a key */
-  // TODO: will move this method up to where other create() are once this is fully done tested with
-  //  stringify()
-
-  public static <T> VKey<T> create(String keyString) throws Exception {
-    if (!keyString.startsWith(CLASS_TYPE + KV_SEPARATOR)) {
-      // to handle the existing ofykey string
-      return fromWebsafeKey(keyString);
-    } else {
-      ImmutableMap<String, String> kvs =
-          ImmutableMap.copyOf(
-              Splitter.on(DELIMITER).withKeyValueSeparator(KV_SEPARATOR).split(keyString));
-      checkNotNull(kvs.get(CLASS_TYPE), "Class type is not specified");
-      Class classType = Class.forName(kvs.get(CLASS_TYPE));
-
-      if (kvs.containsKey(SQL_LOOKUP_KEY) && kvs.containsKey(OFY_LOOKUP_KEY)) {
-        Key ofyKey = Key.create(kvs.get(OFY_LOOKUP_KEY));
-        Serializable sqlKey = SerializeUtils.parse(Serializable.class, kvs.get(SQL_LOOKUP_KEY));
-        return VKey.create(classType, sqlKey, ofyKey);
-
-      } else if (kvs.containsKey(SQL_LOOKUP_KEY)) {
-        Serializable sqlKey = SerializeUtils.parse(Serializable.class, kvs.get(SQL_LOOKUP_KEY));
-        return VKey.createSql(classType, sqlKey);
-
-      } else if (kvs.containsKey(OFY_LOOKUP_KEY)) {
-        return VKey.createOfy(classType, Key.create(kvs.get(OFY_LOOKUP_KEY)));
-      } else {
-        throw new Exception("no valid keys in key string");
-      }
-    }
-  }
-
-  /**
-   * Construct a VKey from the string representation of an ofy key.
-   *
-   * <p>TODO(b/184350590): After migration, we'll want remove the ofy key dependency from this.
-   */
-  @Nullable
-  public static <T> VKey<T> fromWebsafeKey(String ofyKeyRepr) {
-    return from(Key.create(ofyKeyRepr));
-  }
-
 }
