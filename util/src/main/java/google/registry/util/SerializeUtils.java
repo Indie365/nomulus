@@ -14,6 +14,7 @@
 
 package google.registry.util;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.io.BaseEncoding.base16;
 
@@ -23,8 +24,8 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
-import java.util.Base64;
 import javax.annotation.Nullable;
+import org.apache.commons.codec.binary.Base64;
 
 /** Utilities for easy serialization with informative error messages. */
 public final class SerializeUtils {
@@ -55,7 +56,7 @@ public final class SerializeUtils {
    */
   public static String stringify(Serializable object) {
     checkNotNull(object, "Object cannot be null");
-    return Base64.getUrlEncoder().encodeToString(SerializeUtils.serialize(object));
+    return Base64.encodeBase64URLSafeString(SerializeUtils.serialize(object));
   }
 
   /**
@@ -67,7 +68,10 @@ public final class SerializeUtils {
   public static <T> T parse(Class<T> type, String objectString) {
     checkNotNull(type, "Class type is not specified");
     checkNotNull(objectString, "Object string cannot be null");
-    return SerializeUtils.deserialize(type, Base64.getUrlDecoder().decode(objectString));
+    checkArgument(
+        Base64.isBase64(objectString) && !objectString.endsWith("="),
+        "Object string is not in base 64");
+    return SerializeUtils.deserialize(type, Base64.decodeBase64(objectString));
   }
 
   /**
