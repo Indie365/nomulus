@@ -124,7 +124,14 @@ public class VKey<T> extends ImmutableObject implements Serializable {
     return new VKey<T>(kind, Key.create(kind, name), name);
   }
 
-  /** Construct a {@link VKey} from the string representation of a key. */
+  /**
+   * Construct a {@link VKey} from the string representation of a vkey. There are two types of
+   * string representations: 1) existing ofy key string handled by existing method fromWebsafeKey(),
+   * 2) string encoded via stringify() where each contains substrings separated by @, and : in each
+   * of the substrings separates its key from value. The key info is encoded via Base64. It begins
+   * with "kind:" and it must contains at least ofy key or sql key. A valid key representation looks
+   * like the following: kind:google.registry.testing.TestObject@sql:aaaa@ofy:abcde is a valid rere
+   */
   public static <T> VKey<T> create(String keyString) throws Exception {
     if (!keyString.startsWith(CLASS_TYPE + KV_SEPARATOR)) {
       // to handle the existing ofy key string
@@ -271,7 +278,18 @@ public class VKey<T> extends ImmutableObject implements Serializable {
     return from(Key.create(ofyKeyRepr));
   }
 
-  /** Construct the string representation of a {@link VKey}. */
+  /**
+   * Construct the string representation of a {@link VKey}.
+   *
+   * <p>The string representation of a vkey contains its type, and sql key or ofy key, or both. Each
+   * of the keys is first serialized into a byte array then encoded via Base64 into a web safe
+   * string.
+   *
+   * <p>The string representation of a vkey contains key values pairs separated by delimiter @.
+   * Another delimiter @ is put in between each key and value. The following is the complete form of
+   * the string: kind:[class name]@sql:[encoded sql key]@ofy:[encoded ofy key], where "[" and "]"
+   * are NOT part of the string.
+   */
   public String stringify() {
     // class type is required to create a vkey
     String key = CLASS_TYPE + KV_SEPARATOR + getKind().getName();

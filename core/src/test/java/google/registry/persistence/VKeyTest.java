@@ -141,7 +141,7 @@ class VKeyTest {
   @Test
   void testStringify_sqlOnlyVKey() throws Exception {
     assertThat(VKey.createSql(TestObject.class, "foo").stringify())
-        .isEqualTo("kind:google.registry.testing.TestObject@sql:rO0ABXQAA2Zvbw==");
+        .isEqualTo("kind:google.registry.testing.TestObject@sql:rO0ABXQAA2Zvbw");
   }
 
   @Test
@@ -156,7 +156,7 @@ class VKeyTest {
     assertThat(
             VKey.create(TestObject.class, "foo", Key.create(TestObject.create("foo"))).stringify())
         .isEqualTo(
-            "kind:google.registry.testing.TestObject@sql:rO0ABXQAA2Zvbw==@ofy:agR0ZXN0cjELEg9FbnRpdHlHcm91cFJvb3QiCWNyb3NzLXRsZAwLEgpUZXN0T2JqZWN0IgNmb28M");
+            "kind:google.registry.testing.TestObject@sql:rO0ABXQAA2Zvbw@ofy:agR0ZXN0cjELEg9FbnRpdHlHcm91cFJvb3QiCWNyb3NzLXRsZAwLEgpUZXN0T2JqZWN0IgNmb28M");
   }
 
   @Test
@@ -164,13 +164,13 @@ class VKeyTest {
     assertThat(
             VKey.create(TestObject.class, "test", Key.create(TestObject.create("foo"))).stringify())
         .isEqualTo(
-            "kind:google.registry.testing.TestObject@sql:rO0ABXQABHRlc3Q=@ofy:agR0ZXN0cjELEg9FbnRpdHlHcm91cFJvb3QiCWNyb3NzLXRsZAwLEgpUZXN0T2JqZWN0IgNmb28M");
+            "kind:google.registry.testing.TestObject@sql:rO0ABXQABHRlc3Q@ofy:agR0ZXN0cjELEg9FbnRpdHlHcm91cFJvb3QiCWNyb3NzLXRsZAwLEgpUZXN0T2JqZWN0IgNmb28M");
   }
 
   /** Test create() via different vkey string representations. */
   @Test
   void testCreate_stringifedVKey_sqlOnlyVKeyString() throws Exception {
-    assertThat(VKey.create("kind:google.registry.testing.TestObject@sql:rO0ABXQAA2Zvbw=="))
+    assertThat(VKey.create("kind:google.registry.testing.TestObject@sql:rO0ABXQAA2Zvbw"))
         .isEqualTo(VKey.createSql(TestObject.class, "foo"));
   }
 
@@ -186,7 +186,7 @@ class VKeyTest {
   void testCreate_stringifedVKey_asymmetricVKeyString() throws Exception {
     assertThat(
             VKey.create(
-                "kind:google.registry.testing.TestObject@sql:rO0ABXQABHRlc3Q=@ofy:agR0ZXN0cjELEg9FbnRpdHlHcm91cFJvb3QiCWNyb3NzLXRsZAwLEgpUZXN0T2JqZWN0IgNmb28M"))
+                "kind:google.registry.testing.TestObject@sql:rO0ABXQABHRlc3Q@ofy:agR0ZXN0cjELEg9FbnRpdHlHcm91cFJvb3QiCWNyb3NzLXRsZAwLEgpUZXN0T2JqZWN0IgNmb28M"))
         .isEqualTo(VKey.create(TestObject.class, "test", Key.create(TestObject.create("foo"))));
   }
 
@@ -194,7 +194,7 @@ class VKeyTest {
   void testCreate_stringifedVKey_sqlAndOfyVKeyString() throws Exception {
     assertThat(
             VKey.create(
-                "kind:google.registry.testing.TestObject@sql:rO0ABXQAA2Zvbw==@ofy:agR0ZXN0cjELEg9FbnRpdHlHcm91cFJvb3QiCWNyb3NzLXRsZAwLEgpUZXN0T2JqZWN0IgNmb28M"))
+                "kind:google.registry.testing.TestObject@sql:rO0ABXQAA2Zvbw@ofy:agR0ZXN0cjELEg9FbnRpdHlHcm91cFJvb3QiCWNyb3NzLXRsZAwLEgpUZXN0T2JqZWN0IgNmb28M"))
         .isEqualTo(VKey.create(TestObject.class, "foo", Key.create(TestObject.create("foo"))));
   }
 
