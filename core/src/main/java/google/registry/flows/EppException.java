@@ -255,4 +255,12 @@ public abstract class EppException extends Exception {
       super("Specified protocol version is not implemented");
     }
   }
+
+  /** Registry is currently undergoing maintenance and is in read-only mode. */
+  @EppResultCode(Code.COMMAND_FAILED)
+  public static class ReadOnlyModeEppException extends EppException {
+    ReadOnlyModeEppException() {
+      super("Registry is currently undergoing maintenance and is in read-only mode");
+    }
+  }
 }
