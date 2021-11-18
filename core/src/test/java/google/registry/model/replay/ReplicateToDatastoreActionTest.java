@@ -33,6 +33,8 @@ import com.google.common.testing.TestLogHandler;
 import com.google.common.truth.Truth8;
 import google.registry.model.common.DatabaseMigrationStateSchedule;
 import google.registry.model.common.DatabaseMigrationStateSchedule.MigrationState;
+import google.registry.model.domain.token.AllocationToken;
+import google.registry.model.domain.token.AllocationToken.TokenType;
 import google.registry.model.ofy.CommitLogBucket;
 import google.registry.model.ofy.Ofy;
 import google.registry.model.server.Lock;
@@ -64,8 +66,8 @@ public class ReplicateToDatastoreActionTest {
   public final AppEngineExtension appEngine =
       AppEngineExtension.builder()
           .withDatastoreAndCloudSql()
-          .withOfyTestEntities(Lock.class, TestObject.class)
-          .withJpaUnitTestEntities(Lock.class, TestObject.class)
+          .withOfyTestEntities(AllocationToken.class, Lock.class, TestObject.class)
+          .withJpaUnitTestEntities(AllocationToken.class, Lock.class, TestObject.class)
           .withClock(fakeClock)
           .build();
 
@@ -187,6 +189,23 @@ public class ReplicateToDatastoreActionTest {
         .that(logHandler)
         .hasLogAtLevelWithMessage(
             Level.WARNING, "Ignoring transaction 1, which appears to have already been applied.");
+  }
+
+  @RetryingTest(4)
+  void testCreateAutoTimestamp() {
+    // Verify that fields populated by the DB (e.g. CreateAutoTimestamp) correctly get populated in
+    // both databases.
+    if (!ReplayExtension.replayTestsEnabled()) {
+      return;
+    }
+
+    AllocationToken allocationToken =
+        new AllocationToken.Builder().setToken("abc123").setTokenType(TokenType.SINGLE_USE).build();
+    insertInDb(allocationToken);
+    runAndVerifySuccess();
+
+    assertThat(ofyTm().transact(() -> ofyTm().loadByEntity(allocationToken)))
+        .isEqualTo(jpaTm().transact(() -> jpaTm().loadByEntity(allocationToken)));
   }
 
   @RetryingTest(4)
