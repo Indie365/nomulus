@@ -14,8 +14,19 @@
 
 package google.registry.model;
 
+import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
+
+import com.googlecode.objectify.annotation.Ignore;
+import com.googlecode.objectify.annotation.OnLoad;
 import google.registry.model.translators.CreateAutoTimestampTranslatorFactory;
+import google.registry.util.DateTimeUtils;
+import java.time.ZonedDateTime;
 import javax.annotation.Nullable;
+import javax.persistence.Column;
+import javax.persistence.Embeddable;
+import javax.persistence.PostLoad;
+import javax.persistence.PrePersist;
+import javax.persistence.Transient;
 import org.joda.time.DateTime;
 
 /**
@@ -23,9 +34,35 @@ import org.joda.time.DateTime;
  *
  * @see CreateAutoTimestampTranslatorFactory
  */
+@Embeddable
 public class CreateAutoTimestamp extends ImmutableObject implements UnsafeSerializable {
 
-  DateTime timestamp;
+  @Transient DateTime timestamp;
+
+  @Column(nullable = false)
+  @Ignore ZonedDateTime creationTime;
+
+  @PrePersist
+  void setTimestamp() {
+    if (creationTime == null) {
+      timestamp = jpaTm().getTransactionTime();
+      creationTime = DateTimeUtils.toZonedDateTime(timestamp);
+    }
+  }
+
+  @OnLoad
+  void onLoad() {
+    if (timestamp != null) {
+      creationTime = DateTimeUtils.toZonedDateTime(timestamp);
+    }
+  }
+
+  @PostLoad
+  void postLoad() {
+    if (creationTime != null) {
+      timestamp = DateTimeUtils.toJodaDateTime(creationTime);
+    }
+  }
 
   /** Returns the timestamp. */
   @Nullable
@@ -36,6 +73,7 @@ public class CreateAutoTimestamp extends ImmutableObject implements UnsafeSerial
   public static CreateAutoTimestamp create(@Nullable DateTime timestamp) {
     CreateAutoTimestamp instance = new CreateAutoTimestamp();
     instance.timestamp = timestamp;
+    instance.creationTime = (timestamp == null) ? null : DateTimeUtils.toZonedDateTime(timestamp);
     return instance;
   }
 }
