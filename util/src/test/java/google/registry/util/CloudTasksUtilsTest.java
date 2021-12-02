@@ -40,6 +40,7 @@ import org.junit.jupiter.api.Test;
 public class CloudTasksUtilsTest {
   // Use a LinkedListMultimap to preserve order of the inserted entries for assertion.
   private final LinkedListMultimap<String, String> params = LinkedListMultimap.create();
+  private final LinkedListMultimap<String, String> headers = LinkedListMultimap.create();
   private final SerializableCloudTasksClient mockClient = mock(SerializableCloudTasksClient.class);
   private final CloudTasksUtils cloudTasksUtils =
       new CloudTasksUtils(
@@ -51,6 +52,9 @@ public class CloudTasksUtilsTest {
     params.put("key1", "val1");
     params.put("key2", "val2");
     params.put("key1", "val3");
+    headers.put("X-DomainRegistry-ProjectId", "pid");
+    headers.put("X-DomainRegistry-JobId", "jid");
+    headers.put("X-DomainRegistry-ChainedTaskQueue", "ctq");
     when(mockClient.enqueue(anyString(), anyString(), anyString(), any(Task.class)))
         .thenAnswer(invocation -> invocation.getArgument(3));
   }
@@ -73,6 +77,45 @@ public class CloudTasksUtilsTest {
     assertThat(task.getAppEngineHttpRequest().getRelativeUri()).isEqualTo("/the/path");
     assertThat(task.getAppEngineHttpRequest().getAppEngineRouting().getService())
         .isEqualTo("myservice");
+    assertThat(task.getAppEngineHttpRequest().getHeadersMap().get("Content-Type"))
+        .isEqualTo("application/x-www-form-urlencoded");
+    assertThat(task.getAppEngineHttpRequest().getBody().toString(StandardCharsets.UTF_8))
+        .isEqualTo("key1=val1&key2=val2&key1=val3");
+    assertThat(task.getScheduleTime().getSeconds()).isEqualTo(0);
+  }
+
+  @Test
+  void testSuccess_createGetTasks_withHeaders() {
+    Task task = CloudTasksUtils.createGetTask("/the/path", "myservice", params, headers);
+    assertThat(task.getAppEngineHttpRequest().getHttpMethod()).isEqualTo(HttpMethod.GET);
+    assertThat(task.getAppEngineHttpRequest().getRelativeUri())
+        .isEqualTo("/the/path?key1=val1&key2=val2&key1=val3");
+    assertThat(task.getAppEngineHttpRequest().getHeadersMap().get("X-DomainRegistry-ProjectId"))
+        .isEqualTo("pid");
+    assertThat(task.getAppEngineHttpRequest().getHeadersMap().get("X-DomainRegistry-JobId"))
+        .isEqualTo("jid");
+    assertThat(
+            task.getAppEngineHttpRequest().getHeadersMap().get("X-DomainRegistry-ChainedTaskQueue"))
+        .isEqualTo("ctq");
+    assertThat(task.getAppEngineHttpRequest().getAppEngineRouting().getService())
+        .isEqualTo("myservice");
+    assertThat(task.getScheduleTime().getSeconds()).isEqualTo(0);
+  }
+
+  @Test
+  void testSuccess_createPostTasks_withHeaders() {
+    Task task = CloudTasksUtils.createPostTask("/the/path", "myservice", params, headers);
+    assertThat(task.getAppEngineHttpRequest().getHttpMethod()).isEqualTo(HttpMethod.POST);
+    assertThat(task.getAppEngineHttpRequest().getRelativeUri()).isEqualTo("/the/path");
+    assertThat(task.getAppEngineHttpRequest().getAppEngineRouting().getService())
+        .isEqualTo("myservice");
+    assertThat(task.getAppEngineHttpRequest().getHeadersMap().get("X-DomainRegistry-ProjectId"))
+        .isEqualTo("pid");
+    assertThat(task.getAppEngineHttpRequest().getHeadersMap().get("X-DomainRegistry-JobId"))
+        .isEqualTo("jid");
+    assertThat(
+            task.getAppEngineHttpRequest().getHeadersMap().get("X-DomainRegistry-ChainedTaskQueue"))
+        .isEqualTo("ctq");
     assertThat(task.getAppEngineHttpRequest().getHeadersMap().get("Content-Type"))
         .isEqualTo("application/x-www-form-urlencoded");
     assertThat(task.getAppEngineHttpRequest().getBody().toString(StandardCharsets.UTF_8))

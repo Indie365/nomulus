@@ -43,6 +43,7 @@ import java.util.Arrays;
 import java.util.Optional;
 import java.util.Random;
 import java.util.function.Supplier;
+import javax.annotation.Nullable;
 
 /** Utilities for dealing with Cloud Tasks. */
 public class CloudTasksUtils implements Serializable {
@@ -96,13 +97,18 @@ public class CloudTasksUtils implements Serializable {
    *     needs to be explicitly specified.
    * @param params a multi-map of URL query parameters. Duplicate keys are saved as is, and it is up
    *     to the server to process the duplicate keys.
+   * @param headers a multi-map of request headers.
    * @return the enqueued task.
    * @see <a
    *     href=ttps://cloud.google.com/appengine/docs/standard/java/taskqueue/push/creating-tasks#target>Specifyinig
    *     the worker service</a>
    */
   private static Task createTask(
-      String path, HttpMethod method, String service, Multimap<String, String> params) {
+      String path,
+      HttpMethod method,
+      String service,
+      Multimap<String, String> params,
+      @Nullable Multimap<String, String> headers) {
     checkArgument(
         path != null && !path.isEmpty() && path.charAt(0) == '/',
         "The path must start with a '/'.");
@@ -121,6 +127,11 @@ public class CloudTasksUtils implements Serializable {
                                 "%s=%s",
                                 escaper.escape(entry.getKey()), escaper.escape(entry.getValue())))
                     .collect(toImmutableList()));
+    if (headers != null) {
+      headers
+          .entries()
+          .forEach(header -> requestBuilder.putHeaders(header.getKey(), header.getValue()));
+    }
     if (method == HttpMethod.GET) {
       path = String.format("%s?%s", path, encodedParams);
     } else if (method == HttpMethod.POST) {
@@ -161,7 +172,7 @@ public class CloudTasksUtils implements Serializable {
       Clock clock,
       Optional<Integer> jitterSeconds) {
     if (!jitterSeconds.isPresent() || jitterSeconds.get() <= 0) {
-      return createTask(path, method, service, params);
+      return createTask(path, method, service, params, null);
     }
     Instant scheduleTime =
         Instant.ofEpochMilli(
@@ -169,7 +180,7 @@ public class CloudTasksUtils implements Serializable {
                 .nowUtc()
                 .plusMillis(random.nextInt((int) SECONDS.toMillis(jitterSeconds.get())))
                 .getMillis());
-    return Task.newBuilder(createTask(path, method, service, params))
+    return Task.newBuilder(createTask(path, method, service, params, null))
         .setScheduleTime(
             Timestamp.newBuilder()
                 .setSeconds(scheduleTime.getEpochSecond())
@@ -179,13 +190,28 @@ public class CloudTasksUtils implements Serializable {
   }
 
   public static Task createPostTask(String path, String service, Multimap<String, String> params) {
-    return createTask(path, HttpMethod.POST, service, params);
+    return createTask(path, HttpMethod.POST, service, params, null);
   }
 
   public static Task createGetTask(String path, String service, Multimap<String, String> params) {
-    return createTask(path, HttpMethod.GET, service, params);
+    return createTask(path, HttpMethod.GET, service, params, null);
   }
 
+  public static Task createPostTask(
+      String path,
+      String service,
+      Multimap<String, String> params,
+      Multimap<String, String> headers) {
+    return createTask(path, HttpMethod.POST, service, params, headers);
+  }
+
+  public static Task createGetTask(
+      String path,
+      String service,
+      Multimap<String, String> params,
+      Multimap<String, String> headers) {
+    return createTask(path, HttpMethod.GET, service, params, headers);
+  }
   /**
    * Create a {@link Task} via HTTP.POST that will be randomly delayed up to {@code jitterSeconds}.
    */
