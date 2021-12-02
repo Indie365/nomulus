@@ -18,13 +18,18 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static google.registry.model.EppResourceUtils.loadByForeignKey;
 import static google.registry.model.reporting.HistoryEntry.Type.SYNTHETIC;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
+import static google.registry.util.CollectionUtils.isNullOrEmpty;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Streams;
 import google.registry.model.domain.DomainBase;
 import google.registry.model.domain.DomainHistory;
 import google.registry.model.poll.PollMessage;
+import google.registry.model.registrar.Registrar;
 import google.registry.model.reporting.HistoryEntry;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -54,14 +59,22 @@ class EnqueuePollMessageCommand extends MutatingCommand {
   String domainName;
 
   @Parameter(
-      names = {"-c", "--client"},
+      names = {"-c", "--clients"},
       description =
-          "Client identifier of the registrar to send the poll message to, if not the owning"
-              + " registrar of the domain")
-  String clientId;
+          "Comma-delimited list of the client identifier(s) of the registrar(s) to send the poll"
+              + " message to, if not the owning registrar of the domain")
+  List<String> clientIds;
+
+  @Parameter(
+      names = {"-a", "--all"},
+      description = "Whether to send the message to all real registrars",
+      arity = 1)
+  boolean sendToAll;
 
   @Override
   protected final void init() {
+    checkArgument(
+        !sendToAll || isNullOrEmpty(clientIds), "Cannot specify both --all and --clients");
     tm().transact(
             () -> {
               Optional<DomainBase> domainOpt =
@@ -69,8 +82,18 @@ class EnqueuePollMessageCommand extends MutatingCommand {
               checkArgument(
                   domainOpt.isPresent(), "Domain %s doesn't exist or isn't active", domainName);
               DomainBase domain = domainOpt.get();
-              String registrarId =
-                  Optional.ofNullable(clientId).orElse(domain.getCurrentSponsorRegistrarId());
+              ImmutableList<String> registrarIds;
+              if (sendToAll) {
+                registrarIds =
+                    Streams.stream(Registrar.loadAllCached())
+                        .filter(r -> r.isLive() && r.getType() == Registrar.Type.REAL)
+                        .map(Registrar::getRegistrarId)
+                        .collect(ImmutableList.toImmutableList());
+              } else if (!isNullOrEmpty(clientIds)) {
+                registrarIds = ImmutableList.copyOf(clientIds);
+              } else {
+                registrarIds = ImmutableList.of(domain.getCurrentSponsorRegistrarId());
+              }
               HistoryEntry historyEntry =
                   new DomainHistory.Builder()
                       .setDomain(domain)
@@ -79,17 +102,19 @@ class EnqueuePollMessageCommand extends MutatingCommand {
                       .setReason("Manual enqueueing of poll message")
                       .setModificationTime(tm().getTransactionTime())
                       .setRequestedByRegistrar(false)
-                      .setRegistrarId(registrarId)
-                      .build();
-              PollMessage.OneTime pollMessage =
-                  new PollMessage.OneTime.Builder()
-                      .setRegistrarId(registrarId)
-                      .setParent(historyEntry)
-                      .setEventTime(tm().getTransactionTime())
-                      .setMsg(message)
+                      .setRegistrarId(domain.getCurrentSponsorRegistrarId())
                       .build();
               stageEntityChange(null, historyEntry);
-              stageEntityChange(null, pollMessage);
+              for (String registrarId : registrarIds) {
+                stageEntityChange(
+                    null,
+                    new PollMessage.OneTime.Builder()
+                        .setRegistrarId(registrarId)
+                        .setParent(historyEntry)
+                        .setEventTime(tm().getTransactionTime())
+                        .setMsg(message)
+                        .build());
+              }
             });
   }
 }
