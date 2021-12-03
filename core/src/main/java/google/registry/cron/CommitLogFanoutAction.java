@@ -54,7 +54,6 @@ public final class CommitLogFanoutAction implements Runnable {
               endpoint,
               Service.BACKEND.toString(),
               ImmutableMultimap.of(BUCKET_PARAM, Integer.toString(bucketId)),
-              null,
               clock,
               jitterSeconds));
     }

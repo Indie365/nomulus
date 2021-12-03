@@ -15,6 +15,7 @@
 package google.registry.util;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -112,6 +113,7 @@ public class CloudTasksUtils implements Serializable {
     checkArgument(
         path != null && !path.isEmpty() && path.charAt(0) == '/',
         "The path must start with a '/'.");
+    checkNotNull(params, "Params cannot be empty");
     AppEngineHttpRequest.Builder requestBuilder =
         AppEngineHttpRequest.newBuilder()
             .setHttpMethod(method)
@@ -172,6 +174,7 @@ public class CloudTasksUtils implements Serializable {
       @Nullable Multimap<String, String> headers,
       Clock clock,
       Optional<Integer> jitterSeconds) {
+    checkNotNull(params, "Params cannot be empty");
     if (!jitterSeconds.isPresent() || jitterSeconds.get() <= 0) {
       return createTask(path, method, service, params, headers);
     }
@@ -213,6 +216,7 @@ public class CloudTasksUtils implements Serializable {
       Multimap<String, String> headers) {
     return createTask(path, HttpMethod.GET, service, params, headers);
   }
+
   /**
    * Create a {@link Task} via HTTP.POST that will be randomly delayed up to {@code jitterSeconds}.
    */
@@ -220,7 +224,31 @@ public class CloudTasksUtils implements Serializable {
       String path,
       String service,
       Multimap<String, String> params,
-      @Nullable Multimap<String, String> headers,
+      Clock clock,
+      Optional<Integer> jitterSeconds) {
+    return createTask(path, HttpMethod.POST, service, params, null, clock, jitterSeconds);
+  }
+
+  /**
+   * Create a {@link Task} via HTTP.GET that will be randomly delayed up to {@code jitterSeconds}.
+   */
+  public static Task createGetTask(
+      String path,
+      String service,
+      Multimap<String, String> params,
+      Clock clock,
+      Optional<Integer> jitterSeconds) {
+    return createTask(path, HttpMethod.GET, service, params, null, clock, jitterSeconds);
+  }
+
+  /**
+   * Create a {@link Task} via HTTP.POST that will be randomly delayed up to {@code jitterSeconds}.
+   */
+  public static Task createPostTask(
+      String path,
+      String service,
+      Multimap<String, String> params,
+      Multimap<String, String> headers,
       Clock clock,
       Optional<Integer> jitterSeconds) {
     return createTask(path, HttpMethod.POST, service, params, headers, clock, jitterSeconds);
@@ -233,7 +261,7 @@ public class CloudTasksUtils implements Serializable {
       String path,
       String service,
       Multimap<String, String> params,
-      @Nullable Multimap<String, String> headers,
+      Multimap<String, String> headers,
       Clock clock,
       Optional<Integer> jitterSeconds) {
     return createTask(path, HttpMethod.GET, service, params, headers, clock, jitterSeconds);

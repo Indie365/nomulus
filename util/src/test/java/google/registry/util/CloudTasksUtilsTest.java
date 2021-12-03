@@ -181,12 +181,69 @@ public class CloudTasksUtilsTest {
     assertThat(upperBound.isBefore(scheduleTime)).isFalse();
   }
 
+  @Test
+  void testSuccess_createPostTasks_withHeaders_withEmptyJitterSeconds() {
+    Task task =
+        CloudTasksUtils.createPostTask(
+            "/the/path", "myservice", params, headers, clock, Optional.empty());
+    assertThat(task.getAppEngineHttpRequest().getHttpMethod()).isEqualTo(HttpMethod.POST);
+    assertThat(task.getAppEngineHttpRequest().getRelativeUri()).isEqualTo("/the/path");
+    assertThat(task.getAppEngineHttpRequest().getAppEngineRouting().getService())
+        .isEqualTo("myservice");
+    assertThat(task.getAppEngineHttpRequest().getHeadersMap().get("Content-Type"))
+        .isEqualTo("application/x-www-form-urlencoded");
+    assertThat(task.getAppEngineHttpRequest().getBody().toString(StandardCharsets.UTF_8))
+        .isEqualTo("key1=val1&key2=val2&key1=val3");
+    assertThat(task.getScheduleTime().getSeconds()).isEqualTo(0);
+  }
+
+  @Test
+  void testSuccess_createGetTasks_withHeaders_withEmptyJitterSeconds() {
+    Task task =
+        CloudTasksUtils.createGetTask(
+            "/the/path", "myservice", params, headers, clock, Optional.empty());
+    assertThat(task.getAppEngineHttpRequest().getHttpMethod()).isEqualTo(HttpMethod.GET);
+    assertThat(task.getAppEngineHttpRequest().getRelativeUri())
+        .isEqualTo("/the/path?key1=val1&key2=val2&key1=val3");
+    assertThat(task.getAppEngineHttpRequest().getAppEngineRouting().getService())
+        .isEqualTo("myservice");
+    assertThat(task.getScheduleTime().getSeconds()).isEqualTo(0);
+  }
+
+  @Test
+  void testSuccess_createPostTasks_withHeaders_withZeroJitterSeconds() {
+    Task task =
+        CloudTasksUtils.createPostTask(
+            "/the/path", "myservice", params, headers, clock, Optional.of(0));
+    assertThat(task.getAppEngineHttpRequest().getHttpMethod()).isEqualTo(HttpMethod.POST);
+    assertThat(task.getAppEngineHttpRequest().getRelativeUri()).isEqualTo("/the/path");
+    assertThat(task.getAppEngineHttpRequest().getAppEngineRouting().getService())
+        .isEqualTo("myservice");
+    assertThat(task.getAppEngineHttpRequest().getHeadersMap().get("Content-Type"))
+        .isEqualTo("application/x-www-form-urlencoded");
+    assertThat(task.getAppEngineHttpRequest().getBody().toString(StandardCharsets.UTF_8))
+        .isEqualTo("key1=val1&key2=val2&key1=val3");
+    assertThat(task.getScheduleTime().getSeconds()).isEqualTo(0);
+  }
+
+  @Test
+  void testSuccess_createGetTasks_withHeaders_withZeroJitterSeconds() {
+    Task task =
+        CloudTasksUtils.createGetTask(
+            "/the/path", "myservice", params, headers, clock, Optional.of(0));
+    assertThat(task.getAppEngineHttpRequest().getHttpMethod()).isEqualTo(HttpMethod.GET);
+    assertThat(task.getAppEngineHttpRequest().getRelativeUri())
+        .isEqualTo("/the/path?key1=val1&key2=val2&key1=val3");
+    assertThat(task.getAppEngineHttpRequest().getAppEngineRouting().getService())
+        .isEqualTo("myservice");
+    assertThat(task.getScheduleTime().getSeconds()).isEqualTo(0);
+  }
+
   @SuppressWarnings("ProtoTimestampGetSecondsGetNano")
   @Test
   void testSuccess_createGetTasks_withJitterSeconds() {
     Task task =
-        CloudTasksUtils.createGetTask(
-            "/the/path", "myservice", params, null, clock, Optional.of(100));
+        CloudTasksUtils.createGetTask("/the/path", "myservice", params, clock, Optional.of(100));
     assertThat(task.getAppEngineHttpRequest().getHttpMethod()).isEqualTo(HttpMethod.GET);
     assertThat(task.getAppEngineHttpRequest().getRelativeUri())
         .isEqualTo("/the/path?key1=val1&key2=val2&key1=val3");
@@ -205,8 +262,7 @@ public class CloudTasksUtilsTest {
   @Test
   void testSuccess_createPostTasks_withJitterSeconds() {
     Task task =
-        CloudTasksUtils.createPostTask(
-            "/the/path", "myservice", params, null, clock, Optional.of(1));
+        CloudTasksUtils.createPostTask("/the/path", "myservice", params, clock, Optional.of(1));
     assertThat(task.getAppEngineHttpRequest().getHttpMethod()).isEqualTo(HttpMethod.POST);
     assertThat(task.getAppEngineHttpRequest().getRelativeUri()).isEqualTo("/the/path");
     assertThat(task.getAppEngineHttpRequest().getAppEngineRouting().getService())
@@ -228,8 +284,7 @@ public class CloudTasksUtilsTest {
   @Test
   void testSuccess_createPostTasks_withEmptyJitterSeconds() {
     Task task =
-        CloudTasksUtils.createPostTask(
-            "/the/path", "myservice", params, null, clock, Optional.empty());
+        CloudTasksUtils.createPostTask("/the/path", "myservice", params, clock, Optional.empty());
     assertThat(task.getAppEngineHttpRequest().getHttpMethod()).isEqualTo(HttpMethod.POST);
     assertThat(task.getAppEngineHttpRequest().getRelativeUri()).isEqualTo("/the/path");
     assertThat(task.getAppEngineHttpRequest().getAppEngineRouting().getService())
@@ -244,8 +299,7 @@ public class CloudTasksUtilsTest {
   @Test
   void testSuccess_createGetTasks_withEmptyJitterSeconds() {
     Task task =
-        CloudTasksUtils.createGetTask(
-            "/the/path", "myservice", params, null, clock, Optional.empty());
+        CloudTasksUtils.createGetTask("/the/path", "myservice", params, clock, Optional.empty());
     assertThat(task.getAppEngineHttpRequest().getHttpMethod()).isEqualTo(HttpMethod.GET);
     assertThat(task.getAppEngineHttpRequest().getRelativeUri())
         .isEqualTo("/the/path?key1=val1&key2=val2&key1=val3");
@@ -257,8 +311,7 @@ public class CloudTasksUtilsTest {
   @Test
   void testSuccess_createPostTasks_withZeroJitterSeconds() {
     Task task =
-        CloudTasksUtils.createPostTask(
-            "/the/path", "myservice", params, null, clock, Optional.of(0));
+        CloudTasksUtils.createPostTask("/the/path", "myservice", params, clock, Optional.of(0));
     assertThat(task.getAppEngineHttpRequest().getHttpMethod()).isEqualTo(HttpMethod.POST);
     assertThat(task.getAppEngineHttpRequest().getRelativeUri()).isEqualTo("/the/path");
     assertThat(task.getAppEngineHttpRequest().getAppEngineRouting().getService())
@@ -273,14 +326,39 @@ public class CloudTasksUtilsTest {
   @Test
   void testSuccess_createGetTasks_withZeroJitterSeconds() {
     Task task =
-        CloudTasksUtils.createGetTask(
-            "/the/path", "myservice", params, null, clock, Optional.of(0));
+        CloudTasksUtils.createGetTask("/the/path", "myservice", params, clock, Optional.of(0));
     assertThat(task.getAppEngineHttpRequest().getHttpMethod()).isEqualTo(HttpMethod.GET);
     assertThat(task.getAppEngineHttpRequest().getRelativeUri())
         .isEqualTo("/the/path?key1=val1&key2=val2&key1=val3");
     assertThat(task.getAppEngineHttpRequest().getAppEngineRouting().getService())
         .isEqualTo("myservice");
     assertThat(task.getScheduleTime().getSeconds()).isEqualTo(0);
+  }
+
+  @Test
+  void testFailure_createTasks_nullParams() {
+    assertThrows(
+        NullPointerException.class,
+        () -> CloudTasksUtils.createGetTask("/the/path", "myservice", null));
+    assertThrows(
+        NullPointerException.class,
+        () -> CloudTasksUtils.createPostTask("/the/path", "myservice", null));
+    assertThrows(
+        NullPointerException.class,
+        () -> CloudTasksUtils.createGetTask("/the/path", "myservice", null, headers));
+    assertThrows(
+        NullPointerException.class,
+        () -> CloudTasksUtils.createPostTask("/the/path", "myservice", null, null));
+    assertThrows(
+        NullPointerException.class,
+        () ->
+            CloudTasksUtils.createGetTask(
+                "/the/path", "myservice", null, headers, clock, Optional.of(1)));
+    assertThrows(
+        NullPointerException.class,
+        () ->
+            CloudTasksUtils.createPostTask(
+                "/the/path", "myservice", null, null, clock, Optional.of(1)));
   }
 
   @Test
