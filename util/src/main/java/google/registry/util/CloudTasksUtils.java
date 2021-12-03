@@ -169,10 +169,11 @@ public class CloudTasksUtils implements Serializable {
       HttpMethod method,
       String service,
       Multimap<String, String> params,
+      @Nullable Multimap<String, String> headers,
       Clock clock,
       Optional<Integer> jitterSeconds) {
     if (!jitterSeconds.isPresent() || jitterSeconds.get() <= 0) {
-      return createTask(path, method, service, params, null);
+      return createTask(path, method, service, params, headers);
     }
     Instant scheduleTime =
         Instant.ofEpochMilli(
@@ -180,7 +181,7 @@ public class CloudTasksUtils implements Serializable {
                 .nowUtc()
                 .plusMillis(random.nextInt((int) SECONDS.toMillis(jitterSeconds.get())))
                 .getMillis());
-    return Task.newBuilder(createTask(path, method, service, params, null))
+    return Task.newBuilder(createTask(path, method, service, params, headers))
         .setScheduleTime(
             Timestamp.newBuilder()
                 .setSeconds(scheduleTime.getEpochSecond())
@@ -219,9 +220,10 @@ public class CloudTasksUtils implements Serializable {
       String path,
       String service,
       Multimap<String, String> params,
+      @Nullable Multimap<String, String> headers,
       Clock clock,
       Optional<Integer> jitterSeconds) {
-    return createTask(path, HttpMethod.POST, service, params, clock, jitterSeconds);
+    return createTask(path, HttpMethod.POST, service, params, headers, clock, jitterSeconds);
   }
 
   /**
@@ -231,9 +233,10 @@ public class CloudTasksUtils implements Serializable {
       String path,
       String service,
       Multimap<String, String> params,
+      @Nullable Multimap<String, String> headers,
       Clock clock,
       Optional<Integer> jitterSeconds) {
-    return createTask(path, HttpMethod.GET, service, params, clock, jitterSeconds);
+    return createTask(path, HttpMethod.GET, service, params, headers, clock, jitterSeconds);
   }
 
   public abstract static class SerializableCloudTasksClient implements Serializable {
