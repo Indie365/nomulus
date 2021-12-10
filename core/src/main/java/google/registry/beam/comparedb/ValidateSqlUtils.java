@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import google.registry.model.EppResource;
 import google.registry.model.ImmutableObject;
+import google.registry.model.annotations.DeleteAfterMigration;
 import google.registry.model.contact.ContactBase;
 import google.registry.model.contact.ContactHistory;
 import google.registry.model.domain.DomainContent;
@@ -46,6 +47,7 @@ import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.TupleTag;
 
 /** Helpers for use by {@link ValidateSqlPipeline}. */
+@DeleteAfterMigration
 final class ValidateSqlUtils {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 

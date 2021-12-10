@@ -23,6 +23,7 @@ import google.registry.beam.common.DatabaseSnapshot;
 import google.registry.beam.common.RegistryPipelineWorkerInitializer;
 import google.registry.beam.comparedb.LatestDatastoreSnapshotFinder.DatastoreSnapshotInfo;
 import google.registry.beam.comparedb.ValidateSqlUtils.CompareSqlEntity;
+import google.registry.model.annotations.DeleteAfterMigration;
 import google.registry.model.domain.DomainBase;
 import google.registry.model.domain.DomainHistory;
 import google.registry.model.replay.SqlEntity;
@@ -49,6 +50,7 @@ import org.joda.time.DateTime;
  * Validates the asynchronous data replication process from Datastore (primary storage) to Cloud SQL
  * (secondary storage).
  */
+@DeleteAfterMigration
 public class ValidateSqlPipeline {
 
   /** Specifies the extra CommitLogs to load before the start of a Database export. */
