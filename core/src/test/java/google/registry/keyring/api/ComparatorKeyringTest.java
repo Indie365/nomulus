@@ -21,8 +21,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.google.common.flogger.LoggerConfig;
 import com.google.common.testing.TestLogHandler;
+import google.registry.util.LoggerConfig;
 import java.io.IOException;
 import java.util.logging.Level;
 import org.bouncycastle.bcpg.BCPGKey;

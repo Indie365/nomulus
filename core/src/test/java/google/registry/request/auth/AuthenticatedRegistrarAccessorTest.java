@@ -29,7 +29,6 @@ import static org.mockito.Mockito.when;
 
 import com.google.appengine.api.users.User;
 import com.google.common.collect.ImmutableSetMultimap;
-import com.google.common.flogger.LoggerConfig;
 import com.google.common.testing.NullPointerTester;
 import com.google.common.testing.TestLogHandler;
 import dagger.Lazy;
@@ -41,6 +40,7 @@ import google.registry.testing.AppEngineExtension;
 import google.registry.testing.DualDatabaseTest;
 import google.registry.testing.InjectExtension;
 import google.registry.testing.TestOfyAndSql;
+import google.registry.util.LoggerConfig;
 import java.util.Optional;
 import java.util.logging.Level;
 import javax.servlet.http.HttpServletRequest;

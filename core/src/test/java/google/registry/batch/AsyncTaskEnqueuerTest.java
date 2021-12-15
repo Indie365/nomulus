@@ -34,7 +34,6 @@ import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableSortedSet;
-import com.google.common.flogger.LoggerConfig;
 import google.registry.model.contact.ContactResource;
 import google.registry.model.domain.RegistryLock;
 import google.registry.testing.AppEngineExtension;
@@ -44,6 +43,7 @@ import google.registry.testing.InjectExtension;
 import google.registry.testing.TaskQueueHelper.TaskMatcher;
 import google.registry.util.AppEngineServiceUtils;
 import google.registry.util.CapturingLogHandler;
+import google.registry.util.LoggerConfig;
 import google.registry.util.Retrier;
 import java.util.logging.Level;
 import org.joda.time.DateTime;

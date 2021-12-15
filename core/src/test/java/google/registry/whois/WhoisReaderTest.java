@@ -19,12 +19,12 @@ import static google.registry.testing.DatabaseHelper.createTlds;
 import static google.registry.testing.LogsSubject.assertAboutLogs;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.google.common.flogger.LoggerConfig;
 import com.google.common.testing.TestLogHandler;
 import google.registry.testing.AppEngineExtension;
 import google.registry.testing.DualDatabaseTest;
 import google.registry.testing.FakeClock;
 import google.registry.testing.TestOfyAndSql;
+import google.registry.util.LoggerConfig;
 import java.io.StringReader;
 import java.util.logging.Level;
 import org.junit.jupiter.api.BeforeEach;

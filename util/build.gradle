@@ -61,6 +61,8 @@ dependencies {
   annotationProcessor deps['com.google.dagger:dagger-compiler']
   testAnnotationProcessor deps['com.google.auto.value:auto-value']
   testAnnotationProcessor deps['com.google.dagger:dagger-compiler']
+    compile 'com.google.errorprone:error_prone_annotations:2.7.1'
+    compile 'org.checkerframework:checker-compat-qual:2.5.5'
 }
 
 test {

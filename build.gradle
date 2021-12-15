@@ -185,6 +185,9 @@ allprojects {
       println "Java dependencies: Using Maven Central..."
       mavenCentral()
       google()
+      maven {
+        url "http://packages.confluent.io/maven/"
+      }
     }
   }
 
