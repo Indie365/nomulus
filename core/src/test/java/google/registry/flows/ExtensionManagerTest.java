@@ -20,7 +20,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.flogger.LoggerConfig;
 import com.google.common.testing.TestLogHandler;
 import google.registry.flows.EppException.UnimplementedExtensionException;
 import google.registry.flows.ExtensionManager.UndeclaredServiceExtensionException;
@@ -36,6 +35,7 @@ import google.registry.model.eppcommon.ProtocolDefinition.ServiceExtension;
 import google.registry.model.eppinput.EppInput;
 import google.registry.model.eppinput.EppInput.CommandExtension;
 import google.registry.testing.AppEngineExtension;
+import google.registry.util.LoggerConfig;
 import google.registry.util.TypeUtils;
 import java.util.logging.LogRecord;
 import org.junit.jupiter.api.Test;

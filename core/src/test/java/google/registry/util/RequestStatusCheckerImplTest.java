@@ -25,7 +25,6 @@ import com.google.appengine.api.log.LogService;
 import com.google.appengine.api.log.RequestLogs;
 import com.google.apphosting.api.ApiProxy;
 import com.google.common.collect.ImmutableList;
-import com.google.common.flogger.LoggerConfig;
 import com.google.common.testing.TestLogHandler;
 import google.registry.testing.AppEngineExtension;
 import java.util.logging.Level;
