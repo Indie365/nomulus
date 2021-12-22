@@ -17,6 +17,7 @@ package google.registry.tools;
 import com.google.common.collect.ImmutableMap;
 import google.registry.tools.javascrap.BackfillRegistryLocksCommand;
 import google.registry.tools.javascrap.BackfillSpec11ThreatMatchesCommand;
+import google.registry.tools.javascrap.CompareEscrowDepositsCommand;
 import google.registry.tools.javascrap.DeleteContactByRoidCommand;
 import google.registry.tools.javascrap.HardDeleteHostCommand;
 import google.registry.tools.javascrap.PopulateNullRegistrarFieldsCommand;
@@ -41,6 +42,7 @@ public final class RegistryTool {
           .put("check_domain", CheckDomainCommand.class)
           .put("check_domain_claims", CheckDomainClaimsCommand.class)
           .put("convert_idn", ConvertIdnCommand.class)
+          .put("compare_escrow_deposits", CompareEscrowDepositsCommand.class)
           .put("count_domains", CountDomainsCommand.class)
           .put("create_anchor_tenant", CreateAnchorTenantCommand.class)
           .put("create_cdns_tld", CreateCdnsTld.class)
