@@ -14,6 +14,7 @@
 
 package google.registry.model.tld.label;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
 import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
@@ -31,10 +32,12 @@ import google.registry.testing.FakeClock;
 import google.registry.testing.TestCacheExtension;
 import java.math.BigDecimal;
 import java.util.Optional;
+import java.util.stream.IntStream;
 import org.joda.money.CurrencyUnit;
 import org.joda.money.Money;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 /** Unit tests for {@link PremiumListDao}. */
@@ -248,6 +251,21 @@ public class PremiumListDaoTest {
     TransactionManagerUtil.transactIfJpaTm(
         () -> PremiumListDao.save("testname", USD, ImmutableList.of("test,USD 1")));
     assertThat(PremiumListDao.premiumListCache.getIfPresent("testname")).isNull();
+  }
+
+  @Test
+  @Timeout(value = 6)
+  void testSave_largeSize_savedQuickly() {
+    ImmutableMap<String, BigDecimal> prices =
+        IntStream.range(0, 20000).boxed().collect(toImmutableMap(String::valueOf, BigDecimal::new));
+    PremiumList list =
+        new PremiumList.Builder()
+            .setName("testname")
+            .setCurrency(USD)
+            .setLabelsToPrices(prices)
+            .setCreationTimestamp(fakeClock.nowUtc())
+            .build();
+    PremiumListDao.save(list);
   }
 
   private static Money moneyOf(CurrencyUnit unit, double amount) {
