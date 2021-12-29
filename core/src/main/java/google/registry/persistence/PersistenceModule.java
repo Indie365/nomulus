@@ -85,6 +85,20 @@ public abstract class PersistenceModule {
 
   private static final int DEFAULT_SERVER_FETCH_SIZE = 20;
 
+  /**
+   * JDBC-specific: driver default batch size is 0, which means that every INSERT statement will be
+   * sent to the database individually. Batching allows us to group together multiple inserts into
+   * one single INSERT statement which can dramatically increase speed in situations with many
+   * inserts.
+   *
+   * <p>Hibernate docs, i.e.
+   * https://docs.jboss.org/hibernate/orm/5.6/userguide/html_single/Hibernate_User_Guide.html,
+   * recommend between 10 and 50.
+   */
+  public static final String JDBC_BATCH_SIZE = "hibernate.jdbc.batch_size";
+
+  private static final int DEFAULT_SERVER_BATCH_SIZE = 50;
+
   @VisibleForTesting
   @Provides
   @DefaultHibernateConfigs
@@ -112,6 +126,7 @@ public abstract class PersistenceModule {
     properties.put(HIKARI_IDLE_TIMEOUT, getHibernateHikariIdleTimeout());
     properties.put(Environment.DIALECT, NomulusPostgreSQLDialect.class.getName());
     properties.put(JDBC_FETCH_SIZE, Integer.toString(DEFAULT_SERVER_FETCH_SIZE));
+    properties.put(JDBC_BATCH_SIZE, Integer.toString(DEFAULT_SERVER_BATCH_SIZE));
     return properties.build();
   }
 
