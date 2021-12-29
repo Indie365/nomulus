@@ -14,6 +14,7 @@
 
 package google.registry.model.tld.label;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
 import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
@@ -32,6 +33,7 @@ import google.registry.testing.FakeClock;
 import google.registry.testing.TestCacheExtension;
 import java.math.BigDecimal;
 import java.util.Optional;
+import java.util.stream.IntStream;
 import org.joda.money.CurrencyUnit;
 import org.joda.money.Money;
 import org.junit.jupiter.api.BeforeEach;
@@ -258,6 +260,28 @@ public class PremiumListDaoTest {
     TransactionManagerUtil.transactIfJpaTm(
         () -> PremiumListDao.save("testname", USD, ImmutableList.of("test,USD 1")));
     assertThat(PremiumListDao.premiumListCache.getIfPresent("testname")).isNull();
+  }
+
+  @Test
+  void testSave_largeSize_savedQuickly() {
+    long start = System.currentTimeMillis();
+    ImmutableMap<String, BigDecimal> prices =
+        IntStream.range(0, 20000).boxed().collect(toImmutableMap(String::valueOf, BigDecimal::new));
+    PremiumList list =
+        new PremiumList.Builder()
+            .setName("testname")
+            .setCurrency(USD)
+            .setLabelsToPrices(prices)
+            .setCreationTimestamp(fakeClock.nowUtc())
+            .build();
+    PremiumListDao.save(list);
+    long duration = System.currentTimeMillis() - start;
+    if (duration >= 6000) {
+      // Don't fail directly since we can't rely on what sort of machines the test is running on
+      System.err.println(
+          String.format(
+              "Expected premium list update to take 2-3 seconds but it took %d ms", duration));
+    }
   }
 
   private static Money moneyOf(CurrencyUnit unit, double amount) {
