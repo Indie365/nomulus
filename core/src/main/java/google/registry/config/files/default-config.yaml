@@ -221,6 +221,8 @@ hibernate:
   hikariMinimumIdle: 1
   hikariMaximumPoolSize: 10
   hikariIdleTimeout: 300000
+  jdbcBatchSize: 50
+  jdbcFetchSize: 20
 
 cloudSql:
   # jdbc url for the Cloud SQL database.
