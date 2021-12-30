@@ -131,6 +131,14 @@ class DomainCheckFlowTest extends ResourceCheckFlowTestCase<DomainCheckFlow, Dom
   }
 
   @TestOfyAndSql
+  void testNotLoggedIn_takesPrecedenceOverUndeclaredExtensions() {
+    setEppInput("domain_check_unsupported_extension.xml");
+    sessionMetadata.setRegistrarId(null);
+    EppException thrown = assertThrows(NotLoggedInException.class, this::runFlow);
+    assertAboutEppExceptions().that(thrown).marshalsToXml();
+  }
+
+  @TestOfyAndSql
   void testSuccess_nothingExists() throws Exception {
     doCheckTest(
         create(true, "example1.tld", null),
