@@ -110,26 +110,32 @@ public class CloudTasksUtils implements Serializable {
         AppEngineHttpRequest.newBuilder()
             .setHttpMethod(method)
             .setAppEngineRouting(AppEngineRouting.newBuilder().setService(service).build());
-    Escaper escaper = UrlEscapers.urlPathSegmentEscaper();
-    String encodedParams =
-        Joiner.on("&")
-            .join(
-                params.entries().stream()
-                    .map(
-                        entry ->
-                            String.format(
-                                "%s=%s",
-                                escaper.escape(entry.getKey()), escaper.escape(entry.getValue())))
-                    .collect(toImmutableList()));
-    if (method == HttpMethod.GET) {
-      path = String.format("%s?%s", path, encodedParams);
-    } else if (method == HttpMethod.POST) {
-      requestBuilder
-          .putHeaders(HttpHeaders.CONTENT_TYPE, MediaType.FORM_DATA.toString())
-          .setBody(ByteString.copyFrom(encodedParams, StandardCharsets.UTF_8));
-    } else {
-      throw new IllegalArgumentException(
-          String.format("HTTP method %s is used. Only GET and POST are allowed.", method));
+    if (!params.isEmpty()) {
+      Escaper escaper = UrlEscapers.urlPathSegmentEscaper();
+
+      String encodedParams =
+          Joiner.on("&")
+              .join(
+                  params.entries().stream()
+                      .map(
+                          entry ->
+                              String.format(
+                                  "%s=%s",
+                                  escaper.escape(entry.getKey()), escaper.escape(entry.getValue())))
+                      .collect(toImmutableList()));
+      if (method == HttpMethod.GET) {
+        path = String.format("%s?%s", path, encodedParams);
+      } else if (method == HttpMethod.POST) {
+        requestBuilder
+            .putHeaders(HttpHeaders.CONTENT_TYPE, MediaType.FORM_DATA.toString())
+            .setBody(ByteString.copyFrom(encodedParams, StandardCharsets.UTF_8));
+      } else {
+        throw new IllegalArgumentException(
+            String.format("HTTP method %s is used. Only GET and POST are allowed.", method));
+      }
+    }
+    if (method == HttpMethod.POST) {
+      requestBuilder.putHeaders(HttpHeaders.CONTENT_TYPE, MediaType.FORM_DATA.toString());
     }
     requestBuilder.setRelativeUri(path);
     return Task.newBuilder().setAppEngineHttpRequest(requestBuilder.build()).build();
