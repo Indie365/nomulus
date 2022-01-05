@@ -329,24 +329,29 @@ public class LoadTestAction implements Runnable {
   private List<Task> createTasks(List<String> xmls, DateTime start) {
     ImmutableList.Builder<Task> tasks = new ImmutableList.Builder<>();
     for (int i = 0; i < xmls.size(); i++) {
-      // Space tasks evenly within across a second.
-      int offsetMillis = (int) (1000.0 / xmls.size() * i);
-      CloudTasksUtils.createPostTask(
-          "/_dr/epptool",
-          Service.TOOLS.toString(),
-          ImmutableMultimap.of(
-              X_CSRF_TOKEN,
-              xsrfToken,
-              "clientId",
-              registrarId,
-              "superuser",
-              Boolean.FALSE.toString(),
-              "dryRun",
-              Boolean.FALSE.toString(),
-              "xml",
-              xmls.get(i)),
-          clock,
-          Optional.of((int) (start.getMillis() + offsetMillis)));
+      tasks.add(
+          Task.newBuilder()
+              .setAppEngineHttpRequest(
+                  CloudTasksUtils.createPostTask(
+                          "/_dr/epptool",
+                          Service.TOOLS.toString(),
+                          ImmutableMultimap.of(
+                              "clientId",
+                              registrarId,
+                              "superuser",
+                              Boolean.FALSE.toString(),
+                              "dryRun",
+                              Boolean.FALSE.toString(),
+                              "xml",
+                              xmls.get(i)),
+                          clock,
+                          // Space tasks evenly within across a second.
+                          Optional.of((int) (start.getMillis() + (int) (1000.0 / xmls.size() * i))))
+                      .getAppEngineHttpRequest()
+                      .toBuilder()
+                      .putHeaders(X_CSRF_TOKEN, xsrfToken)
+                      .build())
+              .build());
     }
     return tasks.build();
   }
