@@ -367,6 +367,8 @@ dependencies {
   compile deps['org.flywaydb:flyway-core']
 
   closureCompiler deps['com.google.javascript:closure-compiler']
+    compile 'org.apache.arrow:arrow-memory-core:5.0.0'
+    compile 'org.apache.arrow:arrow-memory-core:5.0.0'
 }
 
 task jaxbToJava {

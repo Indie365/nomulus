@@ -347,18 +347,16 @@ public class LoadTestAction implements Runnable {
                               xmls.get(i)))
                       .toBuilder()
                       // Space tasks evenly within across a second.
-                      .setScheduleTime(
-                          Timestamp.newBuilder()
-                              .setSeconds(
-                                  Instant.ofEpochMilli(
-                                          start
-                                              .plusMillis((int) (1000.0 / xmls.size() * i))
-                                              .getMillis())
-                                      .getEpochSecond())
-                              .build())
                       .getAppEngineHttpRequest()
                       .toBuilder()
                       .putHeaders(X_CSRF_TOKEN, xsrfToken)
+                      .build())
+              .setScheduleTime(
+                  Timestamp.newBuilder()
+                      .setSeconds(
+                          Instant.ofEpochMilli(
+                                  start.plusMillis((int) (1000.0 / xmls.size() * i)).getMillis())
+                              .getEpochSecond())
                       .build())
               .build());
     }
