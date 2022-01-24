@@ -221,9 +221,9 @@ public class ReplayExtension implements BeforeEachCallback, AfterEachCallback {
 
     List<TransactionEntity> transactionBatch;
     do {
-      transactionBatch = sqlToDsReplicator.getTransactionBatch();
+      transactionBatch = sqlToDsReplicator.getTransactionBatchAtSnapshot();
       for (TransactionEntity txn : transactionBatch) {
-        sqlToDsReplicator.applyTransaction(txn);
+        ReplicateToDatastoreAction.applyTransaction(txn);
         if (compare) {
           ofyTm().transact(() -> compareSqlTransaction(txn));
         }

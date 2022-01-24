@@ -162,6 +162,8 @@ interface RegistryToolComponent {
 
   void inject(SetupOteCommand command);
 
+  void inject(SyncDatastoreToSqlCommand command);
+
   void inject(UnlockDomainCommand command);
 
   void inject(UnrenewDomainCommand command);
