@@ -60,6 +60,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import javax.annotation.Nonnull;
+import org.joda.time.Instant;
 
 /**
  * Static utility functions for testing task queues.
@@ -196,7 +197,7 @@ public class CloudTasksHelper implements Serializable {
     // tests.
     HttpMethod method = HttpMethod.POST;
     String url;
-    Timestamp scheduleTime;
+    Instant scheduleTime;
     Multimap<String, String> headers = ArrayListMultimap.create();
     Multimap<String, String> params = ArrayListMultimap.create();
 
@@ -218,7 +219,9 @@ public class CloudTasksHelper implements Serializable {
           Ascii.toLowerCase(task.getAppEngineHttpRequest().getAppEngineRouting().getService());
       method = task.getAppEngineHttpRequest().getHttpMethod();
       url = uri.getPath();
-      scheduleTime = task.getScheduleTime();
+      Timestamp taskScheduleTime = task.getScheduleTime();
+      scheduleTime =
+          Instant.ofEpochSecond(taskScheduleTime.getSeconds() + taskScheduleTime.getNanos());
       ImmutableMultimap.Builder<String, String> headerBuilder = new ImmutableMultimap.Builder<>();
       task.getAppEngineHttpRequest()
           .getHeadersMap()
@@ -297,7 +300,7 @@ public class CloudTasksHelper implements Serializable {
       return this;
     }
 
-    public TaskMatcher scheduleTime(Timestamp scheduleTime) {
+    public TaskMatcher scheduleTime(Instant scheduleTime) {
       expected.scheduleTime = scheduleTime;
       return this;
     }
@@ -325,6 +328,9 @@ public class CloudTasksHelper implements Serializable {
      *
      * <p>Match fails if any headers or params expected on the TaskMatcher are not found on the
      * Task. Note that the inverse is not true (i.e. there may be extra headers on the Task).
+     *
+     * <p>Schedule Time of a task by default is Timestamp.getDefaultInstance() which is equivalent
+     * to Instance.EPOCH.
      */
     @Override
     public boolean test(@Nonnull Task task) {

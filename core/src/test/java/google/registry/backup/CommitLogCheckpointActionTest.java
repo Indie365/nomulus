@@ -23,7 +23,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.protobuf.Timestamp;
 import google.registry.model.ofy.CommitLogCheckpoint;
 import google.registry.model.ofy.CommitLogCheckpointRoot;
 import google.registry.testing.AppEngineExtension;
@@ -31,6 +30,7 @@ import google.registry.testing.CloudTasksHelper;
 import google.registry.testing.CloudTasksHelper.TaskMatcher;
 import google.registry.testing.FakeClock;
 import org.joda.time.DateTime;
+import org.joda.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -68,7 +68,7 @@ public class CommitLogCheckpointActionTest {
         QUEUE_NAME,
         new TaskMatcher()
             .url(ExportCommitLogDiffAction.PATH)
-            .scheduleTime(Timestamp.getDefaultInstance())
+            .scheduleTime(Instant.EPOCH)
             .param(ExportCommitLogDiffAction.LOWER_CHECKPOINT_TIME_PARAM, START_OF_TIME.toString())
             .param(ExportCommitLogDiffAction.UPPER_CHECKPOINT_TIME_PARAM, now.toString()));
     assertThat(loadRoot().getLastWrittenTime()).isEqualTo(now);
@@ -83,6 +83,7 @@ public class CommitLogCheckpointActionTest {
         QUEUE_NAME,
         new TaskMatcher()
             .url(ExportCommitLogDiffAction.PATH)
+            .scheduleTime(null)
             .param(ExportCommitLogDiffAction.LOWER_CHECKPOINT_TIME_PARAM, oneMinuteAgo.toString())
             .param(ExportCommitLogDiffAction.UPPER_CHECKPOINT_TIME_PARAM, now.toString()));
     assertThat(loadRoot().getLastWrittenTime()).isEqualTo(now);
