@@ -14,13 +14,18 @@
 
 package google.registry.tools;
 
+
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.net.MediaType;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import google.registry.loadtest.LoadTestAction;
 import google.registry.model.registrar.Registrar;
 import google.registry.model.tld.Registries;
+import java.util.concurrent.Executors;
 
 /** Command to initiate a load-test. */
 @Parameters(separators = " =", commandDescription = "Run a load test.")
@@ -29,7 +34,7 @@ class LoadTestCommand extends ConfirmingCommand
 
   // This is a mostly arbitrary value, roughly an hour and a quarter.  It served as a generous
   // timespan for initial backup/restore testing, but has no other special significance.
-  private static final int DEFAULT_RUN_SECONDS = 4600;
+  private static final int DEFAULT_RUN_SECONDS = 50000;
 
   @Parameter(
       names = {"--tld"},
@@ -114,7 +119,6 @@ class LoadTestCommand extends ConfirmingCommand
   @Override
   protected String execute() throws Exception {
     System.err.println("Initiating load test...");
-
     ImmutableMap<String, Object> params = new ImmutableMap.Builder<String, Object>()
         .put("tld", tld)
         .put("clientId", clientId)
@@ -127,7 +131,14 @@ class LoadTestCommand extends ConfirmingCommand
         .put("runSeconds", runSeconds)
         .build();
 
-    return connection.sendPostRequest(
-        LoadTestAction.PATH, params, MediaType.PLAIN_TEXT_UTF_8, new byte[0]);
+    ListeningExecutorService service =
+        MoreExecutors.listeningDecorator(Executors.newSingleThreadExecutor());
+    ListenableFuture<String> asyncTask =
+        service.submit(
+            () ->
+                connection.sendPostRequest(
+                    LoadTestAction.PATH, params, MediaType.PLAIN_TEXT_UTF_8, new byte[0]));
+    System.err.println("Load test request was submitted.");
+    return asyncTask.isDone() ? "Load test was done." : "Load test is not done.";
   }
 }
