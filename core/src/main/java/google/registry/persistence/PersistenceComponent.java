@@ -43,5 +43,5 @@ public interface PersistenceComponent {
   JpaTransactionManager appEngineJpaTransactionManager();
 
   @ReadOnlyReplicaJpaTm
-  JpaTransactionManager readOnlyReplicaJpaTransactionManager();
+  JpaTransactionManager readOnlyJpaTransactionManager();
 }
