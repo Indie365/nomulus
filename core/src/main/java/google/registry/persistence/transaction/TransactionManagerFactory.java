@@ -47,6 +47,10 @@ public final class TransactionManagerFactory {
   private static Supplier<JpaTransactionManager> jpaTm =
       Suppliers.memoize(TransactionManagerFactory::createJpaTransactionManager);
 
+  @NonFinalForTesting
+  private static Supplier<JpaTransactionManager> roJpaTm =
+      Suppliers.memoize(TransactionManagerFactory::createRoJpaTransactionManager);
+
   private static boolean onBeam = false;
 
   private TransactionManagerFactory() {}
@@ -56,6 +60,14 @@ public final class TransactionManagerFactory {
     // by calling setJpaTm().
     if (isInAppEngine()) {
       return DaggerPersistenceComponent.create().appEngineJpaTransactionManager();
+    } else {
+      return DummyJpaTransactionManager.create();
+    }
+  }
+
+  private static JpaTransactionManager createRoJpaTransactionManager() {
+    if (isInAppEngine()) {
+      return DaggerPersistenceComponent.create().readOnlyJpaTransactionManager();
     } else {
       return DummyJpaTransactionManager.create();
     }
@@ -108,6 +120,22 @@ public final class TransactionManagerFactory {
     return jpaTm.get();
   }
 
+  /** Returns a read-only {@link JpaTransactionManager} instance if configured. */
+  public static JpaTransactionManager roJpaTm() {
+    return roJpaTm.get();
+  }
+
+  /**
+   * Returns a {@link TransactionManager} that, ideally, is read-only.
+   *
+   * <p>In Datastore mode, this is unchanged from the regular transaction manager. In SQL mode,
+   * however, this will be a reference to the read-only replica database if one is configured.
+   */
+  public static TransactionManager roTm() {
+    TransactionManager tm = tm();
+    return tm.isOfy() ? tm : roJpaTm();
+  }
+
   /** Returns {@link DatastoreTransactionManager} instance. */
   @VisibleForTesting
   public static DatastoreTransactionManager ofyTm() {
@@ -122,6 +150,16 @@ public final class TransactionManagerFactory {
             || RegistryToolEnvironment.get() != null,
         "setJpamTm() should only be called by tools and tests.");
     jpaTm = Suppliers.memoize(jpaTmSupplier::get);
+  }
+
+  /** Sets the value of {@link #roJpaTm()} to the given {@link JpaTransactionManager}. */
+  public static void setRoJpaTm(Supplier<JpaTransactionManager> roJpaTmSupplier) {
+    checkNotNull(roJpaTmSupplier, "roJpaTmSupplier");
+    checkState(
+        RegistryEnvironment.get().equals(RegistryEnvironment.UNITTEST)
+            || RegistryToolEnvironment.get() != null,
+        "setRoJpaTm() should only be called by tools and tests.");
+    roJpaTm = Suppliers.memoize(roJpaTmSupplier::get);
   }
 
   /**
