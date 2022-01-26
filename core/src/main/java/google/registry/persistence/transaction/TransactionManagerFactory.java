@@ -47,6 +47,10 @@ public final class TransactionManagerFactory {
   private static Supplier<JpaTransactionManager> jpaTm =
       Suppliers.memoize(TransactionManagerFactory::createJpaTransactionManager);
 
+  @NonFinalForTesting
+  private static Supplier<JpaTransactionManager> replicaJpaTm =
+      Suppliers.memoize(TransactionManagerFactory::createReplicaJpaTransactionManager);
+
   private static boolean onBeam = false;
 
   private TransactionManagerFactory() {}
@@ -56,6 +60,14 @@ public final class TransactionManagerFactory {
     // by calling setJpaTm().
     if (isInAppEngine()) {
       return DaggerPersistenceComponent.create().appEngineJpaTransactionManager();
+    } else {
+      return DummyJpaTransactionManager.create();
+    }
+  }
+
+  private static JpaTransactionManager createReplicaJpaTransactionManager() {
+    if (isInAppEngine()) {
+      return DaggerPersistenceComponent.create().readOnlyReplicaJpaTransactionManager();
     } else {
       return DummyJpaTransactionManager.create();
     }
@@ -108,6 +120,15 @@ public final class TransactionManagerFactory {
     return jpaTm.get();
   }
 
+  /**
+   * Returns a {@link JpaTransactionManager} read-only instance.
+   *
+   * <p>If available, this uses the read-only replica, otherwise it returns the standard instance.
+   */
+  public static JpaTransactionManager replicaJpaTm() {
+    return replicaJpaTm.get();
+  }
+
   /** Returns {@link DatastoreTransactionManager} instance. */
   @VisibleForTesting
   public static DatastoreTransactionManager ofyTm() {
@@ -122,6 +143,16 @@ public final class TransactionManagerFactory {
             || RegistryToolEnvironment.get() != null,
         "setJpamTm() should only be called by tools and tests.");
     jpaTm = Suppliers.memoize(jpaTmSupplier::get);
+  }
+
+  /** Sets the value of {@link #replicaJpaTm()} to the given {@link JpaTransactionManager}. */
+  public static void setReplicaTm(Supplier<JpaTransactionManager> replicaJpaTmSupplier) {
+    checkNotNull(replicaJpaTmSupplier, "replicaJpaTmSupplier");
+    checkState(
+        RegistryEnvironment.get().equals(RegistryEnvironment.UNITTEST)
+            || RegistryToolEnvironment.get() != null,
+        "setJpamTm() should only be called by tools and tests.");
+    replicaJpaTm = Suppliers.memoize(replicaJpaTmSupplier::get);
   }
 
   /**

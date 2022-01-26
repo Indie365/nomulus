@@ -21,6 +21,7 @@ import static com.google.common.collect.Sets.union;
 import static google.registry.config.RegistryConfig.getEppResourceCachingDuration;
 import static google.registry.config.RegistryConfig.getEppResourceMaxCachedEntries;
 import static google.registry.persistence.transaction.TransactionManagerFactory.ofyTm;
+import static google.registry.persistence.transaction.TransactionManagerFactory.replicaJpaTm;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 import static google.registry.util.CollectionUtils.nullToEmpty;
 import static google.registry.util.CollectionUtils.nullToEmptyImmutableCopy;
@@ -43,6 +44,7 @@ import google.registry.model.index.ForeignKeyIndex;
 import google.registry.model.ofy.CommitLogManifest;
 import google.registry.model.transfer.TransferData;
 import google.registry.persistence.VKey;
+import google.registry.persistence.transaction.TransactionManager;
 import google.registry.util.NonFinalForTesting;
 import java.util.Map;
 import java.util.Optional;
@@ -380,13 +382,15 @@ public abstract class EppResource extends BackupGroupRoot implements Buildable {
 
         @Override
         public EppResource load(VKey<? extends EppResource> key) {
-          return tm().doTransactionless(() -> tm().loadByKey(key));
+          TransactionManager tm = tm().isOfy() ? tm() : replicaJpaTm();
+          return tm.doTransactionless(() -> tm.loadByKey(key));
         }
 
         @Override
         public Map<VKey<? extends EppResource>, EppResource> loadAll(
             Iterable<? extends VKey<? extends EppResource>> keys) {
-          return tm().doTransactionless(() -> tm().loadByKeys(keys));
+          TransactionManager tm = tm().isOfy() ? tm() : replicaJpaTm();
+          return tm.doTransactionless(() -> tm.loadByKeys(keys));
         }
       };
 
