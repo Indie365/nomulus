@@ -16,7 +16,7 @@ package google.registry.rdap;
 
 import static com.google.common.base.Charsets.UTF_8;
 import static google.registry.model.ofy.ObjectifyService.auditedOfy;
-import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
+import static google.registry.persistence.transaction.TransactionManagerFactory.replicaJpaTm;
 import static google.registry.util.DateTimeUtils.END_OF_TIME;
 
 import com.google.common.collect.ImmutableList;
@@ -45,6 +45,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import javax.inject.Inject;
+import javax.persistence.EntityManager;
 import javax.persistence.criteria.CriteriaBuilder;
 
 /**
@@ -193,16 +194,17 @@ public abstract class RdapSearchActionBase extends RdapActionBase {
    */
   <T extends EppResource> RdapResultSet<T> getMatchingResourcesSql(
       CriteriaQueryBuilder<T> builder, boolean checkForVisibility, int querySizeLimit) {
-    jpaTm().assertInTransaction();
+    replicaJpaTm().assertInTransaction();
     Optional<String> desiredRegistrar = getDesiredRegistrar();
     if (desiredRegistrar.isPresent()) {
       builder =
           builder.where(
-              "currentSponsorClientId", jpaTm().getEntityManager().getCriteriaBuilder()::equal,
+              "currentSponsorClientId",
+              replicaJpaTm().getEntityManager().getCriteriaBuilder()::equal,
               desiredRegistrar.get());
     }
     List<T> queryResult =
-        jpaTm().criteriaQuery(builder.build()).setMaxResults(querySizeLimit).getResultList();
+        replicaJpaTm().criteriaQuery(builder.build()).setMaxResults(querySizeLimit).getResultList();
     if (checkForVisibility) {
       return filterResourcesByVisibility(queryResult, querySizeLimit);
     } else {
@@ -395,7 +397,7 @@ public abstract class RdapSearchActionBase extends RdapActionBase {
       RdapSearchPattern partialStringQuery,
       Optional<String> cursorString,
       DeletedItemHandling deletedItemHandling) {
-    jpaTm().assertInTransaction();
+    replicaJpaTm().assertInTransaction();
     if (partialStringQuery.getInitialString().length()
         < RdapSearchPattern.MIN_INITIAL_STRING_LENGTH) {
       throw new UnprocessableEntityException(
@@ -403,8 +405,9 @@ public abstract class RdapSearchActionBase extends RdapActionBase {
               "Initial search string must be at least %d characters",
               RdapSearchPattern.MIN_INITIAL_STRING_LENGTH));
     }
-    CriteriaBuilder criteriaBuilder = jpaTm().getEntityManager().getCriteriaBuilder();
-    CriteriaQueryBuilder<T> builder = CriteriaQueryBuilder.create(clazz);
+    EntityManager em = replicaJpaTm().getEntityManager();
+    CriteriaBuilder criteriaBuilder = em.getCriteriaBuilder();
+    CriteriaQueryBuilder<T> builder = CriteriaQueryBuilder.create(em, clazz);
     if (partialStringQuery.getHasWildcard()) {
       builder =
           builder.where(
@@ -493,9 +496,10 @@ public abstract class RdapSearchActionBase extends RdapActionBase {
               "Initial search string must be at least %d characters",
               RdapSearchPattern.MIN_INITIAL_STRING_LENGTH));
     }
-    jpaTm().assertInTransaction();
-    CriteriaQueryBuilder<T> builder = CriteriaQueryBuilder.create(clazz);
-    CriteriaBuilder criteriaBuilder = jpaTm().getEntityManager().getCriteriaBuilder();
+    replicaJpaTm().assertInTransaction();
+    EntityManager em = replicaJpaTm().getEntityManager();
+    CriteriaQueryBuilder<T> builder = CriteriaQueryBuilder.create(em, clazz);
+    CriteriaBuilder criteriaBuilder = em.getCriteriaBuilder();
     builder = builder.where(filterField, criteriaBuilder::equal, queryString);
     if (cursorString.isPresent()) {
       if (cursorField.isPresent()) {
@@ -544,7 +548,7 @@ public abstract class RdapSearchActionBase extends RdapActionBase {
       RdapSearchPattern partialStringQuery,
       Optional<String> cursorString,
       DeletedItemHandling deletedItemHandling) {
-    jpaTm().assertInTransaction();
+    replicaJpaTm().assertInTransaction();
     return queryItemsSql(clazz, "repoId", partialStringQuery, cursorString, deletedItemHandling);
   }
 
@@ -553,7 +557,9 @@ public abstract class RdapSearchActionBase extends RdapActionBase {
     if (!Objects.equals(deletedItemHandling, DeletedItemHandling.INCLUDE)) {
       builder =
           builder.where(
-              "deletionTime", jpaTm().getEntityManager().getCriteriaBuilder()::equal, END_OF_TIME);
+              "deletionTime",
+              replicaJpaTm().getEntityManager().getCriteriaBuilder()::equal,
+              END_OF_TIME);
     }
     return builder;
   }

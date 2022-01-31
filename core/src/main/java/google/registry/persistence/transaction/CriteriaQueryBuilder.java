@@ -42,12 +42,14 @@ public class CriteriaQueryBuilder<T> {
 
   private final CriteriaQuery<T> query;
   private final Root<?> root;
+  private final EntityManager em;
   private final ImmutableList.Builder<Predicate> predicates = new ImmutableList.Builder<>();
   private final ImmutableList.Builder<Order> orders = new ImmutableList.Builder<>();
 
-  private CriteriaQueryBuilder(CriteriaQuery<T> query, Root<?> root) {
+  private CriteriaQueryBuilder(CriteriaQuery<T> query, Root<?> root, EntityManager em) {
     this.query = query;
     this.root = root;
+    this.em = em;
   }
 
   /** Adds a WHERE clause to the query, given the specified operation, field, and value. */
@@ -74,19 +76,18 @@ public class CriteriaQueryBuilder<T> {
    * value.
    */
   public <V> CriteriaQueryBuilder<T> whereFieldContains(String fieldName, Object value) {
-    return where(
-        jpaTm().getEntityManager().getCriteriaBuilder().isMember(value, root.get(fieldName)));
+    return where(em.getCriteriaBuilder().isMember(value, root.get(fieldName)));
   }
 
   /** Orders the result by the given field ascending. */
   public CriteriaQueryBuilder<T> orderByAsc(String fieldName) {
-    orders.add(jpaTm().getEntityManager().getCriteriaBuilder().asc(root.get(fieldName)));
+    orders.add(em.getCriteriaBuilder().asc(root.get(fieldName)));
     return this;
   }
 
   /** Orders the result by the given field descending. */
   public CriteriaQueryBuilder<T> orderByDesc(String fieldName) {
-    orders.add(jpaTm().getEntityManager().getCriteriaBuilder().desc(root.get(fieldName)));
+    orders.add(em.getCriteriaBuilder().desc(root.get(fieldName)));
     return this;
   }
 
@@ -111,7 +112,7 @@ public class CriteriaQueryBuilder<T> {
     CriteriaQuery<T> query = em.getCriteriaBuilder().createQuery(clazz);
     Root<T> root = query.from(clazz);
     query = query.select(root);
-    return new CriteriaQueryBuilder<>(query, root);
+    return new CriteriaQueryBuilder<>(query, root, em);
   }
 
   /** Creates a "count" query for the table for the class. */
@@ -120,6 +121,6 @@ public class CriteriaQueryBuilder<T> {
     CriteriaQuery<Long> query = builder.createQuery(Long.class);
     Root<T> root = query.from(clazz);
     query = query.select(builder.count(root));
-    return new CriteriaQueryBuilder<>(query, root);
+    return new CriteriaQueryBuilder<>(query, root, em);
   }
 }
