@@ -121,6 +121,24 @@ final class AppEngineConnectionTest {
   }
 
   @Test
+  void testSendAsyncPostRequest() throws Exception {
+    assertThat(
+            connection.sendAsyncPostRequest(
+                "/my/path?query",
+                ImmutableMap.of("key1", "value1", "key2", "value2"),
+                MediaType.PLAIN_TEXT_UTF_8,
+                "some data".getBytes(UTF_8)))
+        .isEqualTo("Request was sent asynchronously");
+    assertThat(httpTransport.method).isEqualTo("POST");
+    assertThat(httpTransport.url)
+        .isEqualTo("https://localhost/my/path?query&key1=value1&key2=value2");
+    assertThat(lowLevelHttpRequest.getContentType()).isEqualTo("text/plain; charset=utf-8");
+    assertThat(lowLevelHttpRequest.getContentString()).isEqualTo("some data");
+    assertThat(lowLevelHttpRequest.headers).containsEntry("Cache-Control", "no-cache");
+    assertThat(lowLevelHttpRequest.headers).containsEntry("x-requested-with", "RegistryTool");
+  }
+
+  @Test
   void testSendJsonRequest() throws Exception {
     when(lowLevelHttpResponse.getContent())
         .thenReturn(
