@@ -30,6 +30,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.CharStreams;
 import com.google.common.net.MediaType;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.re2j.Matcher;
 import com.google.re2j.Pattern;
 import google.registry.config.RegistryConfig;
@@ -38,6 +40,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import org.json.simple.JSONValue;
@@ -82,7 +86,7 @@ class AppEngineConnection {
     return CharStreams.toString(new InputStreamReader(response.getContent(), UTF_8));
   }
 
-  private String internalSend(
+  private HttpRequest createRequest(
       String endpoint, Map<String, ?> params, MediaType contentType, @Nullable byte[] payload)
       throws IOException {
     GenericUrl url = new GenericUrl(String.format("%s%s", getServer(), endpoint));
@@ -109,6 +113,13 @@ class AppEngineConnection {
                   response.getStatusMessage(),
                   (errorTitle == null ? "" : ": " + errorTitle)));
         });
+    return request;
+  }
+
+  private String internalSend(
+      String endpoint, Map<String, ?> params, MediaType contentType, @Nullable byte[] payload)
+      throws IOException {
+    HttpRequest request = createRequest(endpoint, params, contentType, payload);
     HttpResponse response = null;
     try {
       response = request.execute();
@@ -120,6 +131,27 @@ class AppEngineConnection {
     }
   }
 
+  private String internalAsyncSend(
+      String endpoint, Map<String, ?> params, MediaType contentType, @Nullable byte[] payload)
+      throws ExecutionException, InterruptedException {
+    ListenableFuture<String> asyncTask =
+        MoreExecutors.listeningDecorator(Executors.newSingleThreadExecutor())
+            .submit(
+                () -> {
+                  HttpResponse response = null;
+                  try {
+                    response = createRequest(endpoint, params, contentType, payload).execute();
+                    return CharStreams.toString(
+                        new InputStreamReader(response.getContent(), UTF_8));
+                  } finally {
+                    if (response != null) {
+                      response.disconnect();
+                    }
+                  }
+                });
+    return asyncTask.get();
+  }
+
   public String sendPostRequest(
       String endpoint, Map<String, ?> params, MediaType contentType, byte[] payload)
       throws IOException {
@@ -128,6 +160,12 @@ class AppEngineConnection {
 
   public String sendGetRequest(String endpoint, Map<String, ?> params) throws IOException {
     return internalSend(endpoint, params, MediaType.PLAIN_TEXT_UTF_8, null);
+  }
+
+  public String sendAsyncPostRequest(
+      String endpoint, Map<String, ?> params, MediaType contentType, byte[] payload)
+      throws ExecutionException, InterruptedException {
+    return internalAsyncSend(endpoint, params, contentType, checkNotNull(payload, "payload"));
   }
 
   @SuppressWarnings("unchecked")

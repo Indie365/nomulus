@@ -19,13 +19,9 @@ import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.net.MediaType;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import google.registry.loadtest.LoadTestAction;
 import google.registry.model.registrar.Registrar;
 import google.registry.model.tld.Registries;
-import java.util.concurrent.Executors;
 
 /** Command to initiate a load-test. */
 @Parameters(separators = " =", commandDescription = "Run a load test.")
@@ -131,14 +127,7 @@ class LoadTestCommand extends ConfirmingCommand
         .put("runSeconds", runSeconds)
         .build();
 
-    ListeningExecutorService service =
-        MoreExecutors.listeningDecorator(Executors.newSingleThreadExecutor());
-    ListenableFuture<String> asyncTask =
-        service.submit(
-            () ->
-                connection.sendPostRequest(
-                    LoadTestAction.PATH, params, MediaType.PLAIN_TEXT_UTF_8, new byte[0]));
-    System.err.println("Load test request was submitted.");
-    return asyncTask.isDone() ? "Load test was done." : "Load test is not done.";
+    return connection.sendAsyncPostRequest(
+        LoadTestAction.PATH, params, MediaType.PLAIN_TEXT_UTF_8, new byte[0]);
   }
 }

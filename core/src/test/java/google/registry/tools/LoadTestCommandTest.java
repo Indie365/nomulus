@@ -55,7 +55,7 @@ class LoadTestCommandTest extends CommandTestCase<LoadTestCommand> {
             .put("runSeconds", 50000)
             .build();
     verify(connection)
-        .sendPostRequest(
+        .sendAsyncPostRequest(
             eq("/_dr/loadtest"), eq(params), eq(MediaType.PLAIN_TEXT_UTF_8), eq(new byte[0]));
   }
 
@@ -85,7 +85,7 @@ class LoadTestCommandTest extends CommandTestCase<LoadTestCommand> {
             .put("runSeconds", 16)
             .build();
     verify(connection)
-        .sendPostRequest(
+        .sendAsyncPostRequest(
             eq("/_dr/loadtest"), eq(params), eq(MediaType.PLAIN_TEXT_UTF_8), eq(new byte[0]));
   }
 
