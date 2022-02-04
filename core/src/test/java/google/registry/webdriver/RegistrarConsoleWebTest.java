@@ -28,6 +28,7 @@ import google.registry.model.registrar.RegistrarAddress;
 import google.registry.model.registrar.RegistrarContact;
 import google.registry.module.frontend.FrontendServlet;
 import google.registry.server.RegistryTestServer;
+import google.registry.ui.server.registrar.RegistrarSettingsAction;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junitpioneer.jupiter.RetryingTest;
 import org.openqa.selenium.By;
@@ -140,6 +141,7 @@ public class RegistrarConsoleWebTest extends WebDriverTestCase {
 
   @RetryingTest(3)
   void testWhoisSettingsEdit() throws Throwable {
+    RegistrarSettingsAction.ENABLE_CLOUD_TASKS_UTILS = false;
     driver.get(server.getUrl("/registrar#whois-settings"));
     driver.waitForDisplayedElement(By.id("reg-app-btn-edit")).click();
     driver.setFormFieldsById(
@@ -161,6 +163,7 @@ public class RegistrarConsoleWebTest extends WebDriverTestCase {
     driver.findElement(By.id("reg-app-btn-save")).click();
     Thread.sleep(1000);
     Registrar registrar = server.runInAppEngineEnvironment(() -> loadRegistrar("TheRegistrar"));
+    RegistrarSettingsAction.ENABLE_CLOUD_TASKS_UTILS = false;
     assertThat(registrar.getEmailAddress()).isEqualTo("test1@example.com");
     assertThat(registrar.getRegistrarId()).isEqualTo("TheRegistrar");
     assertThat(registrar.getWhoisServer()).isEqualTo("foo.bar.baz");

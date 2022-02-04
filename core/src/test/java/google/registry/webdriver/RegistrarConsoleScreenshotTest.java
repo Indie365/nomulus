@@ -39,6 +39,7 @@ import google.registry.module.frontend.FrontendServlet;
 import google.registry.server.RegistryTestServer;
 import google.registry.testing.AppEngineExtension;
 import google.registry.testing.CertificateSamples;
+import google.registry.ui.server.registrar.RegistrarSettingsAction;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -144,6 +145,7 @@ class RegistrarConsoleScreenshotTest extends WebDriverTestCase {
 
   @RetryingTest(3)
   void settingsContactEdit_setRegistryLockPassword() throws Throwable {
+    RegistrarSettingsAction.ENABLE_CLOUD_TASKS_UTILS = false;
     server.runInAppEngineEnvironment(
         () -> {
           persistResource(makeRegistrar2().asBuilder().setRegistryLockAllowed(true).build());
@@ -191,6 +193,7 @@ class RegistrarConsoleScreenshotTest extends WebDriverTestCase {
               .isEqualTo(Optional.of("johndoe.registrylock@example.com"));
           return null;
         });
+    RegistrarSettingsAction.ENABLE_CLOUD_TASKS_UTILS = true;
   }
 
   @RetryingTest(3)

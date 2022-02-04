@@ -91,6 +91,20 @@ public class RegistrarSettingsAction implements Runnable, JsonActionRunner.JsonA
   static final String ARGS_PARAM = "args";
   static final String ID_PARAM = "id";
 
+  /**
+   * Allows task enqueueing to be disabled when executing registrar console test cases.
+   *
+   * <p>The existing workflow in UI test cases would trigger task enqueuing, which was not a problem
+   * with Task Queue since it's a native App Engine feature simulated by the App Engine SDK's
+   * environment. However, with Cloud Tasks, the server enqueues, fails to deliver to the actual
+   * Cloud Tasks endpoint and comes back with a permission denied error.
+   *
+   * <p>One way to allow enqueuing in backend test and avoid enqueuing in UI test is to add a
+   * switch. It should remain true all the time unless it blocks a UI test case from executing the
+   * transaction. It should be false at the beginning of the test case then back to true.
+   */
+  public static Boolean ENABLE_CLOUD_TASKS_UTILS = true;
+
   @Inject JsonActionRunner jsonActionRunner;
   @Inject AppEngineServiceUtils appEngineServiceUtils;
   @Inject RegistrarConsoleMetrics registrarConsoleMetrics;
@@ -598,11 +612,14 @@ public class RegistrarSettingsAction implements Runnable, JsonActionRunner.JsonA
     if (CollectionUtils.difference(changedKeys, "lastUpdateTime").isEmpty()) {
       return;
     }
-    // Enqueues a sync registrar sheet task targeting the App Engine service specified by hostname.
-    cloudTasksUtils.enqueue(
-        SyncRegistrarsSheetAction.QUEUE,
-        CloudTasksUtils.createGetTask(
-            SyncRegistrarsSheetAction.PATH, Service.BACKEND.toString(), ImmutableMultimap.of()));
+
+    if (ENABLE_CLOUD_TASKS_UTILS) {
+      cloudTasksUtils.enqueue(
+          SyncRegistrarsSheetAction.QUEUE,
+          CloudTasksUtils.createGetTask(
+              SyncRegistrarsSheetAction.PATH, Service.BACKEND.toString(), ImmutableMultimap.of()));
+    }
+
     String environment = Ascii.toLowerCase(String.valueOf(RegistryEnvironment.get()));
     sendEmailUtils.sendEmail(
         String.format(
