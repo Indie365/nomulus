@@ -43,8 +43,15 @@ final class EscrowDepositEncryptor {
 
   @Inject @Key("rdeSigningKey") Provider<PGPKeyPair> rdeSigningKey;
   @Inject @Key("rdeReceiverKey") Provider<PGPPublicKey> rdeReceiverKey;
-  @Inject @Key("brdaSigningKey") Provider<PGPKeyPair> brdaSigningKey;
-  @Inject @Key("brdaReceiverKey") Provider<PGPPublicKey> brdaReceiverKey;
+
+  @Inject
+  @Key("brdaSigningKey")
+  Provider<PGPKeyPair> brdaSigningKey;
+
+  @Inject
+  @Key("brdaReceiverKey")
+  Provider<PGPPublicKey> brdaReceiverKey;
+
   @Inject EscrowDepositEncryptor() {}
 
   /** Creates a {@code .ryde} and {@code .sig} file, provided an XML deposit file. */
@@ -53,7 +60,7 @@ final class EscrowDepositEncryptor {
     try (InputStream xmlFileInput = Files.newInputStream(xmlFile);
         BufferedInputStream xmlInput = new BufferedInputStream(xmlFileInput, PEEK_BUFFER_SIZE)) {
       DateTime watermark = RdeUtil.peekWatermark(xmlInput);
-      String name = RdeNamingUtils.makeRydeFilename(tld, watermark, FULL, 1, revision);
+      String name = RdeNamingUtils.makeRydeFilename(tld, watermark, mode, 1, revision);
       Path rydePath = outdir.resolve(name + ".ryde");
       Path sigPath = outdir.resolve(name + ".sig");
       Path pubPath = outdir.resolve(tld + ".pub");
