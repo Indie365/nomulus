@@ -39,8 +39,11 @@ import com.google.appengine.api.urlfetch.HTTPRequest;
 import com.google.appengine.api.urlfetch.HTTPResponse;
 import com.google.appengine.api.urlfetch.URLFetchService;
 import com.google.apphosting.api.DeadlineExceededException;
+import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.collect.Ordering;
 import com.google.common.flogger.FluentLogger;
 import google.registry.config.RegistryConfig.Config;
 import google.registry.request.Action;
@@ -125,15 +128,19 @@ public final class NordnUploadAction implements Runnable {
    * delimited String.
    */
   static String convertTasksToCsv(List<TaskHandle> tasks, DateTime now, String columns) {
-    String header = String.format("1,%s,%d\n%s\n", now, tasks.size(), columns);
-    StringBuilder csv = new StringBuilder(header);
+    // Use a Set for deduping purposes so we can be idempotent in case tasks happened to be
+    // enqueued multiple times for a given domain create.
+    ImmutableSortedSet.Builder<String> builder =
+        new ImmutableSortedSet.Builder<>(Ordering.natural());
     for (TaskHandle task : checkNotNull(tasks)) {
       String payload = new String(task.getPayload(), UTF_8);
       if (!Strings.isNullOrEmpty(payload)) {
-        csv.append(payload).append("\n");
+        builder.add(payload + '\n');
       }
     }
-    return csv.toString();
+    ImmutableSortedSet<String> csvLines = builder.build();
+    String header = String.format("1,%s,%d\n%s\n", now, csvLines.size(), columns);
+    return header + Joiner.on("").join(csvLines);
   }
 
   /** Leases and returns all tasks from the queue with the specified tag tld, in batches. */
