@@ -19,7 +19,9 @@ import static google.registry.model.ImmutableObjectSubject.assertAboutImmutableO
 import static google.registry.testing.DatabaseHelper.loadRegistrar;
 import static google.registry.testing.DatabaseHelper.persistResource;
 import static google.registry.testing.TestDataHelper.loadFile;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -76,6 +78,20 @@ class RegistrarSettingsActionTest extends RegistrarSettingsActionTestCase {
             .url(SyncRegistrarsSheetAction.PATH)
             .service("Backend")
             .method(HttpMethod.GET));
+    assertMetric(CLIENT_ID, "update", "[OWNER]", "SUCCESS");
+  }
+
+  @TestOfyAndSql
+  void testEmailFailure_updateRegistrarInfoSuccessfully_failToSendEmail_noEnqueueing()
+      throws Exception {
+    String expectedEmailBody = loadFile(getClass(), "update_registrar_email.txt");
+    // This update changes some values on the admin contact and makes it a tech contact as well,
+    // while deleting the existing tech contact (by omission).
+    doThrow(new RuntimeException("this is a runtime exception"))
+        .when(emailService)
+        .sendEmail(any());
+    action.handleJsonRequest(readJsonFromFile("update_registrar.json", getLastUpdateTime()));
+    cloudTasksHelper.assertNoTasksEnqueued("sheet");
     assertMetric(CLIENT_ID, "update", "[OWNER]", "SUCCESS");
   }
 
