@@ -77,13 +77,11 @@ public class UploadDatastoreBackupAction implements Runnable {
 
   static final String PATH = "/_dr/task/uploadDatastoreBackup"; // See web.xml.
 
-  static final String SERVICE = Service.BACKEND.toString();
-
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   @Inject CheckedBigquery checkedBigquery;
-
   @Inject CloudTasksUtils cloudTasksUtils;
+  @Inject Clock clock;
 
   @Inject @Config("projectId") String projectId;
 
@@ -98,8 +96,6 @@ public class UploadDatastoreBackupAction implements Runnable {
   @Inject
   @Parameter(UPLOAD_BACKUP_KINDS_PARAM)
   String backupKinds;
-
-  @Inject Clock clock;
 
   @Inject
   UploadDatastoreBackupAction() {}
@@ -147,7 +143,7 @@ public class UploadDatastoreBackupAction implements Runnable {
           .writeObject(
               CloudTasksUtils.createPostTask(
                   UpdateSnapshotViewAction.PATH,
-                  UpdateSnapshotViewAction.SERVICE,
+                  Service.BACKEND.toString(),
                   ImmutableMultimap.of(
                       UpdateSnapshotViewAction.UPDATE_SNAPSHOT_DATASET_ID_PARAM,
                       BACKUP_DATASET,
@@ -160,10 +156,7 @@ public class UploadDatastoreBackupAction implements Runnable {
 
       Instant scheduleTime =
           Instant.ofEpochMilli(
-              clock
-                  .nowUtc()
-                  .plusMillis((int) BigqueryPollJobAction.POLL_COUNTDOWN.getMillis())
-                  .getMillis());
+              clock.nowUtc().plus(BigqueryPollJobAction.POLL_COUNTDOWN).getMillis());
       // Enqueues a task to poll for the success or failure of the referenced BigQuery job and to
       // launch the provided task in the specified queue if the job succeeds.
       cloudTasksUtils.enqueue(
