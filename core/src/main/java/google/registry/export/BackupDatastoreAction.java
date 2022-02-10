@@ -24,6 +24,7 @@ import google.registry.export.datastore.DatastoreAdmin;
 import google.registry.export.datastore.Operation;
 import google.registry.model.annotations.DeleteAfterMigration;
 import google.registry.request.Action;
+import google.registry.request.Action.Service;
 import google.registry.request.HttpException.InternalServerErrorException;
 import google.registry.request.Response;
 import google.registry.request.auth.Auth;
@@ -79,13 +80,13 @@ public class BackupDatastoreAction implements Runnable {
 
       String backupName = backup.getName();
 
-      // Enqueue a poll task to monitor the backup for completion and load REPORTING-related kinds
+      // Enqueue a poll task to monitor the backup for completion and load reporting-related kinds
       // into bigquery.
       cloudTasksUtils.enqueue(
           CheckBackupAction.QUEUE,
           CloudTasksUtils.createPostTask(
               CheckBackupAction.PATH,
-              CheckBackupAction.SERVICE,
+              Service.BACKEND.toString(),
               ImmutableMultimap.of(
                   CheckBackupAction.CHECK_BACKUP_NAME_PARAM,
                   backupName,

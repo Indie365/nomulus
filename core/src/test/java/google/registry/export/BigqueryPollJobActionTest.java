@@ -88,6 +88,9 @@ public class BigqueryPollJobActionTest {
 
   @Test
   void testSuccess_enqueuePollTask_withChainedTask() throws Exception {
+    // Serialize the chainedTask into a byte array to put in the task payload.
+    ByteArrayOutputStream chainedTaskBytes = new ByteArrayOutputStream();
+    // Set up chain task
     Task chainedTask =
         Task.newBuilder()
             .setAppEngineHttpRequest(
@@ -98,12 +101,9 @@ public class BigqueryPollJobActionTest {
                         AppEngineRouting.newBuilder().setService("SERVICE").build())
                     .build())
             .build();
+    new ObjectOutputStream(chainedTaskBytes).writeObject(chainedTask);
 
-    // Serialize the chainedTask into a byte array to put in the task payload.
-    ByteArrayOutputStream taskBytes = new ByteArrayOutputStream();
-    new ObjectOutputStream(taskBytes).writeObject(chainedTask);
-    action.cloudTasksUtils.enqueue(
-        BigqueryPollJobAction.QUEUE,
+    Task task =
         Task.newBuilder()
             .setAppEngineHttpRequest(
                 CloudTasksUtils.createPostTask(
@@ -117,19 +117,30 @@ public class BigqueryPollJobActionTest {
                     .putHeaders(BigqueryPollJobAction.CHAINED_TASK_QUEUE_HEADER, CHAINED_QUEUE_NAME)
                     // need to include CONTENT_TYPE in header when body is not empty
                     .putHeaders(HttpHeaders.CONTENT_TYPE, MediaType.FORM_DATA.toString())
-                    .setBody(ByteString.copyFrom(taskBytes.toByteArray()))
+                    .setBody(ByteString.copyFrom(chainedTaskBytes.toByteArray()))
                     .build())
-            .build());
+            .build();
+
+    ByteArrayOutputStream taskBytes = new ByteArrayOutputStream();
+    new ObjectOutputStream(taskBytes).writeObject(task);
+
+    // Set up chain task
+    when(bigqueryJobsGet.execute())
+        .thenReturn(new Job().setStatus(new JobStatus().setState("DONE")));
+    action.payload = taskBytes.toByteArray();
+    action.run();
 
     cloudTasksHelper.assertTasksEnqueued(
-        BigqueryPollJobAction.QUEUE,
+        CHAINED_QUEUE_NAME,
         new TaskMatcher()
             .method(HttpMethod.POST)
             .url(BigqueryPollJobAction.PATH)
+            .header(HttpHeaders.CONTENT_TYPE, MediaType.FORM_DATA.toString())
             .header(BigqueryPollJobAction.PROJECT_ID_HEADER, PROJECT_ID)
-            .header(BigqueryPollJobAction.JOB_ID_HEADER, JOB_ID));
+            .header(BigqueryPollJobAction.JOB_ID_HEADER, JOB_ID)
+            .header(BigqueryPollJobAction.CHAINED_TASK_QUEUE_HEADER, CHAINED_QUEUE_NAME));
 
-    Task enqueuedTask = cloudTasksHelper.getTestTasksFor(BigqueryPollJobAction.QUEUE).get(0);
+    Task enqueuedTask = cloudTasksHelper.getTestTasksFor(CHAINED_QUEUE_NAME).get(0);
     assertThat(
             (Task)
                 new ObjectInputStream(
