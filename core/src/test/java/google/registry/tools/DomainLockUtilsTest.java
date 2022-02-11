@@ -47,6 +47,7 @@ import google.registry.model.host.HostResource;
 import google.registry.model.reporting.HistoryEntry;
 import google.registry.model.tld.Registry;
 import google.registry.testing.AppEngineExtension;
+import google.registry.testing.CloudTasksHelper;
 import google.registry.testing.DatabaseHelper;
 import google.registry.testing.DeterministicStringGenerator;
 import google.registry.testing.DualDatabaseTest;
@@ -99,7 +100,8 @@ public final class DomainLockUtilsTest {
             new DeterministicStringGenerator(Alphabets.BASE_58),
             "adminreg",
             AsyncTaskEnqueuerTest.createForTesting(
-                appEngineServiceUtils, clock, standardSeconds(90)));
+                appEngineServiceUtils, new CloudTasksHelper().getTestCloudTasksUtils(),
+                clock, standardSeconds(90)));
   }
 
   @TestOfyAndSql
@@ -257,6 +259,7 @@ public final class DomainLockUtilsTest {
             DOMAIN_NAME, "TheRegistrar", false, Optional.of(standardDays(1)));
     assertThat(lock.getRelockDuration()).isEqualTo(Optional.of(standardDays(1)));
   }
+
 
   @TestOfyAndSql
   void testSuccess_unlock_relockSubmitted() {
