@@ -14,6 +14,7 @@
 
 package google.registry.tmch;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static google.registry.tmch.TmchTestData.loadBytes;
 import static org.mockito.Mockito.times;
@@ -21,9 +22,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import google.registry.model.smd.SignedMarkRevocationList;
+import java.io.ByteArrayInputStream;
+import java.net.URL;
 import java.util.Optional;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.Test;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 /** Unit tests for {@link TmchSmdrlAction}. */
 class TmchSmdrlActionTest extends TmchActionTestCase {
@@ -38,19 +43,22 @@ class TmchSmdrlActionTest extends TmchActionTestCase {
   }
 
   @Test
+  @MockitoSettings(strictness = Strictness.LENIENT)
   void testSuccess_smdrl() throws Exception {
     SignedMarkRevocationList smdrl = SignedMarkRevocationList.get();
     assertThat(smdrl.isSmdRevoked("0000001681375789102250-65535", now)).isFalse();
     assertThat(smdrl.isSmdRevoked("0000001681375789102250-65536", now)).isFalse();
-    when(httpResponse.getContent())
-        .thenReturn(loadBytes("smdrl-latest.csv").read())
-        .thenReturn(loadBytes("smdrl-latest.sig").read());
+    when(urlConnectionService.getMockConnection().getInputStream())
+        .thenReturn(new ByteArrayInputStream(loadBytes("smdrl-latest.csv").read()))
+        .thenReturn(new ByteArrayInputStream(loadBytes("smdrl-latest.sig").read()));
     newTmchSmdrlAction().run();
-    verify(fetchService, times(2)).fetch(httpRequest.capture());
-    assertThat(httpRequest.getAllValues().get(0).getURL().toString())
-        .isEqualTo(MARKSDB_URL + "/smdrl/smdrl-latest.csv");
-    assertThat(httpRequest.getAllValues().get(1).getURL().toString())
-        .isEqualTo(MARKSDB_URL + "/smdrl/smdrl-latest.sig");
+    verify(urlConnectionService.getMockConnection(), times(2)).getInputStream();
+    assertThat(
+            urlConnectionService.getConnectedUrls().stream()
+                .map(URL::toString)
+                .collect(toImmutableList()))
+        .containsExactly(
+            MARKSDB_URL + "/smdrl/smdrl-latest.csv", MARKSDB_URL + "/smdrl/smdrl-latest.sig");
     smdrl = SignedMarkRevocationList.get();
     assertThat(smdrl.isSmdRevoked("0000001681375789102250-65535", now)).isTrue();
     assertThat(smdrl.isSmdRevoked("0000001681375789102250-65536", now)).isFalse();
