@@ -15,14 +15,14 @@
 package google.registry.tmch;
 
 import static com.google.common.base.Verify.verifyNotNull;
-import static google.registry.util.UrlFetchUtils.setAuthorizationHeader;
 
-import com.google.appengine.api.urlfetch.HTTPRequest;
 import com.google.common.flogger.FluentLogger;
 import google.registry.keyring.api.KeyModule.Key;
 import google.registry.model.tld.Registry;
+import google.registry.request.UrlConnectionUtils;
 import java.util.Optional;
 import javax.inject.Inject;
+import javax.net.ssl.HttpsURLConnection;
 
 /** Helper class for setting the authorization header on a MarksDB LORDN request. */
 final class LordnRequestInitializer {
@@ -37,8 +37,9 @@ final class LordnRequestInitializer {
   }
 
   /** Initializes a URL fetch request for talking to the MarksDB server. */
-  void initialize(HTTPRequest request, String tld) {
-    setAuthorizationHeader(request, getMarksDbLordnCredentials(tld));
+  void initialize(HttpsURLConnection connection, String tld) {
+    getMarksDbLordnCredentials(tld)
+        .ifPresent(login -> UrlConnectionUtils.setBasicAuth(connection, login));
   }
 
   /** Returns the username and password for the current TLD to login to the MarksDB server. */

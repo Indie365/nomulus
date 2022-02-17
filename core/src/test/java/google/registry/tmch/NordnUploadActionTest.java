@@ -19,21 +19,22 @@ import static com.google.common.net.HttpHeaders.CONTENT_TYPE;
 import static com.google.common.net.HttpHeaders.LOCATION;
 import static com.google.common.net.MediaType.FORM_DATA;
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 import static google.registry.testing.DatabaseHelper.createTld;
 import static google.registry.testing.DatabaseHelper.loadRegistrar;
 import static google.registry.testing.DatabaseHelper.newDomainBase;
 import static google.registry.testing.DatabaseHelper.persistDomainAndEnqueueLordn;
 import static google.registry.testing.DatabaseHelper.persistResource;
 import static google.registry.testing.TaskQueueHelper.assertTasksEnqueued;
-import static google.registry.util.UrlFetchUtils.getHeaderFirst;
-import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static javax.servlet.http.HttpServletResponse.SC_ACCEPTED;
 import static javax.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.startsWith;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -43,10 +44,6 @@ import com.google.appengine.api.taskqueue.TaskHandle;
 import com.google.appengine.api.taskqueue.TaskOptions;
 import com.google.appengine.api.taskqueue.TaskOptions.Method;
 import com.google.appengine.api.taskqueue.TransientFailureException;
-import com.google.appengine.api.urlfetch.HTTPHeader;
-import com.google.appengine.api.urlfetch.HTTPRequest;
-import com.google.appengine.api.urlfetch.HTTPResponse;
-import com.google.appengine.api.urlfetch.URLFetchService;
 import com.google.apphosting.api.DeadlineExceededException;
 import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableList;
@@ -61,25 +58,20 @@ import google.registry.testing.InjectExtension;
 import google.registry.testing.TaskQueueHelper.TaskMatcher;
 import google.registry.util.Retrier;
 import google.registry.util.TaskQueueUtils;
-import google.registry.util.UrlFetchException;
+import google.registry.util.UrlConnectionException;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.net.URL;
 import java.security.SecureRandom;
 import java.util.List;
 import java.util.Optional;
+import javax.net.ssl.HttpsURLConnection;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 
 /** Unit tests for {@link NordnUploadAction}. */
-@ExtendWith(MockitoExtension.class)
 class NordnUploadActionTest {
 
   private static final String CLAIMS_CSV =
@@ -102,9 +94,8 @@ class NordnUploadActionTest {
 
   @RegisterExtension public final InjectExtension inject = new InjectExtension();
 
-  @Mock private URLFetchService fetchService;
-  @Mock private HTTPResponse httpResponse;
-  @Captor private ArgumentCaptor<HTTPRequest> httpRequestCaptor;
+  private final HttpsURLConnection httpsURLConnection = mock(HttpsURLConnection.class);
+  private final ByteArrayOutputStream connectionOutputStream = new ByteArrayOutputStream();
 
   private final FakeClock clock = new FakeClock(DateTime.parse("2010-05-01T10:11:12Z"));
   private final LordnRequestInitializer lordnRequestInitializer =
@@ -114,16 +105,20 @@ class NordnUploadActionTest {
   @BeforeEach
   void beforeEach() throws Exception {
     inject.setStaticField(Ofy.class, "clock", clock);
-    when(fetchService.fetch(any(HTTPRequest.class))).thenReturn(httpResponse);
-    when(httpResponse.getContent()).thenReturn("Success".getBytes(US_ASCII));
-    when(httpResponse.getResponseCode()).thenReturn(SC_ACCEPTED);
-    when(httpResponse.getHeadersUncombined())
-        .thenReturn(ImmutableList.of(new HTTPHeader(LOCATION, "http://trololol")));
+    when(httpsURLConnection.getInputStream())
+        .thenReturn(new ByteArrayInputStream("Success".getBytes(UTF_8)));
+    when(httpsURLConnection.getResponseCode()).thenReturn(SC_ACCEPTED);
+    when(httpsURLConnection.getHeaderField(LOCATION)).thenReturn("http://trololol");
+    when(httpsURLConnection.getOutputStream()).thenReturn(connectionOutputStream);
     persistResource(loadRegistrar("TheRegistrar").asBuilder().setIanaIdentifier(99999L).build());
     createTld("tld");
     persistResource(Registry.get("tld").asBuilder().setLordnUsername("lolcat").build());
     action.clock = clock;
-    action.fetchService = fetchService;
+    action.urlConnectionService =
+        (url) -> {
+          when(httpsURLConnection.getURL()).thenReturn(url);
+          return httpsURLConnection;
+        };
     action.lordnRequestInitializer = lordnRequestInitializer;
     action.phase = "claims";
     action.taskQueueUtils = new TaskQueueUtils(new Retrier(new FakeSleeper(clock), 3));
@@ -133,7 +128,6 @@ class NordnUploadActionTest {
     action.retrier = new Retrier(new FakeSleeper(clock), 3);
   }
 
-  @MockitoSettings(strictness = Strictness.LENIENT)
   @Test
   void test_convertTasksToCsv() {
     List<TaskHandle> tasks =
@@ -145,7 +139,6 @@ class NordnUploadActionTest {
         .isEqualTo("1,2010-05-01T10:11:12.000Z,3\ncol1,col2\ncsvLine1\ncsvLine2\nending\n");
   }
 
-  @MockitoSettings(strictness = Strictness.LENIENT)
   @Test
   void test_convertTasksToCsv_dedupesDuplicates() {
     List<TaskHandle> tasks =
@@ -158,14 +151,12 @@ class NordnUploadActionTest {
         .isEqualTo("1,2010-05-01T10:11:12.000Z,3\ncol1,col2\ncsvLine1\ncsvLine2\nending\n");
   }
 
-  @MockitoSettings(strictness = Strictness.LENIENT)
   @Test
   void test_convertTasksToCsv_doesntFailOnEmptyTasks() {
     assertThat(NordnUploadAction.convertTasksToCsv(ImmutableList.of(), clock.nowUtc(), "col1,col2"))
         .isEqualTo("1,2010-05-01T10:11:12.000Z,0\ncol1,col2\n");
   }
 
-  @MockitoSettings(strictness = Strictness.LENIENT)
   @Test
   void test_convertTasksToCsv_throwsNpeOnNullTasks() {
     assertThrows(
@@ -173,7 +164,6 @@ class NordnUploadActionTest {
         () -> NordnUploadAction.convertTasksToCsv(null, clock.nowUtc(), "header"));
   }
 
-  @MockitoSettings(strictness = Strictness.LENIENT)
   @SuppressWarnings("unchecked")
   @Test
   void test_loadAllTasks_retryLogic_thirdTrysTheCharm() {
@@ -186,7 +176,6 @@ class NordnUploadActionTest {
     assertThat(action.loadAllTasks(queue, "tld")).containsExactly(task);
   }
 
-  @MockitoSettings(strictness = Strictness.LENIENT)
   @Test
   void test_loadAllTasks_retryLogic_allFailures() {
     Queue queue = mock(Queue.class);
@@ -201,15 +190,14 @@ class NordnUploadActionTest {
   void testRun_claimsMode_appendsTldAndClaimsToRequestUrl() throws Exception {
     persistClaimsModeDomain();
     action.run();
-    assertThat(getCapturedHttpRequest().getURL())
-        .isEqualTo(new URL("http://127.0.0.1/LORDN/tld/claims"));
+    assertThat(httpsURLConnection.getURL()).isEqualTo(new URL("http://127.0.0.1/LORDN/tld/claims"));
   }
 
   @Test
   void testRun_sunriseMode_appendsTldAndClaimsToRequestUrl() throws Exception {
     persistSunriseModeDomain();
     action.run();
-    assertThat(getCapturedHttpRequest().getURL())
+    assertThat(httpsURLConnection.getURL())
         .isEqualTo(new URL("http://127.0.0.1/LORDN/tld/sunrise"));
   }
 
@@ -217,31 +205,33 @@ class NordnUploadActionTest {
   void testRun_usesMultipartContentType() throws Exception {
     persistClaimsModeDomain();
     action.run();
-    assertThat(getHeaderFirst(getCapturedHttpRequest(), CONTENT_TYPE).get())
-        .startsWith("multipart/form-data; boundary=");
+    verify(httpsURLConnection)
+        .setRequestProperty(eq(CONTENT_TYPE), startsWith("multipart/form-data; boundary="));
+    verify(httpsURLConnection).setRequestMethod("POST");
   }
 
   @Test
-  void testRun_hasPassword_setsAuthorizationHeader() throws Exception {
+  void testRun_hasPassword_setsAuthorizationHeader() {
     persistClaimsModeDomain();
     action.run();
-    assertThat(getHeaderFirst(getCapturedHttpRequest(), AUTHORIZATION))
-        .hasValue("Basic bG9sY2F0OmF0dGFjaw=="); // echo -n lolcat:attack | base64
+    verify(httpsURLConnection)
+        .setRequestProperty(
+            AUTHORIZATION, "Basic bG9sY2F0OmF0dGFjaw=="); // echo -n lolcat:attack | base64
   }
 
   @Test
-  void testRun_noPassword_doesntSendAuthorizationHeader() throws Exception {
+  void testRun_noPassword_doesntSendAuthorizationHeader() {
     action.lordnRequestInitializer = new LordnRequestInitializer(Optional.empty());
     persistClaimsModeDomain();
     action.run();
-    assertThat(getHeaderFirst(getCapturedHttpRequest(), AUTHORIZATION)).isEmpty();
+    verify(httpsURLConnection, times(0)).setRequestProperty(eq(AUTHORIZATION), anyString());
   }
 
   @Test
-  void testRun_claimsMode_payloadMatchesClaimsCsv() throws Exception {
+  void testRun_claimsMode_payloadMatchesClaimsCsv() {
     persistClaimsModeDomain();
     action.run();
-    assertThat(new String(getCapturedHttpRequest().getPayload(), UTF_8)).contains(CLAIMS_CSV);
+    assertThat(new String(connectionOutputStream.toByteArray(), UTF_8)).contains(CLAIMS_CSV);
   }
 
   @Test
@@ -260,16 +250,16 @@ class NordnUploadActionTest {
   void testRun_sunriseMode_payloadMatchesSunriseCsv() throws Exception {
     persistSunriseModeDomain();
     action.run();
-    assertThat(new String(getCapturedHttpRequest().getPayload(), UTF_8)).contains(SUNRISE_CSV);
+    assertThat(new String(connectionOutputStream.toByteArray(), UTF_8)).contains(SUNRISE_CSV);
   }
 
   @Test
   void test_noResponseContent_stillWorksNormally() throws Exception {
     // Returning null only affects logging.
-    when(httpResponse.getContent()).thenReturn(null);
+    when(httpsURLConnection.getInputStream()).thenReturn(new ByteArrayInputStream(new byte[] {}));
     persistSunriseModeDomain();
     action.run();
-    assertThat(new String(getCapturedHttpRequest().getPayload(), UTF_8)).contains(SUNRISE_CSV);
+    assertThat(new String(connectionOutputStream.toByteArray(), UTF_8)).contains(SUNRISE_CSV);
   }
 
   @Test
@@ -284,7 +274,6 @@ class NordnUploadActionTest {
             .header(CONTENT_TYPE, FORM_DATA.toString()));
   }
 
-  @MockitoSettings(strictness = Strictness.LENIENT)
   @Test
   void testFailure_nullRegistryUser() {
     persistClaimsModeDomain();
@@ -293,17 +282,11 @@ class NordnUploadActionTest {
     assertThat(thrown).hasMessageThat().contains("lordnUsername is not set for tld.");
   }
 
-  @MockitoSettings(strictness = Strictness.LENIENT)
   @Test
-  void testFetchFailure() {
+  void testFetchFailure() throws Exception {
     persistClaimsModeDomain();
-    when(httpResponse.getResponseCode()).thenReturn(SC_INTERNAL_SERVER_ERROR);
-    assertThrows(UrlFetchException.class, action::run);
-  }
-
-  private HTTPRequest getCapturedHttpRequest() throws Exception {
-    verify(fetchService).fetch(httpRequestCaptor.capture());
-    return httpRequestCaptor.getAllValues().get(0);
+    when(httpsURLConnection.getResponseCode()).thenReturn(SC_INTERNAL_SERVER_ERROR);
+    assertThrows(UrlConnectionException.class, action::run);
   }
 
   private void persistClaimsModeDomain() {
