@@ -23,13 +23,12 @@ import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.appengine.api.datastore.DatastoreService;
-import com.google.appengine.api.urlfetch.URLFetchService;
-import com.google.appengine.api.urlfetch.URLFetchServiceFactory;
 import com.google.appengine.api.users.UserService;
 import com.google.appengine.api.users.UserServiceFactory;
 import dagger.Module;
 import dagger.Provides;
 import javax.inject.Singleton;
+import javax.net.ssl.HttpsURLConnection;
 
 /** Dagger modules for App Engine services and other vendor classes. */
 public final class Modules {
@@ -45,14 +44,12 @@ public final class Modules {
     }
   }
 
-  /** Dagger module for {@link URLFetchService}. */
+  /** Dagger module for {@link UrlConnectionService}, injectable for testing. */
   @Module
-  public static final class URLFetchServiceModule {
-    private static final URLFetchService fetchService = URLFetchServiceFactory.getURLFetchService();
-
+  public static final class UrlConnectionServiceModule {
     @Provides
-    static URLFetchService provideURLFetchService() {
-      return fetchService;
+    static UrlConnectionService provideUrlConnectionService() {
+      return url -> (HttpsURLConnection) url.openConnection();
     }
   }
 
