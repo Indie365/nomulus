@@ -1112,7 +1112,12 @@ public class DomainFlowUtils {
         // Only cancel fields which are cancelable
         if (cancelableFields.contains(record.getReportField())) {
           int cancelledAmount = -1 * record.getReportAmount();
-          recordsBuilder.add(record.asBuilder().setReportAmount(cancelledAmount).build());
+          recordsBuilder.add(
+              DomainTransactionRecord.create(
+                  record.getTld(),
+                  record.getReportingTime(),
+                  record.getReportField(),
+                  cancelledAmount));
         }
       }
     }
