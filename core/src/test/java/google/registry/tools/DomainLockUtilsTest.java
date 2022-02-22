@@ -100,7 +100,7 @@ public final class DomainLockUtilsTest {
             new DeterministicStringGenerator(Alphabets.BASE_58),
             "adminreg",
             AsyncTaskEnqueuerTest.createForTesting(
-                appEngineServiceUtils, new CloudTasksHelper().getTestCloudTasksUtils(),
+                appEngineServiceUtils, new CloudTasksHelper(clock).getTestCloudTasksUtils(),
                 clock, standardSeconds(90)));
   }
 
