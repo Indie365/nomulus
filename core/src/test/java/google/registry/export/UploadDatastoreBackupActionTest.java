@@ -19,6 +19,10 @@ import static com.google.common.truth.Truth.assertThat;
 import static google.registry.export.BigqueryPollJobAction.CHAINED_TASK_QUEUE_HEADER;
 import static google.registry.export.BigqueryPollJobAction.JOB_ID_HEADER;
 import static google.registry.export.BigqueryPollJobAction.PROJECT_ID_HEADER;
+import static google.registry.export.UpdateSnapshotViewAction.UPDATE_SNAPSHOT_DATASET_ID_PARAM;
+import static google.registry.export.UpdateSnapshotViewAction.UPDATE_SNAPSHOT_KIND_PARAM;
+import static google.registry.export.UpdateSnapshotViewAction.UPDATE_SNAPSHOT_TABLE_ID_PARAM;
+import static google.registry.export.UpdateSnapshotViewAction.UPDATE_SNAPSHOT_VIEWNAME_PARAM;
 import static google.registry.export.UploadDatastoreBackupAction.BACKUP_DATASET;
 import static google.registry.export.UploadDatastoreBackupAction.getBackupInfoFileForKind;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -34,6 +38,8 @@ import com.google.api.services.bigquery.model.Dataset;
 import com.google.api.services.bigquery.model.Job;
 import com.google.api.services.bigquery.model.JobConfigurationLoad;
 import com.google.cloud.tasks.v2.HttpMethod;
+import com.google.cloud.tasks.v2.Task;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Iterables;
 import com.google.protobuf.util.Timestamps;
 import google.registry.bigquery.CheckedBigquery;
@@ -42,7 +48,9 @@ import google.registry.testing.AppEngineExtension;
 import google.registry.testing.CloudTasksHelper;
 import google.registry.testing.CloudTasksHelper.TaskMatcher;
 import google.registry.testing.FakeClock;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -163,6 +171,72 @@ public class UploadDatastoreBackupActionTest {
             .scheduleTime(
                 Timestamps.fromMillis(
                     action.clock.nowUtc().plus(BigqueryPollJobAction.POLL_COUNTDOWN).getMillis())));
+
+    List<Task> enqueudTasks = cloudTasksHelper.getTestTasksFor(BigqueryPollJobAction.QUEUE);
+    // assert the chained task of each enqueud task is correct
+    assertThat(
+            (Task)
+                new ObjectInputStream(
+                        new ByteArrayInputStream(
+                            enqueudTasks.get(0).getAppEngineHttpRequest().getBody().toByteArray()))
+                    .readObject())
+        .isEqualTo(
+            cloudTasksHelper
+                .getTestCloudTasksUtils()
+                .createPostTask(
+                    UpdateSnapshotViewAction.PATH,
+                    "BACKEND",
+                    ImmutableMultimap.of(
+                        UPDATE_SNAPSHOT_DATASET_ID_PARAM,
+                        "datastore_backups",
+                        UPDATE_SNAPSHOT_TABLE_ID_PARAM,
+                        "2018_12_05T17_46_39_92612_one",
+                        UPDATE_SNAPSHOT_KIND_PARAM,
+                        "one",
+                        UPDATE_SNAPSHOT_VIEWNAME_PARAM,
+                        "latest_datastore_export")));
+    assertThat(
+            (Task)
+                new ObjectInputStream(
+                        new ByteArrayInputStream(
+                            enqueudTasks.get(1).getAppEngineHttpRequest().getBody().toByteArray()))
+                    .readObject())
+        .isEqualTo(
+            cloudTasksHelper
+                .getTestCloudTasksUtils()
+                .createPostTask(
+                    UpdateSnapshotViewAction.PATH,
+                    "BACKEND",
+                    ImmutableMultimap.of(
+                        UPDATE_SNAPSHOT_DATASET_ID_PARAM,
+                        "datastore_backups",
+                        UPDATE_SNAPSHOT_TABLE_ID_PARAM,
+                        "2018_12_05T17_46_39_92612_two",
+                        UPDATE_SNAPSHOT_KIND_PARAM,
+                        "two",
+                        UPDATE_SNAPSHOT_VIEWNAME_PARAM,
+                        "latest_datastore_export")));
+    assertThat(
+            (Task)
+                new ObjectInputStream(
+                        new ByteArrayInputStream(
+                            enqueudTasks.get(2).getAppEngineHttpRequest().getBody().toByteArray()))
+                    .readObject())
+        .isEqualTo(
+            cloudTasksHelper
+                .getTestCloudTasksUtils()
+                .createPostTask(
+                    UpdateSnapshotViewAction.PATH,
+                    "BACKEND",
+                    ImmutableMultimap.of(
+                        UPDATE_SNAPSHOT_DATASET_ID_PARAM,
+                        "datastore_backups",
+                        UPDATE_SNAPSHOT_TABLE_ID_PARAM,
+                        "2018_12_05T17_46_39_92612_three",
+                        UPDATE_SNAPSHOT_KIND_PARAM,
+                        "three",
+                        UPDATE_SNAPSHOT_VIEWNAME_PARAM,
+                        "latest_datastore_export")));
   }
 
   @Test
