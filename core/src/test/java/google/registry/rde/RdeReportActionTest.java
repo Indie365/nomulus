@@ -28,6 +28,7 @@ import static javax.servlet.http.HttpServletResponse.SC_OK;
 import static org.joda.time.Duration.standardDays;
 import static org.joda.time.Duration.standardSeconds;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -57,13 +58,15 @@ import google.registry.xjc.rdereport.XjcRdeReportReport;
 import google.registry.xml.XmlException;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.net.HttpURLConnection;
 import java.net.SocketTimeoutException;
 import java.util.Optional;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLSocketFactory;
 import org.bouncycastle.openpgp.PGPPublicKey;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.mockito.ArgumentCaptor;
 
 /** Unit tests for {@link RdeReportAction}. */
 @DualDatabaseTest
@@ -87,9 +90,9 @@ public class RdeReportActionTest {
   private final GcsUtils gcsUtils = new GcsUtils(LocalStorageHelper.getOptions());
   private final BlobId reportFile =
       BlobId.of("tub", "test_2006-06-06_full_S1_R0-report.xml.ghostryde");
-  private final HttpURLConnection httpUrlConnection = mock(HttpURLConnection.class);
+  private final HttpsURLConnection httpsUrlConnection = mock(HttpsURLConnection.class);
   private final FakeUrlConnectionService urlConnectionService =
-      new FakeUrlConnectionService(httpUrlConnection);
+      new FakeUrlConnectionService(httpsUrlConnection);
   private final ByteArrayOutputStream connectionOutputStream = new ByteArrayOutputStream();
 
   private RdeReportAction createAction() {
@@ -121,7 +124,7 @@ public class RdeReportActionTest {
         Cursor.create(RDE_UPLOAD, DateTime.parse("2006-06-07TZ"), Registry.get("test")));
     gcsUtils.createFromBytes(reportFile, Ghostryde.encode(REPORT_XML.read(), encryptKey));
     tm().transact(() -> RdeRevision.saveRevision("test", DateTime.parse("2006-06-06TZ"), FULL, 0));
-    when(httpUrlConnection.getOutputStream()).thenReturn(connectionOutputStream);
+    when(httpsUrlConnection.getOutputStream()).thenReturn(connectionOutputStream);
   }
 
   @TestOfyAndSql
@@ -137,19 +140,22 @@ public class RdeReportActionTest {
 
   @TestOfyAndSql
   void testRunWithLock() throws Exception {
-    when(httpUrlConnection.getResponseCode()).thenReturn(SC_OK);
-    when(httpUrlConnection.getInputStream()).thenReturn(IIRDEA_GOOD_XML.openStream());
+    ArgumentCaptor<SSLSocketFactory> sslSocketFactoryCaptor =
+        ArgumentCaptor.forClass(SSLSocketFactory.class);
+    when(httpsUrlConnection.getResponseCode()).thenReturn(SC_OK);
+    when(httpsUrlConnection.getInputStream()).thenReturn(IIRDEA_GOOD_XML.openStream());
     createAction().runWithLock(loadRdeReportCursor());
     assertThat(response.getStatus()).isEqualTo(200);
     assertThat(response.getContentType()).isEqualTo(PLAIN_TEXT_UTF_8);
     assertThat(response.getPayload()).isEqualTo("OK test 2006-06-06T00:00:00.000Z\n");
 
     // Verify the HTTP request was correct.
-    verify(httpUrlConnection).setRequestMethod("PUT");
-    assertThat(httpUrlConnection.getURL().getProtocol()).isEqualTo("https");
-    assertThat(httpUrlConnection.getURL().getPath()).endsWith("/test/20101017001");
-    verify(httpUrlConnection).setRequestProperty("Content-Type", "text/xml; charset=utf-8");
-    verify(httpUrlConnection).setRequestProperty("Authorization", "Basic dGVzdF9yeTpmb28=");
+    verify(httpsUrlConnection).setRequestMethod("PUT");
+    assertThat(httpsUrlConnection.getURL().getProtocol()).isEqualTo("https");
+    assertThat(httpsUrlConnection.getURL().getPath()).endsWith("/test/20101017001");
+    verify(httpsUrlConnection).setRequestProperty("Content-Type", "text/xml; charset=utf-8");
+    verify(httpsUrlConnection).setRequestProperty("Authorization", "Basic dGVzdF9yeTpmb28=");
+    verify(httpsUrlConnection).setSSLSocketFactory(any(SSLSocketFactory.class));
 
     // Verify the payload XML was the same as what's in testdata/report.xml.
     XjcRdeReportReport report = parseReport(connectionOutputStream.toByteArray());
@@ -160,8 +166,8 @@ public class RdeReportActionTest {
 
   @TestOfyAndSql
   void testRunWithLock_withPrefix() throws Exception {
-    when(httpUrlConnection.getResponseCode()).thenReturn(SC_OK);
-    when(httpUrlConnection.getInputStream()).thenReturn(IIRDEA_GOOD_XML.openStream());
+    when(httpsUrlConnection.getResponseCode()).thenReturn(SC_OK);
+    when(httpsUrlConnection.getInputStream()).thenReturn(IIRDEA_GOOD_XML.openStream());
     RdeReportAction action = createAction();
     action.prefix = Optional.of("job-name/");
     gcsUtils.delete(reportFile);
@@ -174,11 +180,11 @@ public class RdeReportActionTest {
     assertThat(response.getPayload()).isEqualTo("OK test 2006-06-06T00:00:00.000Z\n");
 
     // Verify the HTTP request was correct.
-    verify(httpUrlConnection).setRequestMethod("PUT");
-    assertThat(httpUrlConnection.getURL().getProtocol()).isEqualTo("https");
-    assertThat(httpUrlConnection.getURL().getPath()).endsWith("/test/20101017001");
-    verify(httpUrlConnection).setRequestProperty("Content-Type", "text/xml; charset=utf-8");
-    verify(httpUrlConnection).setRequestProperty("Authorization", "Basic dGVzdF9yeTpmb28=");
+    verify(httpsUrlConnection).setRequestMethod("PUT");
+    assertThat(httpsUrlConnection.getURL().getProtocol()).isEqualTo("https");
+    assertThat(httpsUrlConnection.getURL().getPath()).endsWith("/test/20101017001");
+    verify(httpsUrlConnection).setRequestProperty("Content-Type", "text/xml; charset=utf-8");
+    verify(httpsUrlConnection).setRequestProperty("Authorization", "Basic dGVzdF9yeTpmb28=");
 
     // Verify the payload XML was the same as what's in testdata/report.xml.
     XjcRdeReportReport report = parseReport(connectionOutputStream.toByteArray());
@@ -194,8 +200,8 @@ public class RdeReportActionTest {
     PGPPublicKey encryptKey = new FakeKeyringModule().get().getRdeStagingEncryptionKey();
     gcsUtils.createFromBytes(newReport, Ghostryde.encode(REPORT_XML.read(), encryptKey));
     tm().transact(() -> RdeRevision.saveRevision("test", DateTime.parse("2006-06-06TZ"), FULL, 1));
-    when(httpUrlConnection.getResponseCode()).thenReturn(SC_OK);
-    when(httpUrlConnection.getInputStream()).thenReturn(IIRDEA_GOOD_XML.openStream());
+    when(httpsUrlConnection.getResponseCode()).thenReturn(SC_OK);
+    when(httpsUrlConnection.getInputStream()).thenReturn(IIRDEA_GOOD_XML.openStream());
     createAction().runWithLock(loadRdeReportCursor());
     assertThat(response.getStatus()).isEqualTo(200);
   }
@@ -228,8 +234,8 @@ public class RdeReportActionTest {
 
   @TestOfyAndSql
   void testRunWithLock_badRequest_throws500WithErrorInfo() throws Exception {
-    when(httpUrlConnection.getResponseCode()).thenReturn(SC_BAD_REQUEST);
-    when(httpUrlConnection.getInputStream()).thenReturn(IIRDEA_BAD_XML.openStream());
+    when(httpsUrlConnection.getResponseCode()).thenReturn(SC_BAD_REQUEST);
+    when(httpsUrlConnection.getInputStream()).thenReturn(IIRDEA_BAD_XML.openStream());
     InternalServerErrorException thrown =
         assertThrows(
             InternalServerErrorException.class,
@@ -240,15 +246,15 @@ public class RdeReportActionTest {
   @TestOfyAndSql
   void testRunWithLock_fetchFailed_throwsRuntimeException() throws Exception {
     class ExpectedThrownException extends RuntimeException {}
-    when(httpUrlConnection.getResponseCode()).thenThrow(new ExpectedThrownException());
+    when(httpsUrlConnection.getResponseCode()).thenThrow(new ExpectedThrownException());
     assertThrows(
         ExpectedThrownException.class, () -> createAction().runWithLock(loadRdeReportCursor()));
   }
 
   @TestOfyAndSql
   void testRunWithLock_socketTimeout_doesRetry() throws Exception {
-    when(httpUrlConnection.getInputStream()).thenReturn(IIRDEA_GOOD_XML.openStream());
-    when(httpUrlConnection.getResponseCode())
+    when(httpsUrlConnection.getInputStream()).thenReturn(IIRDEA_GOOD_XML.openStream());
+    when(httpsUrlConnection.getResponseCode())
         .thenThrow(new SocketTimeoutException())
         .thenReturn(SC_OK);
     createAction().runWithLock(loadRdeReportCursor());

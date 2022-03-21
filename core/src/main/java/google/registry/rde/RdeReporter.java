@@ -44,6 +44,8 @@ import java.net.MalformedURLException;
 import java.net.SocketTimeoutException;
 import java.net.URL;
 import javax.inject.Inject;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
 
 /**
  * Class that uploads a decrypted XML deposit report to ICANN's webserver.
@@ -81,6 +83,12 @@ public class RdeReporter {
         retrier.callWithRetry(
             () -> {
               HttpURLConnection connection = urlConnectionService.createConnection(url);
+              if (connection instanceof HttpsURLConnection) {
+                HttpsURLConnection httpsConnection = (HttpsURLConnection) connection;
+                SSLContext tls13Context = SSLContext.getInstance("TLSv1.3");
+                tls13Context.init(null, null, null);
+                httpsConnection.setSSLSocketFactory(tls13Context.getSocketFactory());
+              }
               connection.setRequestMethod(HttpMethods.PUT);
               setBasicAuth(connection, username, password);
               setPayload(connection, reportBytes, MEDIA_TYPE.toString());
