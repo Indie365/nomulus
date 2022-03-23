@@ -14,3 +14,5 @@
 
 alter table "BillingRecurrence" add column "always_renew_at_standard_price" boolean default false;
 alter table "BillingRecurrence" add column "always_renew_at_initial_price" boolean default false;
+alter table "BillingEvent" add column "always_renew_at_standard_price" boolean default false;
+alter table "BillingEvent" add column "always_renew_at_initial_price" boolean default false;

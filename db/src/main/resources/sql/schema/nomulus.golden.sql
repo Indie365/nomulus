@@ -98,7 +98,9 @@ CREATE TABLE public."BillingEvent" (
     cost_currency text,
     period_years integer,
     synthetic_creation_time timestamp with time zone,
-    recurrence_history_revision_id bigint
+    recurrence_history_revision_id bigint,
+    always_renew_at_standard_price boolean DEFAULT false,
+    always_renew_at_initial_price boolean DEFAULT false
 );
 
 
