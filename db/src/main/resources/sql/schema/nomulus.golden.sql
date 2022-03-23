@@ -116,7 +116,9 @@ CREATE TABLE public."BillingRecurrence" (
     reason text NOT NULL,
     domain_name text NOT NULL,
     recurrence_end_time timestamp with time zone,
-    recurrence_time_of_year text
+    recurrence_time_of_year text,
+    always_renew_at_standard_price boolean DEFAULT false,
+    always_renew_at_initial_price boolean DEFAULT false
 );
 
 
