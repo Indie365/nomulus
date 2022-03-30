@@ -590,7 +590,6 @@ public abstract class BillingEvent extends ImmutableObject
      * <p>This price column remains null except when the renewal price behavior of the billing is
      * SPECIFIED_PRICE. This column is used for internal registrations.
      */
-    @Nullable
     @Type(type = JodaMoneyType.TYPE_NAME)
     @Columns(
         columns = {@Column(name = "renewalPriceAmount"), @Column(name = "renewalPriceCurrency")})
