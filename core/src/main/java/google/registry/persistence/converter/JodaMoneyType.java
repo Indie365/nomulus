@@ -121,8 +121,13 @@ public class JodaMoneyType implements CompositeUserType {
       ResultSet rs, String[] names, SharedSessionContractImplementor session, Object owner)
       throws HibernateException, SQLException {
     BigDecimal amount = StandardBasicTypes.BIG_DECIMAL.nullSafeGet(rs, names[AMOUNT_ID], session);
-    CurrencyUnit currencyUnit =
-        CurrencyUnit.of(StandardBasicTypes.STRING.nullSafeGet(rs, names[CURRENCY_ID], session));
+    CurrencyUnit currencyUnit;
+    try {
+      currencyUnit =
+          CurrencyUnit.of(StandardBasicTypes.STRING.nullSafeGet(rs, names[CURRENCY_ID], session));
+    } catch (NullPointerException e) {
+      currencyUnit = null;
+    }
     if (amount != null && currencyUnit != null) {
       return Money.of(currencyUnit, amount.stripTrailingZeros());
     }
