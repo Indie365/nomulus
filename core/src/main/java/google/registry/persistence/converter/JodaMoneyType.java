@@ -121,13 +121,16 @@ public class JodaMoneyType implements CompositeUserType {
       ResultSet rs, String[] names, SharedSessionContractImplementor session, Object owner)
       throws HibernateException, SQLException {
     BigDecimal amount = StandardBasicTypes.BIG_DECIMAL.nullSafeGet(rs, names[AMOUNT_ID], session);
-    CurrencyUnit currencyUnit =
-        CurrencyUnit.of(StandardBasicTypes.STRING.nullSafeGet(rs, names[CURRENCY_ID], session));
-    if (amount != null && currencyUnit != null) {
-      return Money.of(currencyUnit, amount.stripTrailingZeros());
-    }
-    if (amount == null && currencyUnit == null) {
-      return null;
+    try {
+      CurrencyUnit currencyUnit =
+          CurrencyUnit.of(StandardBasicTypes.STRING.nullSafeGet(rs, names[CURRENCY_ID], session));
+      if (amount != null) {
+        return Money.of(currencyUnit, amount.stripTrailingZeros());
+      }
+    } catch (NullPointerException e) {
+      if (amount == null) {
+        return null;
+      }
     }
     throw new HibernateException("Mismatching null state between currency and amount.");
   }

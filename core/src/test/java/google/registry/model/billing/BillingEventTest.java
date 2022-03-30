@@ -36,6 +36,7 @@ import com.googlecode.objectify.Key;
 import google.registry.model.EntityTestCase;
 import google.registry.model.billing.BillingEvent.Flag;
 import google.registry.model.billing.BillingEvent.Reason;
+import google.registry.model.billing.BillingEvent.RenewalPriceBehavior;
 import google.registry.model.domain.DomainBase;
 import google.registry.model.domain.DomainHistory;
 import google.registry.model.domain.GracePeriod;
@@ -49,6 +50,7 @@ import google.registry.testing.TestOfyAndSql;
 import google.registry.testing.TestOfyOnly;
 import google.registry.testing.TestSqlOnly;
 import google.registry.util.DateTimeUtils;
+import java.math.BigDecimal;
 import org.joda.money.Money;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.BeforeEach;
@@ -473,5 +475,237 @@ public class BillingEventTest extends EntityTestCase {
         .setTargetId("example.tld")
         .setParent(domainHistory)
         .build();
+  }
+
+  @TestOfyAndSql
+  void testDefaultRenewalPriceBehavior_assertsIsDefault() {
+    assertThat(recurring.getRenewalPriceBehavior()).isEqualTo(RenewalPriceBehavior.DEFAULT);
+    assertThat(recurring.getRenewalPrice().isEmpty()).isTrue();
+  }
+
+  @TestOfyAndSql
+  void testsetRenewalPriceBehaviorThenBuild_assertsFromNonPremiumToDefaultBehavior() {
+    BillingEvent.Recurring recurringEvent =
+        persistResource(
+            commonInit(
+                new BillingEvent.Recurring.Builder()
+                    .setParent(domainHistory)
+                    .setFlags(ImmutableSet.of(Flag.AUTO_RENEW))
+                    .setReason(Reason.RENEW)
+                    .setEventTime(now.plusYears(1))
+                    .setRenewalPriceBehavior(RenewalPriceBehavior.NONPREMIUM)
+                    .setRecurrenceEndTime(END_OF_TIME)));
+    assertThat(recurringEvent.getRenewalPriceBehavior()).isEqualTo(RenewalPriceBehavior.NONPREMIUM);
+    BillingEvent.Recurring loadedEntity = loadByEntity(recurringEvent);
+    assertThat(loadedEntity).isEqualTo(recurringEvent);
+    persistResource(
+        loadedEntity.asBuilder().setRenewalPriceBehavior(RenewalPriceBehavior.DEFAULT).build());
+    assertThat(loadByEntity(recurringEvent).getRenewalPriceBehavior())
+        .isEqualTo(RenewalPriceBehavior.DEFAULT);
+    assertThat(recurringEvent.getRenewalPrice().isEmpty()).isTrue();
+  }
+
+  @TestOfyAndSql
+  void testsetRenewalPriceBehaviorThenBuild_errorsChangingToSpecifiedWithoutAddingRenewalPrice() {
+    BillingEvent.Recurring recurringEvent =
+        persistResource(
+            commonInit(
+                new BillingEvent.Recurring.Builder()
+                    .setParent(domainHistory)
+                    .setFlags(ImmutableSet.of(Flag.AUTO_RENEW))
+                    .setReason(Reason.RENEW)
+                    .setEventTime(now.plusYears(1))
+                    .setRenewalPriceBehavior(RenewalPriceBehavior.NONPREMIUM)
+                    .setRecurrenceEndTime(END_OF_TIME)));
+    assertThat(recurringEvent.getRenewalPriceBehavior()).isEqualTo(RenewalPriceBehavior.NONPREMIUM);
+    BillingEvent.Recurring loadedEntity = loadByEntity(recurringEvent);
+    assertThat(loadedEntity).isEqualTo(recurringEvent);
+
+    IllegalArgumentException thrown =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                persistResource(
+                    loadedEntity
+                        .asBuilder()
+                        .setRenewalPriceBehavior(RenewalPriceBehavior.SPECIFIED)
+                        .build()));
+
+    assertThat(thrown)
+        .hasMessageThat()
+        .isEqualTo(
+            "Renewal price can have a value if and only if the "
+                + "renewal price behavior is SPECIFIED");
+  }
+
+  @TestOfyAndSql
+  void
+      testsetRenewalPriceBehaviorThenBuild_errorsChangingToNonPremiumWIthoutRemovingRenewalPrice() {
+    BillingEvent.Recurring recurringEvent =
+        persistResource(
+            commonInit(
+                new BillingEvent.Recurring.Builder()
+                    .setParent(domainHistory)
+                    .setFlags(ImmutableSet.of(Flag.AUTO_RENEW))
+                    .setReason(Reason.RENEW)
+                    .setEventTime(now.plusYears(1))
+                    .setRenewalPriceBehavior(RenewalPriceBehavior.SPECIFIED)
+                    .setRenewalPrice(Money.of(USD, 100))
+                    .setRecurrenceEndTime(END_OF_TIME)));
+    assertThat(recurringEvent.getRenewalPriceBehavior()).isEqualTo(RenewalPriceBehavior.SPECIFIED);
+    BillingEvent.Recurring loadedEntity = loadByEntity(recurringEvent);
+    assertThat(loadedEntity).isEqualTo(recurringEvent);
+
+    IllegalArgumentException thrown =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                persistResource(
+                    loadedEntity
+                        .asBuilder()
+                        .setRenewalPriceBehavior(RenewalPriceBehavior.NONPREMIUM)
+                        .build()));
+
+    assertThat(thrown)
+        .hasMessageThat()
+        .isEqualTo(
+            "Renewal price can have a value if and only if the "
+                + "renewal price behavior is SPECIFIED");
+  }
+
+  @TestOfyAndSql
+  void testGetRenewalPriceBehavior_returnsRightBehavior() {
+    BillingEvent.Recurring recurringEvent =
+        persistResource(
+            commonInit(
+                new BillingEvent.Recurring.Builder()
+                    .setParent(domainHistory)
+                    .setFlags(ImmutableSet.of(Flag.AUTO_RENEW))
+                    .setReason(Reason.RENEW)
+                    .setEventTime(now.plusYears(1))
+                    .setRenewalPriceBehavior(RenewalPriceBehavior.NONPREMIUM)
+                    .setRecurrenceEndTime(END_OF_TIME)));
+    assertThat(recurringEvent.getRenewalPriceBehavior()).isEqualTo(RenewalPriceBehavior.NONPREMIUM);
+    assertThat(recurringEvent.getRenewalPrice().isEmpty()).isTrue();
+  }
+
+  @TestOfyAndSql
+  void testSuccess_defaultRenewalBehaviorWithoutRenewalPrice() {
+    BillingEvent.Recurring recurringEvent =
+        persistResource(
+            commonInit(
+                new BillingEvent.Recurring.Builder()
+                    .setParent(domainHistory)
+                    .setFlags(ImmutableSet.of(Flag.AUTO_RENEW))
+                    .setReason(Reason.RENEW)
+                    .setEventTime(now.plusYears(1))
+                    .setRenewalPriceBehavior(RenewalPriceBehavior.SPECIFIED)
+                    .setRenewalPrice(Money.of(USD, BigDecimal.valueOf(100)))
+                    .setRecurrenceEndTime(END_OF_TIME)));
+    assertThat(recurringEvent.getRenewalPriceBehavior()).isEqualTo(RenewalPriceBehavior.SPECIFIED);
+    assertThat(recurringEvent.getRenewalPrice().get())
+        .isEqualTo(Money.of(USD, BigDecimal.valueOf(100)));
+  }
+
+  @TestOfyAndSql
+  void testSuccess_nonPremiumRenewalBehaviorWithoutRenewalPrice() {
+    BillingEvent.Recurring recurringEvent =
+        persistResource(
+            commonInit(
+                new BillingEvent.Recurring.Builder()
+                    .setParent(domainHistory)
+                    .setFlags(ImmutableSet.of(Flag.AUTO_RENEW))
+                    .setReason(Reason.RENEW)
+                    .setEventTime(now.plusYears(1))
+                    .setRenewalPriceBehavior(RenewalPriceBehavior.NONPREMIUM)
+                    .setRecurrenceEndTime(END_OF_TIME)));
+    assertThat(recurringEvent.getRenewalPriceBehavior()).isEqualTo(RenewalPriceBehavior.NONPREMIUM);
+    assertThat(recurringEvent.getRenewalPrice().isEmpty()).isTrue();
+  }
+
+  @TestOfyAndSql
+  void testSuccess_specifiedRenewalBehaviorWithRenewalPrice() {
+    BillingEvent.Recurring recurringEvent =
+        persistResource(
+            commonInit(
+                new BillingEvent.Recurring.Builder()
+                    .setParent(domainHistory)
+                    .setFlags(ImmutableSet.of(Flag.AUTO_RENEW))
+                    .setReason(Reason.RENEW)
+                    .setEventTime(now.plusYears(1))
+                    .setRenewalPriceBehavior(RenewalPriceBehavior.SPECIFIED)
+                    .setRenewalPrice(Money.of(USD, BigDecimal.valueOf(100)))
+                    .setRecurrenceEndTime(END_OF_TIME)));
+    assertThat(recurringEvent.getRenewalPriceBehavior()).isEqualTo(RenewalPriceBehavior.SPECIFIED);
+    assertThat(recurringEvent.getRenewalPrice().get())
+        .isEqualTo(Money.of(USD, BigDecimal.valueOf(100)));
+  }
+
+  @TestOfyAndSql
+  void testFailure_specifiedRenewalBehaviorRequiresNonNullRenewalPrice() {
+    IllegalArgumentException thrown =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                new BillingEvent.Recurring.Builder()
+                    .setParent(domainHistory)
+                    .setFlags(ImmutableSet.of(Flag.AUTO_RENEW))
+                    .setReason(Reason.RENEW)
+                    .setEventTime(now.plusYears(1))
+                    .setRenewalPriceBehavior(RenewalPriceBehavior.SPECIFIED)
+                    .setRecurrenceEndTime(END_OF_TIME)
+                    .build());
+
+    assertThat(thrown)
+        .hasMessageThat()
+        .isEqualTo(
+            "Renewal price can have a value if and only if the "
+                + "renewal price behavior is SPECIFIED");
+  }
+
+  @TestOfyAndSql
+  void testFailure_nonPremiumRenewalBehaviorRequiresNullRenewalPrice() {
+    IllegalArgumentException thrown =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                new BillingEvent.Recurring.Builder()
+                    .setParent(domainHistory)
+                    .setFlags(ImmutableSet.of(Flag.AUTO_RENEW))
+                    .setReason(Reason.RENEW)
+                    .setEventTime(now.plusYears(1))
+                    .setRenewalPriceBehavior(RenewalPriceBehavior.NONPREMIUM)
+                    .setRenewalPrice(Money.of(USD, BigDecimal.valueOf(100)))
+                    .setRecurrenceEndTime(END_OF_TIME)
+                    .build());
+
+    assertThat(thrown)
+        .hasMessageThat()
+        .isEqualTo(
+            "Renewal price can have a value if and only if the "
+                + "renewal price behavior is SPECIFIED");
+  }
+
+  @TestOfyAndSql
+  void testFailure_defaultRenewalBehaviorRequiresNullRenewalPrice() {
+    IllegalArgumentException thrown =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                new BillingEvent.Recurring.Builder()
+                    .setParent(domainHistory)
+                    .setFlags(ImmutableSet.of(Flag.AUTO_RENEW))
+                    .setReason(Reason.RENEW)
+                    .setEventTime(now.plusYears(1))
+                    .setRenewalPriceBehavior(RenewalPriceBehavior.DEFAULT)
+                    .setRenewalPrice(Money.of(USD, BigDecimal.valueOf(100)))
+                    .setRecurrenceEndTime(END_OF_TIME)
+                    .build());
+
+    assertThat(thrown)
+        .hasMessageThat()
+        .isEqualTo(
+            "Renewal price can have a value if and only if the "
+                + "renewal price behavior is SPECIFIED");
   }
 }
