@@ -127,7 +127,7 @@ public abstract class BillingEvent extends ImmutableObject
      * automated process to expand {@link Recurring} events.
      */
     SYNTHETIC
-  }
+  };
 
   /**
    * Sets of renewal price behaviors that can be applied to billing recurrences.
@@ -142,21 +142,28 @@ public abstract class BillingEvent extends ImmutableObject
      * <p>By default, if the domain is premium, then premium price will be used. Otherwise, the
      * standard price of the TLD will be used.
      */
-    DEFAULT_PRICE,
+    DEFAULT,
     /**
-     * This indicates that standard price will be used for domain renewal.
+     * This indicates the domain is not part of the premium list and therefore, the standard price
+     * of the TLD will be used for renewal.
+     *
+     * <p>This behavior is equivalent to renewing at standard price. Renewing a domain is either at
+     * standard price or premium price, unless the renewal price is specified. Due to the
+     * similarities between 'DEFAULT' and 'STANDARD', 'NONPREMIUM' is chosen instead.
      *
      * <p>This price behavior is used with anchor tenants.
      */
-    STANDARD_PRICE,
+    NONPREMIUM,
     /**
      * This indicates that the renewalPrice in {@link Recurring} will be used for domain renewal.
      *
-     * <p>The renewalPrice has a value iff the price behavior is set to SPECIFIED_PRICE. This
-     * behavior is used with internal registrations.
+     * <p>The renewalPrice in {@link Recurring} has a non-null value if and only if the price
+     * behavior is set to SPECIFIED.
+     *
+     * <p>This behavior is used with internal registrations.
      */
-    SPECIFIED_PRICE
-  }
+    SPECIFIED
+  };
 
   /** Entity id. */
   @Id @javax.persistence.Id Long id;
@@ -588,13 +595,13 @@ public abstract class BillingEvent extends ImmutableObject
      * The renewal price for domain renewal if and only if it's specified.
      *
      * <p>This price column remains null except when the renewal price behavior of the billing is
-     * SPECIFIED_PRICE. This column is used for internal registrations.
+     * SPECIFIED. This column is used for internal registrations.
      */
     @Nullable
     @Type(type = JodaMoneyType.TYPE_NAME)
     @Columns(
         columns = {@Column(name = "renewalPriceAmount"), @Column(name = "renewalPriceCurrency")})
-    Optional<Money> renewalPrice;
+    Money renewalPrice;
 
     @Column(name = "renewalPriceBehavior")
     RenewalPriceBehavior renewalPriceBehavior;
@@ -612,7 +619,7 @@ public abstract class BillingEvent extends ImmutableObject
     }
 
     public Optional<Money> getRenewalPrice() {
-      return renewalPrice;
+      return Optional.ofNullable(renewalPrice);
     }
 
     @Override
@@ -648,9 +655,10 @@ public abstract class BillingEvent extends ImmutableObject
         return this;
       }
 
-      public Builder setRenewalPrice(Money renewalPrice) {
-        checkNotNull(renewalPrice, "Renewal price is not specified");
-        getInstance().renewalPrice = Optional.of(renewalPrice);
+      public Builder setRenewalPrice(@Nullable Money renewalPrice) {
+        if (renewalPrice != null) {
+          getInstance().renewalPrice = renewalPrice;
+        }
         return this;
       }
 
@@ -659,12 +667,13 @@ public abstract class BillingEvent extends ImmutableObject
         Recurring instance = getInstance();
         checkNotNull(instance.eventTime);
         checkNotNull(instance.reason);
-        if (instance.renewalPrice.isPresent()) {
-          checkArgument(
-              instance.renewalPriceBehavior == RenewalPriceBehavior.SPECIFIED_PRICE,
-              "Renewal price can have a value if an only if the renewal price behavior is"
-                  + " SPECIFIED_PRICE");
-        }
+        checkArgument(
+            ((instance.renewalPriceBehavior == RenewalPriceBehavior.SPECIFIED
+                    && instance.renewalPrice == null)
+                || (instance.renewalPrice != null
+                    && instance.renewalPriceBehavior != RenewalPriceBehavior.SPECIFIED)),
+            "Renewal price can have a value if and only if the renewal price behavior is"
+                + " SPECIFIED");
         instance.recurrenceTimeOfYear = TimeOfYear.fromDateTime(instance.eventTime);
         instance.recurrenceEndTime =
             Optional.ofNullable(instance.recurrenceEndTime).orElse(END_OF_TIME);
