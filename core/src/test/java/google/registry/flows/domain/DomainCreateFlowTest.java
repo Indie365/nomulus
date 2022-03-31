@@ -840,6 +840,13 @@ class DomainCreateFlowTest extends ResourceFlowTestCase<DomainCreateFlow, Domain
     doSuccessfulTest();
   }
 
+  @TestOfyOnly
+  void testSuccess_inNoAsyncPhase() throws Exception {
+    DatabaseHelper.setMigrationScheduleToDatastorePrimaryNoAsync(clock);
+    persistContactsAndHosts();
+    doSuccessfulTest();
+  }
+
   @TestOfyAndSql
   void testSuccess_maxNumberOfNameservers() throws Exception {
     setEppInput("domain_create_13_nameservers.xml");
