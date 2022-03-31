@@ -1452,6 +1452,8 @@ public class DatabaseHelper {
                         now.plusMillis(1),
                         MigrationState.DATASTORE_PRIMARY,
                         now.plusMillis(2),
+                        MigrationState.DATASTORE_PRIMARY_NO_ASYNC,
+                        now.plusMillis(3),
                         MigrationState.DATASTORE_PRIMARY_READ_ONLY)));
     fakeClock.advanceBy(Duration.standardSeconds(1));
   }
@@ -1478,8 +1480,10 @@ public class DatabaseHelper {
                         now.plusMillis(1),
                         MigrationState.DATASTORE_PRIMARY,
                         now.plusMillis(2),
-                        MigrationState.DATASTORE_PRIMARY_READ_ONLY,
+                        MigrationState.DATASTORE_PRIMARY_NO_ASYNC,
                         now.plusMillis(3),
+                        MigrationState.DATASTORE_PRIMARY_READ_ONLY,
+                        now.plusMillis(4),
                         MigrationState.SQL_PRIMARY)));
     fakeClock.advanceBy(Duration.standardSeconds(1));
   }
