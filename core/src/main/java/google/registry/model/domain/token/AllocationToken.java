@@ -107,7 +107,7 @@ public class AllocationToken extends BackupGroupRoot implements Buildable, Datas
     CANCELLED
   }
 
-  //TODO(rachelguan): Remove this once PR 1573 goes in;
+  // TODO(rachelguan): Remove this once PR 1573 goes in;
   /**
    * Sets of renewal price behaviors that can be applied to billing recurrences.
    *
@@ -123,23 +123,23 @@ public class AllocationToken extends BackupGroupRoot implements Buildable, Datas
      */
     DEFAULT,
     /**
-     * This indicates the domain is not part of the premium list and therefore, the standard price
-     * of the TLD will be used for renewal.
+     * This indicates the domain will be renewed at standard price even if it's a premium domain.
      *
-     * <p>This behavior is equivalent to renewing at standard price. Renewing a domain is either at
-     * standard price or premium price, unless the renewal price is specified. Due to the
-     * similarities between 'DEFAULT' and 'STANDARD', 'NONPREMIUM' is chosen instead. This price
-     * behavior is used with anchor tenants.
+     * <p>We chose to name this "NONPREMIUM" rather than simply "STANDARD" to avoid confusion
+     * between "STANDARD" and "DEFAULT".
+     *
+     * <p>This price behavior is used with anchor tenants.
      */
     NONPREMIUM,
     /**
-     * This indicates that the renewalPrice in {@link BillingEvent.Recurring} will be used for domain renewal.
+     * This indicates that the renewalPrice in {@link BillingEvent.Recurring} will be used for
+     * domain renewal.
      *
-     * <p>The renewalPrice has a non-null value iff the price behavior is set to SPECIFIED. This
+     * <p>The renewalPrice has a non-null value iff the price behavior is set to "SPECIFIED". This
      * behavior is used with internal registrations.
      */
-    SPECIFIED
-  };
+    SPECIFIED;
+  }
 
   /** The allocation token string. */
   @javax.persistence.Id @Id String token;
@@ -186,8 +186,9 @@ public class AllocationToken extends BackupGroupRoot implements Buildable, Datas
   @Enumerated(EnumType.STRING)
   TokenType tokenType;
 
+  @Enumerated(EnumType.STRING)
   @Column(name = "renewalPriceBehavior")
-  RenewalPriceBehavior renewalPriceBehavior;
+  RenewalPriceBehavior renewalPriceBehavior = RenewalPriceBehavior.DEFAULT;
 
   // TODO: Remove onLoad once all allocation tokens are migrated to have a discountYears of 1.
   @OnLoad
@@ -281,8 +282,6 @@ public class AllocationToken extends BackupGroupRoot implements Buildable, Datas
   public RenewalPriceBehavior getRenewalPriceBehavior() {
     return renewalPriceBehavior;
   }
-
-
 
   public VKey<AllocationToken> createVKey() {
     return VKey.create(AllocationToken.class, getToken(), Key.create(this));
