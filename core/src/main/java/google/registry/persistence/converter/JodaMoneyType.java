@@ -21,6 +21,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Objects;
+import javax.annotation.Nullable;
 import org.hibernate.HibernateException;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.type.StandardBasicTypes;
@@ -116,6 +117,7 @@ public class JodaMoneyType implements CompositeUserType {
     return Objects.hashCode(x);
   }
 
+  @Nullable
   @Override
   public Object nullSafeGet(
       ResultSet rs, String[] names, SharedSessionContractImplementor session, Object owner)
