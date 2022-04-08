@@ -16,6 +16,7 @@ package google.registry.persistence.converter;
 import static com.google.common.truth.Truth.assertThat;
 import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
 import static google.registry.testing.DatabaseHelper.insertInDb;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.common.collect.ImmutableMap;
 import google.registry.model.ImmutableObject;
@@ -23,6 +24,7 @@ import google.registry.model.replay.EntityTest.EntityForTesting;
 import google.registry.persistence.transaction.JpaTestExtensions;
 import google.registry.persistence.transaction.JpaTestExtensions.JpaUnitTestExtension;
 import java.math.BigDecimal;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -34,9 +36,11 @@ import javax.persistence.FetchType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.MapKeyColumn;
+import javax.persistence.PersistenceException;
 import org.hibernate.annotations.Columns;
 import org.hibernate.annotations.Type;
 import org.joda.money.CurrencyUnit;
+import org.joda.money.IllegalCurrencyException;
 import org.joda.money.Money;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -162,6 +166,119 @@ public class JodaMoneyConverterTest {
     assertThat(persisted.myMoney).isEqualTo(myMoney);
     assertThat(persisted.yourMoney).isEqualTo(yourMoney);
     assertThat(persisted.moneyMap).containsExactlyEntriesIn(moneyMap);
+  }
+
+  @Test
+  void testNullSafeGet_nullAmountNullCurrency_returnsNull() throws SQLException {
+    jpaTm()
+        .transact(
+            () ->
+                jpaTm()
+                    .getEntityManager()
+                    .createNativeQuery(
+                        "INSERT INTO \"TestEntity\""
+                            + " (name, amount, currency) VALUES('id', null, null)")
+                    .executeUpdate());
+    assertThat(
+            jpaTm()
+                .transact(
+                    () ->
+                        jpaTm()
+                            .getEntityManager()
+                            .createNativeQuery(
+                                "SELECT amount, currency FROM \"TestEntity\" WHERE name = 'id'")
+                            .getResultList())
+                .size())
+        .isEqualTo(1);
+    assertThat(
+            jpaTm()
+                .transact(
+                    () ->
+                        jpaTm()
+                            .getEntityManager()
+                            .createQuery("SELECT money FROM TestEntity WHERE name" + " = 'id'")
+                            .getResultList())
+                .get(0))
+        .isNull();
+  }
+
+  @Test
+  void testNullSafeGet_nullAMountValidCurrency_throwsHibernateException() throws SQLException {
+    jpaTm()
+        .transact(
+            () ->
+                jpaTm()
+                    .getEntityManager()
+                    .createNativeQuery(
+                        "INSERT INTO \"TestEntity\""
+                            + " (name, amount, currency) VALUES('id', null, 'USD')")
+                    .executeUpdate());
+    assertThat(
+            jpaTm()
+                .transact(
+                    () ->
+                        jpaTm()
+                            .getEntityManager()
+                            .createNativeQuery(
+                                "SELECT amount, currency FROM \"TestEntity\" WHERE name = 'id'")
+                            .getResultList())
+                .size())
+        .isEqualTo(1);
+    // CurrencyUnit.of() throws HibernateException for invalid currency which leads to persistance
+    // error
+    PersistenceException thrown =
+        assertThrows(
+            PersistenceException.class,
+            () ->
+                jpaTm()
+                    .transact(
+                        () ->
+                            jpaTm()
+                                .getEntityManager()
+                                .createQuery("SELECT money FROM TestEntity WHERE name = 'id'")
+                                .getResultList()));
+    assertThat(thrown)
+        .hasMessageThat()
+        .isEqualTo(
+            "org.hibernate.HibernateException: Mismatching null state between currency and"
+                + " amount.");
+  }
+
+  @Test
+  void testNullSafeGet_nullAMountInValidCurrency_throwsIllegalCurrencyException()
+      throws SQLException {
+    jpaTm()
+        .transact(
+            () ->
+                jpaTm()
+                    .getEntityManager()
+                    .createNativeQuery(
+                        "INSERT INTO \"TestEntity\""
+                            + " (name, amount, currency) VALUES('id', 100, 'INVALIDCURRENCY')")
+                    .executeUpdate());
+    assertThat(
+            jpaTm()
+                .transact(
+                    () ->
+                        jpaTm()
+                            .getEntityManager()
+                            .createNativeQuery(
+                                "SELECT amount, currency FROM \"TestEntity\" WHERE name = 'id'")
+                            .getResultList())
+                .size())
+        .isEqualTo(1);
+    IllegalCurrencyException thrown =
+        assertThrows(
+            IllegalCurrencyException.class,
+            () ->
+                jpaTm()
+                    .transact(
+                        () ->
+                            jpaTm()
+                                .getEntityManager()
+                                .createQuery("SELECT money FROM TestEntity WHERE name" + " = 'id'")
+                                .getResultList()));
+    assertThat(thrown).hasMessageThat().isEqualTo("Unknown currency 'INVALIDCURRENCY'");
   }
 
   // Override entity name to exclude outer-class name in table name. Not necessary if class is not
