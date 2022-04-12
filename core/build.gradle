@@ -74,9 +74,6 @@ def fragileTestPatterns = [
     // Changes cache timeouts and for some reason appears to have contention
     // with other tests.
     "google/registry/whois/WhoisCommandFactoryTest.*",
-    // Currently changes a global configuration parameter that for some reason
-    // results in timestamp inversions for other tests.  TODO(mmuller): fix.
-    "google/registry/flows/host/HostInfoFlowTest.*",
 ] + dockerIncompatibleTestPatterns
 
 sourceSets {
@@ -172,6 +169,7 @@ dependencies {
   testRuntime files(sourceSets.test.resources.srcDirs)
 
   compile deps['com.beust:jcommander']
+  compile deps['com.github.ben-manes.caffeine:caffeine']
   compile deps['com.google.api:gax']
   compile deps['com.google.api.grpc:proto-google-cloud-datastore-v1']
   compile deps['com.google.api.grpc:proto-google-common-protos']

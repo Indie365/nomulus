@@ -17,10 +17,9 @@ package google.registry.model;
 import static com.google.common.base.Suppliers.memoizeWithExpiration;
 import static google.registry.config.RegistryConfig.getSingletonCacheRefreshDuration;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static org.joda.time.Duration.ZERO;
 
 import com.google.common.base.Supplier;
-import org.joda.time.Duration;
+import java.time.Duration;
 
 /** Utility methods related to caching Datastore entities. */
 public class CacheUtils {
@@ -41,8 +40,8 @@ public class CacheUtils {
    */
   public static <T> Supplier<T> tryMemoizeWithExpiration(
       Duration expiration, Supplier<T> original) {
-    return expiration.isEqual(ZERO)
+    return expiration.isZero()
         ? original
-        : memoizeWithExpiration(original, expiration.getMillis(), MILLISECONDS);
+        : memoizeWithExpiration(original, expiration.toMillis(), MILLISECONDS);
   }
 }
