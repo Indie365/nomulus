@@ -383,7 +383,7 @@ public class RdePipeline implements Serializable {
       } else {
         logger.atSevere().log(
             String.format(
-                "Duplicate revision IDs detected for repo %s ID %s: %s",
+                "Duplicate revision IDs detected for %s repo ID %s: %s",
                 EPP_RESOURCE_FIELD_NAME.get(historyEntryClazz), repoId, ids));
       }
     }
