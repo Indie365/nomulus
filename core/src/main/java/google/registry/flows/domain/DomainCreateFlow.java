@@ -53,6 +53,7 @@ import static google.registry.persistence.transaction.TransactionManagerFactory.
 import static google.registry.util.DateTimeUtils.END_OF_TIME;
 import static google.registry.util.DateTimeUtils.leapSafeAddYears;
 
+import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.net.InternetDomainName;
@@ -79,6 +80,7 @@ import google.registry.model.billing.BillingEvent;
 import google.registry.model.billing.BillingEvent.Flag;
 import google.registry.model.billing.BillingEvent.Reason;
 import google.registry.model.billing.BillingEvent.Recurring;
+import google.registry.model.billing.BillingEvent.RenewalPriceBehavior;
 import google.registry.model.domain.DomainBase;
 import google.registry.model.domain.DomainCommand;
 import google.registry.model.domain.DomainCommand.Create;
@@ -114,7 +116,9 @@ import google.registry.model.tld.Registry.TldType;
 import google.registry.model.tld.label.ReservationType;
 import google.registry.tmch.LordnTaskUtils;
 import java.util.Optional;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
+import org.joda.money.Money;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
@@ -260,6 +264,8 @@ public final class DomainCreateFlow implements TransactionalFlow {
         isAnchorTenant(
             domainName, allocationToken, eppInput.getSingleExtension(MetadataExtension.class));
     verifyAnchorTenantValidPeriod(isAnchorTenant, years);
+
+
     // Superusers can create reserved domains, force creations on domains that require a claims
     // notice without specifying a claims key, ignore the registry phase, and override blocks on
     // registering premium domains.
@@ -302,6 +308,8 @@ public final class DomainCreateFlow implements TransactionalFlow {
     FeesAndCredits feesAndCredits =
         pricingLogic.getCreatePrice(
             registry, targetId, now, years, isAnchorTenant, allocationToken);
+    RenewalPriceInfo renewalPriceInfo =
+        getRenewalPriceInfo(isAnchorTenant, allocationToken, feesAndCredits.getCreateCost());
     validateFeeChallenge(targetId, now, feeCreate, feesAndCredits);
     Optional<SecDnsCreateExtension> secDnsCreate =
         validateSecDnsExtension(eppInput.getSingleExtension(SecDnsCreateExtension.class));
@@ -324,7 +332,7 @@ public final class DomainCreateFlow implements TransactionalFlow {
             now);
     // Create a new autorenew billing event and poll message starting at the expiration time.
     BillingEvent.Recurring autorenewBillingEvent =
-        createAutorenewBillingEvent(domainHistoryKey, registrationExpirationTime);
+        createAutorenewBillingEvent(domainHistoryKey, registrationExpirationTime, renewalPriceInfo);
     PollMessage.Autorenew autorenewPollMessage =
         createAutorenewPollMessage(domainHistoryKey, registrationExpirationTime);
     ImmutableSet.Builder<ImmutableObject> entitiesToSave = new ImmutableSet.Builder<>();
@@ -543,7 +551,9 @@ public final class DomainCreateFlow implements TransactionalFlow {
   }
 
   private Recurring createAutorenewBillingEvent(
-      Key<DomainHistory> domainHistoryKey, DateTime registrationExpirationTime) {
+      Key<DomainHistory> domainHistoryKey,
+      DateTime registrationExpirationTime,
+      RenewalPriceInfo renewalpriceInfo) {
     return new BillingEvent.Recurring.Builder()
         .setReason(Reason.RENEW)
         .setFlags(ImmutableSet.of(Flag.AUTO_RENEW))
@@ -552,6 +562,8 @@ public final class DomainCreateFlow implements TransactionalFlow {
         .setEventTime(registrationExpirationTime)
         .setRecurrenceEndTime(END_OF_TIME)
         .setParent(domainHistoryKey)
+        .setRenewalPriceBehavior(renewalpriceInfo.renewalPriceBehavior())
+        .setRenewalPrice(renewalpriceInfo.renewalPrice())
         .build();
   }
 
@@ -606,6 +618,32 @@ public final class DomainCreateFlow implements TransactionalFlow {
     if (hasClaimsNotice || hasSignedMarks) {
       LordnTaskUtils.enqueueDomainBaseTask(newDomain);
     }
+  }
+
+  static RenewalPriceInfo getRenewalPriceInfo(
+      Boolean isAnchorTenant, Optional<AllocationToken> allocationToken, @Nullable Money createCost)
+      throws EppException {
+    if (isAnchorTenant) {
+      return RenewalPriceInfo.create(RenewalPriceBehavior.NONPREMIUM, null);
+    } else if (allocationToken.isPresent()
+        && allocationToken.get().getRenewalPriceBehavior() == RenewalPriceBehavior.SPECIFIED) {
+      return RenewalPriceInfo.create(RenewalPriceBehavior.SPECIFIED, createCost);
+    } else {
+      return RenewalPriceInfo.create(RenewalPriceBehavior.DEFAULT, null);
+    }
+  }
+
+  @AutoValue
+  public abstract static class RenewalPriceInfo {
+    static DomainCreateFlow.RenewalPriceInfo create(
+        RenewalPriceBehavior renewalPriceBehavior, @Nullable Money renewalPrice) {
+      return new AutoValue_DomainCreateFlow_RenewalPriceInfo(renewalPriceBehavior, renewalPrice);
+    }
+
+    public abstract RenewalPriceBehavior renewalPriceBehavior();
+
+    @Nullable
+    public abstract Money renewalPrice();
   }
 
   private static ImmutableList<FeeTransformResponseExtension> createResponseExtensions(
