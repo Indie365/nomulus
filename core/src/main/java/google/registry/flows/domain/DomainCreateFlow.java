@@ -15,7 +15,6 @@
 package google.registry.flows.domain;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static google.registry.flows.FlowUtils.persistEntityChanges;
 import static google.registry.flows.FlowUtils.validateRegistrarIsLoggedIn;
@@ -308,8 +307,6 @@ public final class DomainCreateFlow implements TransactionalFlow {
     FeesAndCredits feesAndCredits =
         pricingLogic.getCreatePrice(
             registry, targetId, now, years, isAnchorTenant, allocationToken);
-    RenewalPriceInfo renewalPriceInfo =
-        getRenewalPriceInfo(isAnchorTenant, allocationToken, feesAndCredits.getCreateCost());
     validateFeeChallenge(targetId, now, feeCreate, feesAndCredits);
     Optional<SecDnsCreateExtension> secDnsCreate =
         validateSecDnsExtension(eppInput.getSingleExtension(SecDnsCreateExtension.class));
@@ -332,7 +329,10 @@ public final class DomainCreateFlow implements TransactionalFlow {
             now);
     // Create a new autorenew billing event and poll message starting at the expiration time.
     BillingEvent.Recurring autorenewBillingEvent =
-        createAutorenewBillingEvent(domainHistoryKey, registrationExpirationTime, renewalPriceInfo);
+        createAutorenewBillingEvent(
+            domainHistoryKey,
+            registrationExpirationTime,
+            getRenewalPriceInfo(isAnchorTenant, allocationToken, feesAndCredits));
     PollMessage.Autorenew autorenewPollMessage =
         createAutorenewPollMessage(domainHistoryKey, registrationExpirationTime);
     ImmutableSet.Builder<ImmutableObject> entitiesToSave = new ImmutableSet.Builder<>();
@@ -485,7 +485,6 @@ public final class DomainCreateFlow implements TransactionalFlow {
   private Optional<AllocationToken> verifyAllocationTokenIfPresent(
       DomainCommand.Create command, Registry registry, String registrarId, DateTime now)
       throws EppException {
-
     Optional<AllocationTokenExtension> extension =
         eppInput.getSingleExtension(AllocationTokenExtension.class);
     return Optional.ofNullable(
@@ -625,25 +624,41 @@ public final class DomainCreateFlow implements TransactionalFlow {
    * Determines the {@link RenewalPriceBehavior} and the renewal price that needs be stored in the
    * {@link Recurring} billing events.
    *
-   * <p>By default, renewal price is calculated during the process of renewal. Renewal price should
-   * be the createCost if and only if the renewal price behavior in the {@link AllocationToken} is
-   * 'SPECIFIED'.
+   * <p>By default, the renewal price is calculated during the process of renewal. Renewal price
+   * should be the createCost if and only if the renewal price behavior in the {@link
+   * AllocationToken} is 'SPECIFIED'.
    */
   static RenewalPriceInfo getRenewalPriceInfo(
-      Boolean isAnchorTenant, Optional<AllocationToken> allocationToken, Money createCost) {
-    checkNotNull(createCost, "Create cost cannot be null");
-    if (isAnchorTenant) {
-      if (allocationToken.isPresent()) {
-        checkArgument(
-            allocationToken.get().getRenewalPriceBehavior() != RenewalPriceBehavior.SPECIFIED,
-            "Renewal price behavior cannot be SPECIFIED for anchor tenant");
+      boolean isAnchorTenant,
+      Optional<AllocationToken> allocationToken,
+      FeesAndCredits feesAndCredits) {
+    if (allocationToken.isPresent()) {
+      RenewalPriceBehavior renewalPriceBehavior = allocationToken.get().getRenewalPriceBehavior();
+      switch (renewalPriceBehavior) {
+        case SPECIFIED:
+          checkArgument(
+              isAnchorTenant == false,
+              "Renewal price behavior cannot be SPECIFIED for anchor tenant");
+          // if the renewal price behavior is specified, it means the domain will be renewed at the
+          // creation cost
+          return RenewalPriceInfo.create(
+              RenewalPriceBehavior.SPECIFIED, feesAndCredits.getCreateCost());
+        case DEFAULT:
+          if (isAnchorTenant) {
+            return RenewalPriceInfo.create(RenewalPriceBehavior.NONPREMIUM, null);
+          } else {
+            return RenewalPriceInfo.create(RenewalPriceBehavior.DEFAULT, null);
+          }
+        default:
+          throw new IllegalArgumentException(
+              String.format("Unexpected renewal price behavior: %s ", renewalPriceBehavior));
       }
-      return RenewalPriceInfo.create(RenewalPriceBehavior.NONPREMIUM, null);
-    } else if (allocationToken.isPresent()
-        && allocationToken.get().getRenewalPriceBehavior() == RenewalPriceBehavior.SPECIFIED) {
-      return RenewalPriceInfo.create(RenewalPriceBehavior.SPECIFIED, createCost);
     } else {
-      return RenewalPriceInfo.create(RenewalPriceBehavior.DEFAULT, null);
+      if (isAnchorTenant) {
+        return RenewalPriceInfo.create(RenewalPriceBehavior.NONPREMIUM, null);
+      } else {
+        return RenewalPriceInfo.create(RenewalPriceBehavior.DEFAULT, null);
+      }
     }
   }
 
