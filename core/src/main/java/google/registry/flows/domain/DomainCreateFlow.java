@@ -15,7 +15,6 @@
 package google.registry.flows.domain;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static google.registry.flows.FlowUtils.persistEntityChanges;
 import static google.registry.flows.FlowUtils.validateRegistrarIsLoggedIn;
@@ -54,6 +53,7 @@ import static google.registry.model.tld.label.ReservationType.NAME_COLLISION;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 import static google.registry.util.DateTimeUtils.END_OF_TIME;
 import static google.registry.util.DateTimeUtils.leapSafeAddYears;
+import static google.registry.util.PreconditionsUtils.checkArgumentNotNull;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
@@ -309,7 +309,7 @@ public final class DomainCreateFlow implements TransactionalFlow {
         pricingLogic.getCreatePrice(
             registry, targetId, now, years, isAnchorTenant, allocationToken);
     RenewalPriceInfo renewalPriceInfo =
-        getRenewalPriceInfo(isAnchorTenant, allocationToken, feesAndCredits.getCreateCost());
+        getRenewalPriceInfo(isAnchorTenant, allocationToken, feesAndCredits);
     validateFeeChallenge(targetId, now, feeCreate, feesAndCredits);
     Optional<SecDnsCreateExtension> secDnsCreate =
         validateSecDnsExtension(eppInput.getSingleExtension(SecDnsCreateExtension.class));
@@ -625,25 +625,42 @@ public final class DomainCreateFlow implements TransactionalFlow {
    * Determines the {@link RenewalPriceBehavior} and the renewal price that needs be stored in the
    * {@link Recurring} billing events.
    *
-   * <p>By default, renewal price is calculated during the process of renewal. Renewal price should
-   * be the createCost if and only if the renewal price behavior in the {@link AllocationToken} is
-   * 'SPECIFIED'.
+   * <p>By default, the renewal price is calculated during the process of renewal. Renewal price
+   * should be the createCost if and only if the renewal price behavior in the {@link
+   * AllocationToken} is 'SPECIFIED'.
    */
   static RenewalPriceInfo getRenewalPriceInfo(
-      Boolean isAnchorTenant, Optional<AllocationToken> allocationToken, Money createCost) {
-    checkNotNull(createCost, "Create cost cannot be null");
-    if (isAnchorTenant) {
-      if (allocationToken.isPresent()) {
-        checkArgument(
-            allocationToken.get().getRenewalPriceBehavior() != RenewalPriceBehavior.SPECIFIED,
-            "Renewal price behavior cannot be SPECIFIED for anchor tenant");
+      boolean isAnchorTenant,
+      Optional<AllocationToken> allocationToken,
+      FeesAndCredits feesAndCredits) {
+    if (allocationToken.isPresent()) {
+      RenewalPriceBehavior renewalPriceBehavior = allocationToken.get().getRenewalPriceBehavior();
+      switch (renewalPriceBehavior) {
+        case SPECIFIED:
+          checkArgumentNotNull(feesAndCredits, "Create cost cannot be null");
+          checkArgument(
+              isAnchorTenant == false,
+              "Renewal price behavior cannot be SPECIFIED for anchor tenant");
+          // if the renewal price behavior is specified, it means the domain will be renewed at teh
+          // create cost
+          return RenewalPriceInfo.create(
+              RenewalPriceBehavior.SPECIFIED, feesAndCredits.getCreateCost());
+        case DEFAULT:
+          if (isAnchorTenant) {
+            return RenewalPriceInfo.create(RenewalPriceBehavior.NONPREMIUM, null);
+          } else {
+            return RenewalPriceInfo.create(RenewalPriceBehavior.DEFAULT, null);
+          }
+        default:
+          throw new IllegalArgumentException(
+              String.format("Unexpected renewal price behavior: %s ", renewalPriceBehavior));
       }
-      return RenewalPriceInfo.create(RenewalPriceBehavior.NONPREMIUM, null);
-    } else if (allocationToken.isPresent()
-        && allocationToken.get().getRenewalPriceBehavior() == RenewalPriceBehavior.SPECIFIED) {
-      return RenewalPriceInfo.create(RenewalPriceBehavior.SPECIFIED, createCost);
     } else {
-      return RenewalPriceInfo.create(RenewalPriceBehavior.DEFAULT, null);
+      if (isAnchorTenant) {
+        return RenewalPriceInfo.create(RenewalPriceBehavior.NONPREMIUM, null);
+      } else {
+        return RenewalPriceInfo.create(RenewalPriceBehavior.DEFAULT, null);
+      }
     }
   }
 

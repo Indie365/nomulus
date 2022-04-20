@@ -152,6 +152,8 @@ import google.registry.model.billing.BillingEvent.RenewalPriceBehavior;
 import google.registry.model.domain.DomainBase;
 import google.registry.model.domain.DomainHistory;
 import google.registry.model.domain.GracePeriod;
+import google.registry.model.domain.fee.BaseFee.FeeType;
+import google.registry.model.domain.fee.Fee;
 import google.registry.model.domain.launch.LaunchNotice;
 import google.registry.model.domain.rgp.GracePeriodStatus;
 import google.registry.model.domain.secdns.DelegationSignerData;
@@ -254,12 +256,19 @@ class DomainCreateFlowTest extends ResourceFlowTestCase<DomainCreateFlow, Domain
 
     boolean isAnchorTenant = expectedBillingFlags.contains(ANCHOR_TENANT);
     // Calculate the total creation cost.
-    Money creationCost =
-        isAnchorTenant
-            ? Money.of(USD, 0)
-            : isDomainPremium(getUniqueIdFromCommand(), clock.nowUtc())
-                ? Money.of(USD, 200)
-                : Money.of(USD, 26);
+    FeesAndCredits feesAndCredits =
+        new FeesAndCredits.Builder()
+            .setCurrency(USD)
+            .addFeeOrCredit(
+                Fee.create(
+                    isAnchorTenant
+                        ? BigDecimal.valueOf(0)
+                        : isDomainPremium(getUniqueIdFromCommand(), clock.nowUtc())
+                            ? BigDecimal.valueOf(200)
+                            : BigDecimal.valueOf(26),
+                    FeeType.CREATE,
+                    isDomainPremium(getUniqueIdFromCommand(), clock.nowUtc())))
+            .build();
     Money eapFee =
         Money.of(
             Registry.get(domainTld).getCurrency(),
@@ -280,14 +289,14 @@ class DomainCreateFlowTest extends ResourceFlowTestCase<DomainCreateFlow, Domain
         .and()
         .hasPeriodYears(2);
     RenewalPriceInfo renewalPriceInfo =
-        DomainCreateFlow.getRenewalPriceInfo(isAnchorTenant, allocationToken, creationCost);
+        DomainCreateFlow.getRenewalPriceInfo(isAnchorTenant, allocationToken, feesAndCredits);
     // There should be one bill for the create and one for the recurring autorenew event.
     BillingEvent.OneTime createBillingEvent =
         new BillingEvent.OneTime.Builder()
             .setReason(Reason.CREATE)
             .setTargetId(getUniqueIdFromCommand())
             .setRegistrarId("TheRegistrar")
-            .setCost(creationCost)
+            .setCost(feesAndCredits.getCreateCost())
             .setPeriodYears(2)
             .setEventTime(clock.nowUtc())
             .setBillingTime(billingTime)
@@ -2604,40 +2613,59 @@ class DomainCreateFlowTest extends ResourceFlowTestCase<DomainCreateFlow, Domain
   }
 
   @TestOfyAndSql
-  void testgetRenewalPriceInfo_isAnchorTenantWithoutToken_returnsNonPremiumAndNullPrice()
-      throws EppException {
-    assertThat(DomainCreateFlow.getRenewalPriceInfo(true, Optional.empty(), Money.of(USD, 123)))
+  void testGetRenewalPriceInfo_isAnchorTenantWithoutToken_returnsNonPremiumAndNullPrice() {
+    assertThat(
+            DomainCreateFlow.getRenewalPriceInfo(
+                true,
+                Optional.empty(),
+                new FeesAndCredits.Builder()
+                    .setCurrency(USD)
+                    .addFeeOrCredit(Fee.create(BigDecimal.valueOf(0), FeeType.CREATE, false))
+                    .build()))
         .isEqualTo(RenewalPriceInfo.create(RenewalPriceBehavior.NONPREMIUM, null));
   }
 
   @TestOfyAndSql
-  void testgetRenewalPriceInfo_isAnchorTenantWithToken_returnsNonPremiumAndNullPrice()
-      throws EppException {
+  void testGetRenewalPriceInfo_isAnchorTenantWithToken_returnsNonPremiumAndNullPrice() {
     assertThat(
             DomainCreateFlow.getRenewalPriceInfo(
-                true, Optional.of(allocationToken), Money.of(USD, 123)))
+                true,
+                Optional.of(allocationToken),
+                new FeesAndCredits.Builder()
+                    .setCurrency(USD)
+                    .addFeeOrCredit(Fee.create(BigDecimal.valueOf(0), FeeType.CREATE, false))
+                    .build()))
         .isEqualTo(RenewalPriceInfo.create(RenewalPriceBehavior.NONPREMIUM, null));
   }
 
   @TestOfyAndSql
-  void testgetRenewalPriceInfo_isNotAnchorTenantWithToken_returnsDefaultAndNullPrice()
-      throws EppException {
+  void testGetRenewalPriceInfo_isNotAnchorTenantWithToken_returnsDefaultAndNullPrice() {
     assertThat(
             DomainCreateFlow.getRenewalPriceInfo(
-                false, Optional.of(allocationToken), Money.of(USD, 123)))
+                false,
+                Optional.of(allocationToken),
+                new FeesAndCredits.Builder()
+                    .setCurrency(USD)
+                    .addFeeOrCredit(Fee.create(BigDecimal.valueOf(100), FeeType.CREATE, false))
+                    .build()))
         .isEqualTo(RenewalPriceInfo.create(RenewalPriceBehavior.DEFAULT, null));
   }
 
   @TestOfyAndSql
-  void testgetRenewalPriceInfo_isNotAnchorTenantWithoutToken_returnsDefaultAndNullPrice()
-      throws EppException {
-    assertThat(DomainCreateFlow.getRenewalPriceInfo(false, Optional.empty(), Money.of(USD, 123)))
+  void testGetRenewalPriceInfo_isNotAnchorTenantWithoutToken_returnsDefaultAndNullPrice() {
+    assertThat(
+            DomainCreateFlow.getRenewalPriceInfo(
+                false,
+                Optional.empty(),
+                new FeesAndCredits.Builder()
+                    .setCurrency(USD)
+                    .addFeeOrCredit(Fee.create(BigDecimal.valueOf(100), FeeType.CREATE, false))
+                    .build()))
         .isEqualTo(RenewalPriceInfo.create(RenewalPriceBehavior.DEFAULT, null));
   }
 
   @TestOfyAndSql
-  void testgetRenewalPriceInfo_isNotAnchorTenantWithoutToken_returnsSpecifiedAndCreatePrice()
-      throws EppException {
+  void testGetRenewalPriceInfo_isNotAnchorTenantWithoutToken_returnsSpecifiedAndCreatePrice() {
     AllocationToken token =
         persistResource(
             new AllocationToken.Builder()
@@ -2645,41 +2673,59 @@ class DomainCreateFlowTest extends ResourceFlowTestCase<DomainCreateFlow, Domain
                 .setTokenType(SINGLE_USE)
                 .setRenewalPriceBehavior(RenewalPriceBehavior.SPECIFIED)
                 .build());
-    assertThat(DomainCreateFlow.getRenewalPriceInfo(false, Optional.of(token), Money.of(USD, 123)))
-        .isEqualTo(RenewalPriceInfo.create(RenewalPriceBehavior.SPECIFIED, Money.of(USD, 123)));
+    assertThat(
+            DomainCreateFlow.getRenewalPriceInfo(
+                false,
+                Optional.of(token),
+                new FeesAndCredits.Builder()
+                    .setCurrency(USD)
+                    .addFeeOrCredit(Fee.create(BigDecimal.valueOf(100), FeeType.CREATE, false))
+                    .build()))
+        .isEqualTo(RenewalPriceInfo.create(RenewalPriceBehavior.SPECIFIED, Money.of(USD, 100)));
   }
 
   @TestOfyAndSql
-  void testgetRenewalPriceInfo_isAnchorTenantWithSpecifiedStateInToken_throwsError()
-      throws EppException {
-    AllocationToken token =
-        persistResource(
-            new AllocationToken.Builder()
-                .setToken("abc123")
-                .setTokenType(SINGLE_USE)
-                .setRenewalPriceBehavior(RenewalPriceBehavior.SPECIFIED)
-                .build());
-    assertThat(
-            assertThrows(
-                IllegalArgumentException.class,
-                () -> {
-                  DomainCreateFlow.getRenewalPriceInfo(
-                      true, Optional.of(token), Money.of(USD, 123));
-                }))
+  void testGetRenewalPriceInfo_isAnchorTenantWithSpecifiedStateInToken_throwsError() {
+    IllegalArgumentException thrown =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> {
+              DomainCreateFlow.getRenewalPriceInfo(
+                  true,
+                  Optional.of(
+                      persistResource(
+                          new AllocationToken.Builder()
+                              .setToken("abc123")
+                              .setTokenType(SINGLE_USE)
+                              .setRenewalPriceBehavior(RenewalPriceBehavior.SPECIFIED)
+                              .build())),
+                  new FeesAndCredits.Builder()
+                      .setCurrency(USD)
+                      .addFeeOrCredit(Fee.create(BigDecimal.valueOf(0), FeeType.CREATE, true))
+                      .build());
+            });
+    assertThat(thrown)
         .hasMessageThat()
         .isEqualTo("Renewal price behavior cannot be SPECIFIED for anchor tenant");
   }
 
   @TestOfyAndSql
-  void testgetRenewalPriceInfo_isNotAnchorTenantWithoutTokenWithoutCreatePrice_throwsException()
-      throws EppException {
-    assertThat(
-            assertThrows(
-                NullPointerException.class,
-                () -> {
-                  DomainCreateFlow.getRenewalPriceInfo(false, Optional.empty(), null);
-                }))
-        .hasMessageThat()
-        .isEqualTo("Create cost cannot be null");
+  void testGetRenewalPriceInfo_isNotAnchorTenantWithTokenWithoutCreatePrice_throwsException() {
+    IllegalArgumentException thrown =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> {
+              DomainCreateFlow.getRenewalPriceInfo(
+                  false,
+                  Optional.of(
+                      persistResource(
+                          new AllocationToken.Builder()
+                              .setToken("abc123")
+                              .setTokenType(SINGLE_USE)
+                              .setRenewalPriceBehavior(RenewalPriceBehavior.SPECIFIED)
+                              .build())),
+                  null);
+            });
+    assertThat(thrown).hasMessageThat().isEqualTo("Create cost cannot be null");
   }
 }
