@@ -16,6 +16,7 @@ package google.registry.tools;
 
 import static com.google.common.truth.Truth.assertThat;
 import static google.registry.model.billing.BillingEvent.RenewalPriceBehavior.DEFAULT;
+import static google.registry.model.billing.BillingEvent.RenewalPriceBehavior.NONPREMIUM;
 import static google.registry.model.billing.BillingEvent.RenewalPriceBehavior.SPECIFIED;
 import static google.registry.model.domain.token.AllocationToken.TokenType.SINGLE_USE;
 import static google.registry.model.domain.token.AllocationToken.TokenType.UNLIMITED_USE;
@@ -206,6 +207,23 @@ class GenerateAllocationTokensCommandTest extends CommandTestCase<GenerateAlloca
   }
 
   @TestOfyAndSql
+  void testSuccess_renewalPriceBehaviorIsSetToDefaultByDefault() throws Exception {
+    runCommand("--tokens", "foobar,foobaz");
+    assertAllocationTokens(
+        createToken("foobar", DEFAULT, null, null), createToken("foobaz", DEFAULT, null, null));
+    assertInStdout("foobar", "foobaz");
+  }
+
+  @TestOfyAndSql
+  void testSuccess_renewalPriceBehaviorIsNonPremium() throws Exception {
+    runCommand("--tokens", "foobar,foobaz", "--renewal_price_behavior", "NONPREMIUM");
+    assertAllocationTokens(
+        createToken("foobar", NONPREMIUM, null, null),
+        createToken("foobaz", NONPREMIUM, null, null));
+    assertInStdout("foobar", "foobaz");
+  }
+
+  @TestOfyAndSql
   void testSuccess_renewalPriceBehaviorIsSpecified() throws Exception {
     runCommand("--tokens", "foobar,foobaz", "--renewal_price_behavior", "SPECIFIED");
     assertAllocationTokens(
@@ -214,55 +232,41 @@ class GenerateAllocationTokensCommandTest extends CommandTestCase<GenerateAlloca
   }
 
   @TestOfyAndSql
-  void testSuccess_renewalPriceBehaviorIsInAllLowerCase() throws Exception {
-    runCommand("--tokens", "foobar,foobaz", "--renewal_price_behavior", "specified");
+  void testSuccess_renewalPriceBehaviorIsSpecifiedButMixedCase() throws Exception {
+    runCommand("--tokens", "foobar,foobaz", "--renewal_price_behavior", "speCIFied");
     assertAllocationTokens(
         createToken("foobar", SPECIFIED, null, null), createToken("foobaz", SPECIFIED, null, null));
     assertInStdout("foobar", "foobaz");
   }
 
   @TestOfyAndSql
-  void testSuccess_renewalPriceBehaviorIsInMixedrCases() throws Exception {
-    runCommand("--tokens", "foobar,foobaz", "--renewal_price_behavior", "deFault");
-    assertAllocationTokens(
-        createToken("foobar", DEFAULT, null, null), createToken("foobaz", DEFAULT, null, null));
-    assertInStdout("foobar", "foobaz");
-  }
-
-  @TestOfyAndSql
   void testFailure_renewalPriceBehaviorIsSpecifiedIsInvalid() {
-    assertThat(
-            assertThrows(
-                IllegalArgumentException.class,
-                () -> {
-                  runCommand("--tokens", "foobar,foobaz", "--renewal_price_behavior", "SPEXIFIED");
-                }))
+    ParameterException thrown =
+        assertThrows(
+            ParameterException.class,
+            () -> {
+              runCommand("--tokens", "foobar,foobaz", "--renewal_price_behavior", "SPEXIFIED");
+            });
+    assertThat(thrown)
         .hasMessageThat()
-        .isEqualTo("Invalid renewal price behavior: 'SPEXIFIED'");
-  }
-
-  @TestOfyAndSql
-  void testFailure_renewalPriceBehaviorIsNonpremium() {
-    assertThat(
-            assertThrows(
-                IllegalArgumentException.class,
-                () -> {
-                  runCommand("--tokens", "foobar,foobaz", "--renewal_price_behavior", "NONPREMIUM");
-                }))
-        .hasMessageThat()
-        .isEqualTo("NONPREMIUM is not a supported renewal price behavior in allocation token");
+        .isEqualTo(
+            "Invalid value for --renewal_price_behavior parameter. Allowed values:[DEFAULT,"
+                + " NONPREMIUM, SPECIFIED]");
   }
 
   @TestOfyAndSql
   void testFailure_renewalPriceBehaviorIsEmptyString() {
-    assertThat(
-            assertThrows(
-                IllegalArgumentException.class,
-                () -> {
-                  runCommand("--tokens", "foobar,foobaz", "--renewal_price_behavior", "");
-                }))
+    ParameterException thrown =
+        assertThrows(
+            ParameterException.class,
+            () -> {
+              runCommand("--tokens", "foobar,foobaz", "--renewal_price_behavior", "");
+            });
+    assertThat(thrown)
         .hasMessageThat()
-        .isEqualTo("Invalid renewal price behavior: ''");
+        .isEqualTo(
+            "Invalid value for --renewal_price_behavior parameter. Allowed values:[DEFAULT,"
+                + " NONPREMIUM, SPECIFIED]");
   }
 
   @TestOfyAndSql

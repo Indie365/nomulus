@@ -21,7 +21,6 @@ import static com.google.common.collect.Streams.stream;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 import static google.registry.persistence.transaction.TransactionManagerUtil.transactIfJpaTm;
 
-import avro.shaded.com.google.common.base.Ascii;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import com.google.common.base.Joiner;
@@ -95,7 +94,7 @@ final class UpdateAllocationTokensCommand extends UpdateOrDeleteAllocationTokens
       description =
           "Type of renewal price behavior, either DEFAULT (default) or SPECIFIED. This indicates"
               + " how a domain should be charged for renewal.")
-  private String renewalPriceBehavior;
+  private RenewalPriceBehavior renewalPriceBehavior;
 
   private static final int BATCH_SIZE = 20;
   private static final Joiner JOINER = Joiner.on(", ");
@@ -152,17 +151,8 @@ final class UpdateAllocationTokensCommand extends UpdateOrDeleteAllocationTokens
     Optional.ofNullable(discountYears).ifPresent(builder::setDiscountYears);
     Optional.ofNullable(tokenStatusTransitions).ifPresent(builder::setTokenStatusTransitions);
     Optional.ofNullable(renewalPriceBehavior)
-        .ifPresent(behavior -> builder.setRenewalPriceBehavior(getRenewalPriceBehavior(behavior)));
+        .ifPresent(behavior -> builder.setRenewalPriceBehavior(renewalPriceBehavior));
     return builder.build();
-  }
-
-  private RenewalPriceBehavior getRenewalPriceBehavior(String renewalPriceBehaviorStr) {
-    try {
-      return RenewalPriceBehavior.valueOf(Ascii.toUpperCase(renewalPriceBehaviorStr));
-    } catch (IllegalArgumentException e) {
-      throw new IllegalArgumentException(
-          String.format("Invalid renewal price behavior: '%s'", renewalPriceBehaviorStr));
-    }
   }
 
   private long saveBatch(ImmutableList<AllocationToken> batch) {
