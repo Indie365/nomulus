@@ -37,7 +37,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-/** Tests for {@link PricingEngineProxy}. */
+/** Unit tests for {@link PricingEngineProxy}. */
 public class PricingEngineProxyTest {
 
   @RegisterExtension

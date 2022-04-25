@@ -156,7 +156,7 @@ public final class DomainRenewFlow implements TransactionalFlow {
     Recurring existingRecurringBillingEvent =
         tm().loadByKey(existingDomain.getAutorenewBillingEvent());
     FeesAndCredits feesAndCredits =
-        pricingLogic.getRenewPrice(
+        pricingLogic.getRenewalCost(
             Registry.get(existingDomain.getTld()),
             targetId,
             now,
