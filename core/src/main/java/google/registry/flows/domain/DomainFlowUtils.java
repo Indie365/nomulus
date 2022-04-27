@@ -683,6 +683,12 @@ public class DomainFlowUtils {
         break;
       case RENEW:
         builder.setAvailIfSupported(true);
+        // There are cases when the domain does not contain billing event such as checking the fee
+        // extension of the renew command via {@link DomainInfoFlow}
+        // If the user wants to check the renew fee of a domain via {@link DomainCheckFlow}, the
+        // domain must be available and therefore the domain will not be present and without billing
+        // event, unless it's loaded for a restore check. The renew price in both cases would be
+        // whatever coming from the pricing engine.
         if (domain.isPresent() && domain.get().getAutorenewBillingEvent() != null) {
           fees =
               pricingLogic
@@ -691,13 +697,12 @@ public class DomainFlowUtils {
                       domainNameString,
                       now,
                       years,
-                      tm().loadByKey(domain.get().getAutorenewBillingEvent()))
+                      tm().transact(() -> tm().loadByKey(domain.get().getAutorenewBillingEvent())))
                   .getFees();
         } else {
           fees =
               pricingLogic.getRenewalCost(registry, domainNameString, now, years, null).getFees();
         }
-
         break;
       case RESTORE:
         // The minimum allowable period per the EPP spec is 1, so, strangely, 1 year still has to be
