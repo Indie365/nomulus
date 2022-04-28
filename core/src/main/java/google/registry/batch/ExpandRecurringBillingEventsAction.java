@@ -27,7 +27,6 @@ import static google.registry.persistence.transaction.QueryComposer.Comparator.E
 import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 import static google.registry.persistence.transaction.TransactionManagerUtil.transactIfJpaTm;
-import static google.registry.pricing.PricingEngineProxy.getDomainRenewCost;
 import static google.registry.util.CollectionUtils.union;
 import static google.registry.util.DateTimeUtils.START_OF_TIME;
 import static google.registry.util.DateTimeUtils.earliestOf;
@@ -41,6 +40,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Range;
 import com.google.common.collect.Streams;
 import com.google.common.flogger.FluentLogger;
+import google.registry.flows.domain.DomainFlowUtils;
 import google.registry.mapreduce.MapreduceRunner;
 import google.registry.mapreduce.inputs.NullInput;
 import google.registry.model.ImmutableObject;
@@ -64,7 +64,6 @@ import google.registry.util.Clock;
 import java.util.Optional;
 import java.util.Set;
 import javax.inject.Inject;
-import org.joda.money.Money;
 import org.joda.time.DateTime;
 
 /**
@@ -349,13 +348,14 @@ public class ExpandRecurringBillingEventsAction implements Runnable {
       historyEntriesBuilder.add(historyEntry);
 
       DateTime eventTime = billingTime.minus(tld.getAutoRenewGracePeriodLength());
-      // Determine the cost for a one-year renewal.
-      Money renewCost = getDomainRenewCost(recurring.getTargetId(), eventTime, 1);
       syntheticOneTimesBuilder.add(
           new OneTime.Builder()
               .setBillingTime(billingTime)
               .setRegistrarId(recurring.getRegistrarId())
-              .setCost(renewCost)
+              // Determine the cost for a one-year renewal.
+              .setCost(
+                  DomainFlowUtils.getDomainRenewPrice(
+                      recurring.getTargetId(), eventTime, recurring))
               .setEventTime(eventTime)
               .setFlags(union(recurring.getFlags(), Flag.SYNTHETIC))
               .setParent(historyEntry)
