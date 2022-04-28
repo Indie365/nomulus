@@ -27,15 +27,18 @@ import google.registry.flows.custom.DomainPricingCustomLogic.RenewPriceParameter
 import google.registry.flows.custom.DomainPricingCustomLogic.RestorePriceParameters;
 import google.registry.flows.custom.DomainPricingCustomLogic.TransferPriceParameters;
 import google.registry.flows.custom.DomainPricingCustomLogic.UpdatePriceParameters;
+import google.registry.model.billing.BillingEvent.Recurring;
 import google.registry.model.domain.fee.BaseFee;
 import google.registry.model.domain.fee.BaseFee.FeeType;
 import google.registry.model.domain.fee.Fee;
 import google.registry.model.domain.token.AllocationToken;
 import google.registry.model.pricing.PremiumPricingEngine.DomainPrices;
 import google.registry.model.tld.Registry;
+import google.registry.pricing.PricingEngineProxy;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Optional;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import org.joda.money.CurrencyUnit;
 import org.joda.money.Money;
@@ -102,6 +105,8 @@ public final class DomainPricingLogic {
             .build());
   }
 
+  // TODO(rachelguan): keeping this method for now to support existing renew flow. It should be
+  // removed once PR#1592 is approved.
   /** Returns a new renew price for the pricer. */
   @SuppressWarnings("unused")
   FeesAndCredits getRenewPrice(Registry registry, String domainName, DateTime dateTime, int years)
@@ -114,6 +119,35 @@ public final class DomainPricingLogic {
                 new FeesAndCredits.Builder()
                     .setCurrency(registry.getCurrency())
                     .addFeeOrCredit(Fee.create(renewCost, FeeType.RENEW, domainPrices.isPremium()))
+                    .build())
+            .setRegistry(registry)
+            .setDomainName(InternetDomainName.from(domainName))
+            .setAsOfDate(dateTime)
+            .setYears(years)
+            .build());
+  }
+
+  /** Returns a new renewal cost for the pricer. */
+  @SuppressWarnings("unused")
+  FeesAndCredits getRenewalCost(
+      Registry registry,
+      String domainName,
+      DateTime dateTime,
+      int years,
+      @Nullable Recurring recurringBillingEvent)
+      throws EppException {
+    Money renewCost =
+        DomainFlowUtils.getDomainRenewCost(domainName, dateTime, years, recurringBillingEvent);
+    return customLogic.customizeRenewPrice(
+        RenewPriceParameters.newBuilder()
+            .setFeesAndCredits(
+                new FeesAndCredits.Builder()
+                    .setCurrency(renewCost.getCurrencyUnit())
+                    .addFeeOrCredit(
+                        Fee.create(
+                            renewCost.getAmount(),
+                            FeeType.RENEW,
+                            PricingEngineProxy.isDomainPremium(domainName, dateTime)))
                     .build())
             .setRegistry(registry)
             .setDomainName(InternetDomainName.from(domainName))
