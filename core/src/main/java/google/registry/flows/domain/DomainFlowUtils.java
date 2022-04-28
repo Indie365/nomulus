@@ -14,6 +14,7 @@
 
 package google.registry.flows.domain;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Predicates.equalTo;
@@ -46,6 +47,7 @@ import static google.registry.util.DateTimeUtils.END_OF_TIME;
 import static google.registry.util.DateTimeUtils.isAtOrAfter;
 import static google.registry.util.DateTimeUtils.leapSafeAddYears;
 import static google.registry.util.DomainNameUtils.ACE_PREFIX;
+import static google.registry.util.DomainNameUtils.getTldFromDomainName;
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.joining;
 
@@ -128,6 +130,7 @@ import google.registry.model.tld.label.ReservationType;
 import google.registry.model.tld.label.ReservedList;
 import google.registry.model.tmch.ClaimsListDao;
 import google.registry.persistence.VKey;
+import google.registry.pricing.PricingEngineProxy;
 import google.registry.tldconfig.idn.IdnLabelValidator;
 import google.registry.tools.DigestType;
 import google.registry.util.Idn;
@@ -615,6 +618,42 @@ public class DomainFlowUtils {
     return recurring;
   }
 
+  /** Returns the billing price for renewing the specified domain name for one year. */
+  public static Money getDomainRenewPrice(
+      String domainName, DateTime priceTime, @Nullable Recurring recurringBillingEvent) {
+    if (recurringBillingEvent == null) {
+      return PricingEngineProxy.getDomainRenewCost(domainName, priceTime, 1);
+    }
+    Money renewPrice;
+    switch (recurringBillingEvent.getRenewalPriceBehavior()) {
+      case DEFAULT:
+        renewPrice = PricingEngineProxy.getDomainRenewCost(domainName, priceTime, 1);
+        break;
+      case SPECIFIED:
+        checkArgument(
+            recurringBillingEvent.getRenewalPrice().isPresent(),
+            "Unexpected behavior: renewal price cannot be null when renewal behavior is SPECIFIED");
+        renewPrice = recurringBillingEvent.getRenewalPrice().get();
+        break;
+      case NONPREMIUM:
+        renewPrice = Registry.get(getTldFromDomainName(domainName)).getStandardRenewCost(priceTime);
+        break;
+      default:
+        throw new IllegalArgumentException(
+            String.format(
+                "Unknown RenewalPriceBehavior enum value: %s",
+                recurringBillingEvent.getRenewalPriceBehavior()));
+    }
+    return renewPrice.multipliedBy(1);
+  }
+
+  /** Returns the billing cost for renewing the specified domain name for this many years. */
+  public static Money getDomainRenewCost(
+      String domainName, DateTime priceTime, int years, @Nullable Recurring recurringBillingEvent) {
+    checkArgument(years > 0, "Number of years must be positive");
+    return getDomainRenewPrice(domainName, priceTime, recurringBillingEvent).multipliedBy(years);
+  }
+
   /**
    * Validates a {@link FeeQueryCommandExtensionItem} and sets the appropriate fields on a {@link
    * FeeQueryResponseExtensionItem} builder.
@@ -675,7 +714,26 @@ public class DomainFlowUtils {
         break;
       case RENEW:
         builder.setAvailIfSupported(true);
-        fees = pricingLogic.getRenewPrice(registry, domainNameString, now, years).getFees();
+        // There are cases when the domain does not contain billing event such as checking the fee
+        // extension of the renew command via {@link DomainInfoFlow}
+        // If the user wants to check the renew fee of a domain via {@link DomainCheckFlow}, the
+        // domain must be available and therefore the domain will not be present and without billing
+        // event, unless it's loaded for a restore check. The renew price in both cases would be
+        // whatever coming from the pricing engine.
+        if (domain.isPresent() && domain.get().getAutorenewBillingEvent() != null) {
+          fees =
+              pricingLogic
+                  .getRenewalCost(
+                      registry,
+                      domainNameString,
+                      now,
+                      years,
+                      tm().transact(() -> tm().loadByKey(domain.get().getAutorenewBillingEvent())))
+                  .getFees();
+        } else {
+          fees =
+              pricingLogic.getRenewalCost(registry, domainNameString, now, years, null).getFees();
+        }
         break;
       case RESTORE:
         // The minimum allowable period per the EPP spec is 1, so, strangely, 1 year still has to be
