@@ -607,6 +607,7 @@ public class DomainFlowUtils {
     return recurring;
   }
 
+  //TODO(rachelguan): remove after PR#1610 for renewal cost calculation gets merged
   /** Returns the billing price for renewing the specified domain name for one year. */
   public static Money getDomainRenewPrice(
       String domainName, DateTime priceTime, @Nullable Recurring recurringBillingEvent) {
@@ -636,6 +637,7 @@ public class DomainFlowUtils {
     return renewPrice.multipliedBy(1);
   }
 
+  //TODO(rachelguan): remove after PR#1610 for renewal cost calculation gets merged
   /** Returns the billing cost for renewing the specified domain name for this many years. */
   public static Money getDomainRenewCost(
       String domainName, DateTime priceTime, int years, @Nullable Recurring recurringBillingEvent) {
@@ -703,6 +705,8 @@ public class DomainFlowUtils {
         break;
       case RENEW:
         builder.setAvailIfSupported(true);
+        //TODO(rachelguan): remove after PR#1610 for renewal cost calculation gets merged
+
         // There are cases when the domain does not contain billing event such as checking the fee
         // extension of the renew command via {@link DomainInfoFlow}
         // If the user wants to check the renew fee of a domain via {@link DomainCheckFlow}, the

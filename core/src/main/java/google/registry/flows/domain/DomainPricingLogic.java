@@ -104,6 +104,7 @@ public final class DomainPricingLogic {
             .build());
   }
 
+  //TODO(rachelguan): remove after PR#1610 for renewal cost calculation gets merged
   /** Returns a new renewal cost for the pricer. */
   @SuppressWarnings("unused")
   FeesAndCredits getRenewalCost(
