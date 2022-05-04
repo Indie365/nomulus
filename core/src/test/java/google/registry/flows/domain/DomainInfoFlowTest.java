@@ -16,6 +16,7 @@ package google.registry.flows.domain;
 
 import static com.google.common.io.BaseEncoding.base16;
 import static com.google.common.truth.Truth.assertThat;
+import static google.registry.model.billing.BillingEvent.RenewalPriceBehavior.DEFAULT;
 import static google.registry.model.tld.Registry.TldState.QUIET_PERIOD;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 import static google.registry.testing.DatabaseHelper.assertNoBillingEvents;
@@ -49,6 +50,7 @@ import google.registry.flows.domain.DomainFlowUtils.TransfersAreAlwaysForOneYear
 import google.registry.model.billing.BillingEvent;
 import google.registry.model.billing.BillingEvent.Flag;
 import google.registry.model.billing.BillingEvent.Reason;
+import google.registry.model.billing.BillingEvent.Recurring;
 import google.registry.model.contact.ContactAuthInfo;
 import google.registry.model.contact.ContactResource;
 import google.registry.model.domain.DesignatedContact;
@@ -717,6 +719,34 @@ class DomainInfoFlowTest extends ResourceFlowTestCase<DomainInfoFlow, DomainBase
             "COMMAND", "renew",
             "PERIOD", "2"));
     persistTestEntities(false);
+
+    DomainHistory historyEntry =
+        persistResource(
+            new DomainHistory.Builder()
+                .setRegistrarId(domain.getCreationRegistrarId())
+                .setType(HistoryEntry.Type.DOMAIN_CREATE)
+                .setModificationTime(clock.nowUtc())
+                .setDomain(domain)
+                .build());
+
+    Recurring recurring =
+        persistResource(
+            new BillingEvent.Recurring.Builder()
+                .setParent(historyEntry)
+                .setRegistrarId(domain.getCreationRegistrarId())
+                .setEventTime(clock.nowUtc())
+                .setFlags(ImmutableSet.of(Flag.AUTO_RENEW))
+                .setId(2L)
+                .setReason(Reason.RENEW)
+                .setRenewalPriceBehavior(DEFAULT)
+                .setRenewalPrice(null)
+                .setRecurrenceEndTime(END_OF_TIME)
+                .setTargetId(domain.getDomainName())
+                .build());
+
+    domain =
+        persistResource(
+            domain.asBuilder().setAutorenewBillingEvent(recurring.createVKey()).build());
     doSuccessfulTest(
         "domain_info_fee_response.xml",
         false,
@@ -724,7 +754,8 @@ class DomainInfoFlowTest extends ResourceFlowTestCase<DomainInfoFlow, DomainBase
             "COMMAND", "renew",
             "DESCRIPTION", "renew",
             "PERIOD", "2",
-            "FEE", "22.00"));
+            "FEE", "22.00"),
+        true);
   }
 
   /** Test transfer command. */
@@ -823,10 +854,38 @@ class DomainInfoFlowTest extends ResourceFlowTestCase<DomainInfoFlow, DomainBase
             "COMMAND", "renew",
             "PERIOD", "1"));
     persistTestEntities("rich.example", false);
+
+    DomainHistory historyEntry =
+        persistResource(
+            new DomainHistory.Builder()
+                .setRegistrarId(domain.getCreationRegistrarId())
+                .setType(HistoryEntry.Type.DOMAIN_CREATE)
+                .setModificationTime(clock.nowUtc())
+                .setDomain(domain)
+                .build());
+
+    Recurring recurring =
+        persistResource(
+            new BillingEvent.Recurring.Builder()
+                .setParent(historyEntry)
+                .setRegistrarId(domain.getCreationRegistrarId())
+                .setEventTime(clock.nowUtc())
+                .setFlags(ImmutableSet.of(Flag.AUTO_RENEW))
+                .setId(2L)
+                .setReason(Reason.RENEW)
+                .setRenewalPriceBehavior(DEFAULT)
+                .setRenewalPrice(null)
+                .setRecurrenceEndTime(END_OF_TIME)
+                .setTargetId(domain.getDomainName())
+                .build());
+    domain =
+        persistResource(
+            domain.asBuilder().setAutorenewBillingEvent(recurring.createVKey()).build());
     doSuccessfulTest(
         "domain_info_fee_premium_response.xml",
         false,
-        ImmutableMap.of("COMMAND", "renew", "DESCRIPTION", "renew"));
+        ImmutableMap.of("COMMAND", "renew", "DESCRIPTION", "renew"),
+        true);
   }
 
   /** Test transfer command on a premium label. */

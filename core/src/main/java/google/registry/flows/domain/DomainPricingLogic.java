@@ -14,8 +14,10 @@
 
 package google.registry.flows.domain;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static google.registry.flows.domain.DomainFlowUtils.zeroInCurrency;
 import static google.registry.pricing.PricingEngineProxy.getPricesForDomainName;
+import static google.registry.util.DomainNameUtils.getTldFromDomainName;
 
 import com.google.common.net.InternetDomainName;
 import google.registry.flows.EppException;
@@ -105,8 +107,38 @@ public final class DomainPricingLogic {
             .build());
   }
 
-  // TODO(rachelguan): keeping this method for now to support existing renew flow. It should be
-  // removed once PR#1592 is approved.
+  /** Returns the billing cost for renewing the specified domain name for this many years. */
+  @SuppressWarnings("unused")
+  public Money getRenewCostLogic(
+      String domainName, DateTime priceTime, int years, @Nullable Recurring recurringBillingEvent) {
+    checkArgument(years > 0, "Number of years must be positive");
+    if (recurringBillingEvent == null) {
+      return PricingEngineProxy.getDomainRenewCost(domainName, priceTime, years);
+    }
+    Money renewPrice;
+    switch (recurringBillingEvent.getRenewalPriceBehavior()) {
+      case DEFAULT:
+        renewPrice = PricingEngineProxy.getDomainRenewCost(domainName, priceTime, 1);
+        break;
+      case SPECIFIED:
+        checkArgument(
+            recurringBillingEvent.getRenewalPrice().isPresent(),
+            "Unexpected behavior: renewal price cannot be null when renewal behavior is SPECIFIED");
+        renewPrice = recurringBillingEvent.getRenewalPrice().get();
+        break;
+      case NONPREMIUM:
+        renewPrice = Registry.get(getTldFromDomainName(domainName)).getStandardRenewCost(priceTime);
+        break;
+      default:
+        throw new IllegalArgumentException(
+            String.format(
+                "Unknown RenewalPriceBehavior enum value: %s",
+                recurringBillingEvent.getRenewalPriceBehavior()));
+    }
+    return renewPrice.multipliedBy(years);
+  }
+
+  // TODO (rachelguan): this will be replaced by the method getRenewPrice below in PR#1592
   /** Returns a new renew price for the pricer. */
   @SuppressWarnings("unused")
   FeesAndCredits getRenewPrice(Registry registry, String domainName, DateTime dateTime, int years)
@@ -129,15 +161,14 @@ public final class DomainPricingLogic {
 
   /** Returns a new renewal cost for the pricer. */
   @SuppressWarnings("unused")
-  FeesAndCredits getRenewalCost(
+  FeesAndCredits getRenewPrice(
       Registry registry,
       String domainName,
       DateTime dateTime,
       int years,
       @Nullable Recurring recurringBillingEvent)
       throws EppException {
-    Money renewCost =
-        DomainFlowUtils.getDomainRenewCost(domainName, dateTime, years, recurringBillingEvent);
+    Money renewCost = getRenewCostLogic(domainName, dateTime, years, recurringBillingEvent);
     return customLogic.customizeRenewPrice(
         RenewPriceParameters.newBuilder()
             .setFeesAndCredits(
