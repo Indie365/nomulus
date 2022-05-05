@@ -14,7 +14,6 @@
 
 package google.registry.flows.domain;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static google.registry.flows.domain.DomainFlowUtils.zeroInCurrency;
 import static google.registry.pricing.PricingEngineProxy.getPricesForDomainName;
 
@@ -105,31 +104,25 @@ public final class DomainPricingLogic {
             .build());
   }
 
-  /** Returns a new renew price for the pricer. */
+  /** Returns a new renewal cost for the pricer. */
   @SuppressWarnings("unused")
-  FeesAndCredits getRenewPrice(
+  FeesAndCredits getRenewalCost(
       Registry registry,
       String domainName,
       DateTime dateTime,
       int years,
       @Nullable Recurring recurringBillingEvent)
       throws EppException {
-    Money renewPrice =
-        PricingEngineProxy.getDomainRenewPrice(domainName, dateTime, recurringBillingEvent);
-    checkArgument(
-        registry.getCurrency().equals(renewPrice.getCurrencyUnit()),
-        String.format(
-            "The currency unit %s of the registry is different from the currency unit %s from the"
-                + " renew price",
-            registry.getCurrency().getSymbol(), renewPrice.getCurrencyUnit().getSymbol()));
+    Money renewCost =
+        DomainFlowUtils.getDomainRenewCost(domainName, dateTime, years, recurringBillingEvent);
     return customLogic.customizeRenewPrice(
         RenewPriceParameters.newBuilder()
             .setFeesAndCredits(
                 new FeesAndCredits.Builder()
-                    .setCurrency(registry.getCurrency())
+                    .setCurrency(renewCost.getCurrencyUnit())
                     .addFeeOrCredit(
                         Fee.create(
-                            renewPrice.multipliedBy(years).getAmount(),
+                            renewCost.getAmount(),
                             FeeType.RENEW,
                             PricingEngineProxy.isDomainPremium(domainName, dateTime)))
                     .build())

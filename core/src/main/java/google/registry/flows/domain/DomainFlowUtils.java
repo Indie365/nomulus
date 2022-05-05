@@ -14,6 +14,7 @@
 
 package google.registry.flows.domain;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Predicates.equalTo;
@@ -46,6 +47,7 @@ import static google.registry.util.DateTimeUtils.END_OF_TIME;
 import static google.registry.util.DateTimeUtils.isAtOrAfter;
 import static google.registry.util.DateTimeUtils.leapSafeAddYears;
 import static google.registry.util.DomainNameUtils.ACE_PREFIX;
+import static google.registry.util.DomainNameUtils.getTldFromDomainName;
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.joining;
 
@@ -129,6 +131,7 @@ import google.registry.model.tld.label.ReservationType;
 import google.registry.model.tld.label.ReservedList;
 import google.registry.model.tmch.ClaimsListDao;
 import google.registry.persistence.VKey;
+import google.registry.pricing.PricingEngineProxy;
 import google.registry.tldconfig.idn.IdnLabelValidator;
 import google.registry.tools.DigestType;
 import google.registry.util.Idn;
@@ -681,13 +684,18 @@ public class DomainFlowUtils {
       case RENEW:
         builder.setAvailIfSupported(true);
         if (domain.isPresent() && domain.get().getAutorenewBillingEvent() != null) {
-          Recurring recurring = tm().loadByKey(domain.get().getAutorenewBillingEvent());
           fees =
               pricingLogic
-                  .getRenewPrice(registry, domainNameString, now, years, recurring)
+                  .getRenewalCost(
+                      registry,
+                      domainNameString,
+                      now,
+                      years,
+                      tm().loadByKey(domain.get().getAutorenewBillingEvent()))
                   .getFees();
         } else {
-          fees = pricingLogic.getRenewPrice(registry, domainNameString, now, years, null).getFees();
+          fees =
+              pricingLogic.getRenewalCost(registry, domainNameString, now, years, null).getFees();
         }
 
         break;

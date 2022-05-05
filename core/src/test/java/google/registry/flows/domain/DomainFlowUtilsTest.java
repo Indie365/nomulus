@@ -23,7 +23,20 @@ import static google.registry.testing.EppExceptionSubject.assertAboutEppExceptio
 import static google.registry.util.DateTimeUtils.START_OF_TIME;
 import static org.joda.money.CurrencyUnit.CHF;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static google.registry.model.billing.BillingEvent.RenewalPriceBehavior.DEFAULT;
+import static google.registry.model.billing.BillingEvent.RenewalPriceBehavior.NONPREMIUM;
+import static google.registry.model.billing.BillingEvent.RenewalPriceBehavior.SPECIFIED;
+import static google.registry.testing.DatabaseHelper.createTld;
+import static google.registry.testing.DatabaseHelper.newDomainBase;
+import static google.registry.testing.DatabaseHelper.persistPremiumList;
+import static google.registry.testing.DatabaseHelper.persistResource;
+import static google.registry.testing.EppExceptionSubject.assertAboutEppExceptions;
+import static google.registry.util.DateTimeUtils.END_OF_TIME;
+import static google.registry.util.DateTimeUtils.START_OF_TIME;
+import static org.joda.money.CurrencyUnit.USD;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
 import google.registry.flows.EppException;
 import google.registry.flows.ResourceFlowTestCase;
@@ -37,14 +50,30 @@ import google.registry.flows.domain.DomainFlowUtils.LeadingDashException;
 import google.registry.flows.domain.DomainFlowUtils.MissingBillingAccountMapException;
 import google.registry.flows.domain.DomainFlowUtils.TldDoesNotExistException;
 import google.registry.flows.domain.DomainFlowUtils.TrailingDashException;
+import google.registry.model.billing.BillingEvent;
+import google.registry.model.billing.BillingEvent.Flag;
+import google.registry.model.billing.BillingEvent.Reason;
+import google.registry.model.billing.BillingEvent.Recurring;
+import google.registry.model.billing.BillingEvent.RenewalPriceBehavior;
 import google.registry.model.domain.DomainBase;
 import google.registry.model.tld.Registry.TldType;
 import google.registry.testing.AppEngineExtension;
 import google.registry.testing.DualDatabaseTest;
 import google.registry.testing.TestOfyAndSql;
 import org.joda.money.Money;
+import google.registry.model.domain.DomainHistory;
+import google.registry.model.reporting.HistoryEntry;
+import google.registry.model.tld.Registry;
+import google.registry.model.tld.label.PremiumList;
+import google.registry.testing.AppEngineExtension;
+import google.registry.testing.DualDatabaseTest;
+import google.registry.testing.TestOfyAndSql;
+import java.util.Optional;
+import org.joda.money.Money;
+import org.joda.time.DateTime;
 import org.junit.jupiter.api.BeforeEach;
 
+/** Unit tests for {@link DomainFlowUtils}. */
 @DualDatabaseTest
 class DomainFlowUtilsTest extends ResourceFlowTestCase<DomainInfoFlow, DomainBase> {
 
