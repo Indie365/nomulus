@@ -30,6 +30,7 @@ import static google.registry.flows.domain.DomainFlowUtils.validateFeeChallenge;
 import static google.registry.flows.domain.DomainFlowUtils.validateRegistrationPeriod;
 import static google.registry.flows.domain.DomainFlowUtils.verifyRegistrarIsActive;
 import static google.registry.flows.domain.DomainFlowUtils.verifyUnitIsYears;
+import static google.registry.model.billing.BillingEvent.RenewalPriceBehavior.DEFAULT;
 import static google.registry.model.reporting.HistoryEntry.Type.DOMAIN_RENEW;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 import static google.registry.util.DateTimeUtils.leapSafeAddYears;
@@ -164,7 +165,14 @@ public final class DomainRenewFlow implements TransactionalFlow {
             now,
             years,
             existingRecurringBillingEvent);
-    validateFeeChallenge(targetId, now, feeRenew, feesAndCredits);
+    // skip validate fee challenge if the renewal price behavior is not default;
+    // if the renewal price behavior is NONPREMIUM, it means that the domain will be charged
+    // standard price even if it's a premium domain.
+    // if the renewal price behavior is SPECIFIED, it means the renewal price comes from the
+    // existing billing event regardless of the status of the domain being premium or standard.
+    if (existingRecurringBillingEvent.getRenewalPriceBehavior() == DEFAULT) {
+      validateFeeChallenge(targetId, now, feeRenew, feesAndCredits);
+    }
     flowCustomLogic.afterValidation(
         AfterValidationParameters.newBuilder()
             .setExistingDomain(existingDomain)
