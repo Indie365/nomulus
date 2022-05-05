@@ -14,8 +14,10 @@
 
 package google.registry.flows.domain;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static google.registry.flows.domain.DomainFlowUtils.zeroInCurrency;
 import static google.registry.pricing.PricingEngineProxy.getPricesForDomainName;
+import static google.registry.util.DomainNameUtils.getTldFromDomainName;
 
 import com.google.common.net.InternetDomainName;
 import google.registry.flows.EppException;
@@ -104,17 +106,43 @@ public final class DomainPricingLogic {
             .build());
   }
 
+  // TODO(rachelguan): remove after PR#1610 for renewal cost calculation gets merged
   /** Returns a new renewal cost for the pricer. */
   @SuppressWarnings("unused")
-  FeesAndCredits getRenewalCost(
+  FeesAndCredits getRenewPrice(
       Registry registry,
       String domainName,
       DateTime dateTime,
       int years,
       @Nullable Recurring recurringBillingEvent)
       throws EppException {
-    Money renewCost =
-        DomainFlowUtils.getDomainRenewCost(domainName, dateTime, years, recurringBillingEvent);
+    checkArgument(years > 0, "Number of years must be positive");
+    Money renewCost = PricingEngineProxy.getDomainRenewCost(domainName, dateTime, years);
+    if (recurringBillingEvent != null) {
+      switch (recurringBillingEvent.getRenewalPriceBehavior()) {
+        case DEFAULT:
+          renewCost = PricingEngineProxy.getDomainRenewCost(domainName, dateTime, years);
+          break;
+        case SPECIFIED:
+          checkArgument(
+              recurringBillingEvent.getRenewalPrice().isPresent(),
+              "Unexpected behavior: renewal price cannot be null when renewal behavior is"
+                  + " SPECIFIED");
+          renewCost = recurringBillingEvent.getRenewalPrice().get().multipliedBy(years);
+          break;
+        case NONPREMIUM:
+          renewCost =
+              Registry.get(getTldFromDomainName(domainName))
+                  .getStandardRenewCost(dateTime)
+                  .multipliedBy(years);
+          break;
+        default:
+          throw new IllegalArgumentException(
+              String.format(
+                  "Unknown RenewalPriceBehavior enum value: %s",
+                  recurringBillingEvent.getRenewalPriceBehavior()));
+      }
+    }
     return customLogic.customizeRenewPrice(
         RenewPriceParameters.newBuilder()
             .setFeesAndCredits(

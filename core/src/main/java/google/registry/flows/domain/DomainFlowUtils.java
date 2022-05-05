@@ -14,7 +14,6 @@
 
 package google.registry.flows.domain;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Predicates.equalTo;
@@ -47,7 +46,6 @@ import static google.registry.util.DateTimeUtils.END_OF_TIME;
 import static google.registry.util.DateTimeUtils.isAtOrAfter;
 import static google.registry.util.DateTimeUtils.leapSafeAddYears;
 import static google.registry.util.DomainNameUtils.ACE_PREFIX;
-import static google.registry.util.DomainNameUtils.getTldFromDomainName;
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.joining;
 
@@ -131,7 +129,6 @@ import google.registry.model.tld.label.ReservationType;
 import google.registry.model.tld.label.ReservedList;
 import google.registry.model.tmch.ClaimsListDao;
 import google.registry.persistence.VKey;
-import google.registry.pricing.PricingEngineProxy;
 import google.registry.tldconfig.idn.IdnLabelValidator;
 import google.registry.tools.DigestType;
 import google.registry.util.Idn;
@@ -683,6 +680,8 @@ public class DomainFlowUtils {
         break;
       case RENEW:
         builder.setAvailIfSupported(true);
+        // TODO(rachelguan): remove after PR#1610 for renewal cost calculation gets merged
+
         // There are cases when the domain does not contain billing event such as checking the fee
         // extension of the renew command via {@link DomainInfoFlow}
         // If the user wants to check the renew fee of a domain via {@link DomainCheckFlow}, the
@@ -692,7 +691,7 @@ public class DomainFlowUtils {
         if (domain.isPresent() && domain.get().getAutorenewBillingEvent() != null) {
           fees =
               pricingLogic
-                  .getRenewalCost(
+                  .getRenewPrice(
                       registry,
                       domainNameString,
                       now,
@@ -700,8 +699,7 @@ public class DomainFlowUtils {
                       tm().transact(() -> tm().loadByKey(domain.get().getAutorenewBillingEvent())))
                   .getFees();
         } else {
-          fees =
-              pricingLogic.getRenewalCost(registry, domainNameString, now, years, null).getFees();
+          fees = pricingLogic.getRenewPrice(registry, domainNameString, now, years, null).getFees();
         }
         break;
       case RESTORE:
