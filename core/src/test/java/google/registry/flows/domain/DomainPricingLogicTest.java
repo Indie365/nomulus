@@ -193,8 +193,7 @@ public class DomainPricingLogicTest {
   }
 
   @TestOfyAndSql
-  void testGetDomainRenewPrice_oneYear_premiumDomain_default_isNonPremiumPrice()
-      throws EppException {
+  void testGetDomainRenewPrice_oneYear_premiumDomain_default_isPremiumPrice() throws EppException {
     assertThat(
             domainPricingLogic
                 .getRenewPrice(
@@ -209,8 +208,7 @@ public class DomainPricingLogicTest {
   }
 
   @TestOfyAndSql
-  void testGetDomainRenewPrice_multiYear_premiumDomain_default_isNonPremiumCost()
-      throws EppException {
+  void testGetDomainRenewPrice_multiYear_premiumDomain_default_isPremiumCost() throws EppException {
     assertThat(
             domainPricingLogic
                 .getRenewPrice(
@@ -251,7 +249,7 @@ public class DomainPricingLogicTest {
                     clock.nowUtc(),
                     5,
                     persistDomainAndSetRecurringBillingEvent(
-                        "premium.example", DEFAULT, Optional.empty()))
+                        "standard.example", DEFAULT, Optional.empty()))
                 .getRenewCost())
         .isEqualTo(Money.of(USD, 50));
   }
@@ -299,7 +297,7 @@ public class DomainPricingLogicTest {
                     clock.nowUtc(),
                     1,
                     persistDomainAndSetRecurringBillingEvent(
-                        "premium.example", NONPREMIUM, Optional.empty()))
+                        "standard.example", NONPREMIUM, Optional.empty()))
                 .getRenewCost())
         .isEqualTo(Money.of(USD, 10));
   }
@@ -315,7 +313,7 @@ public class DomainPricingLogicTest {
                     clock.nowUtc(),
                     5,
                     persistDomainAndSetRecurringBillingEvent(
-                        "premium.example", NONPREMIUM, Optional.empty()))
+                        "standard.example", NONPREMIUM, Optional.empty()))
                 .getRenewCost())
         .isEqualTo(Money.of(USD, 50));
   }
@@ -331,7 +329,7 @@ public class DomainPricingLogicTest {
                     clock.nowUtc(),
                     1,
                     persistDomainAndSetRecurringBillingEvent(
-                        "premium.example", SPECIFIED, Optional.of(Money.of(USD, 1))))
+                        "standard.example", SPECIFIED, Optional.of(Money.of(USD, 1))))
                 .getRenewCost())
         .isEqualTo(Money.of(USD, 1));
   }
@@ -347,7 +345,7 @@ public class DomainPricingLogicTest {
                     clock.nowUtc(),
                     5,
                     persistDomainAndSetRecurringBillingEvent(
-                        "premium.example", SPECIFIED, Optional.of(Money.of(USD, 1))))
+                        "standard.example", SPECIFIED, Optional.of(Money.of(USD, 1))))
                 .getRenewCost())
         .isEqualTo(Money.of(USD, 5));
   }
