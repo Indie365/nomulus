@@ -36,11 +36,13 @@ import static google.registry.util.DomainNameUtils.getTldFromDomainName;
 import com.google.appengine.tools.mapreduce.Mapper;
 import com.google.appengine.tools.mapreduce.Reducer;
 import com.google.appengine.tools.mapreduce.ReducerInput;
+import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Range;
 import com.google.common.collect.Streams;
 import com.google.common.flogger.FluentLogger;
+import google.registry.config.RegistryConfig.Config;
 import google.registry.mapreduce.MapreduceRunner;
 import google.registry.mapreduce.inputs.NullInput;
 import google.registry.model.ImmutableObject;
@@ -61,6 +63,7 @@ import google.registry.request.Parameter;
 import google.registry.request.Response;
 import google.registry.request.auth.Auth;
 import google.registry.util.Clock;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import javax.inject.Inject;
@@ -86,6 +89,11 @@ public class ExpandRecurringBillingEventsAction implements Runnable {
 
   @Inject Clock clock;
   @Inject MapreduceRunner mrRunner;
+
+  @Inject
+  @Config("jdbcBatchSize")
+  int batchSize;
+
   @Inject @Parameter(PARAM_DRY_RUN) boolean isDryRun;
   @Inject @Parameter(PARAM_CURSOR_TIME) Optional<DateTime> cursorTimeParam;
   @Inject Response response;
@@ -120,61 +128,91 @@ public class ExpandRecurringBillingEventsAction implements Runnable {
                       ImmutableSet.of(DomainBase.class), ImmutableSet.of(Recurring.class))))
           .sendLinkToMapreduceConsole(response);
     } else {
-      int numBillingEventsSaved =
-          jpaTm()
-              .transact(
-                  () ->
-                      jpaTm()
-                          .query(
-                              "FROM BillingRecurrence "
-                                  + "WHERE eventTime <= :executeTime "
-                                  + "AND eventTime < recurrenceEndTime "
-                                  + "ORDER BY id ASC",
-                              Recurring.class)
-                          .setParameter("executeTime", executeTime)
-                          // Need to get a list from the transaction and then convert it to a stream
-                          // for further processing. If we get a stream directly, each elements gets
-                          // processed downstream eagerly but Hibernate returns a
-                          // ScrollableResultsIterator that cannot be advanced outside the
-                          // transaction, resulting in an exception.
-                          .getResultList())
-              .stream()
-              .map(
-                  recurring ->
-                      jpaTm()
-                          .transact(
-                              () ->
-                                  expandBillingEvent(recurring, executeTime, cursorTime, isDryRun)))
-              .reduce(0, Integer::sum);
-
-      if (!isDryRun) {
-        logger.atInfo().log("Saved OneTime billing events.", numBillingEventsSaved);
-      } else {
-        logger.atInfo().log("Generated OneTime billing events (dry run).", numBillingEventsSaved);
-      }
-      logger.atInfo().log(
-          "Recurring event expansion %s complete for billing event range [%s, %s).",
-          isDryRun ? "(dry run) " : "", cursorTime, executeTime);
-      tm().transact(
-              () -> {
-                // Check for the unlikely scenario where the cursor has been altered during the
-                // expansion.
-                DateTime currentCursorTime =
-                    tm().loadByKeyIfPresent(Cursor.createGlobalVKey(RECURRING_BILLING))
-                        .orElse(Cursor.createGlobal(RECURRING_BILLING, START_OF_TIME))
-                        .getCursorTime();
-                if (!currentCursorTime.equals(persistedCursorTime)) {
-                  throw new IllegalStateException(
-                      String.format(
-                          "Current cursor position %s does not match persisted cursor position %s.",
-                          currentCursorTime, persistedCursorTime));
-                }
-                if (!isDryRun) {
-                  tm().put(Cursor.createGlobal(RECURRING_BILLING, executeTime));
-                }
-              });
+      expandSqlBillingEventsInBatches(executeTime, cursorTime, persistedCursorTime);
     }
   }
+
+  private void expandSqlBillingEventsInBatches(
+      DateTime executeTime, DateTime cursorTime, DateTime persistedCursorTime) {
+    int totalBillingEventsSaved = 0;
+
+    long maxProcessedRecurrenceId = 0;
+    SqlBatchResults sqlBatchResults;
+    do {
+      final long finalMaxProcessedRecurrenceId = maxProcessedRecurrenceId;
+      sqlBatchResults =
+          jpaTm()
+              .transact(
+                  () -> {
+                    int batchBillingEventsSaved = 0;
+                    long maxRecurrenceId = finalMaxProcessedRecurrenceId;
+                    List<Recurring> recurrings =
+                        jpaTm()
+                            .query(
+                                "FROM BillingRecurrence "
+                                    + "WHERE eventTime <= :executeTime "
+                                    + "AND eventTime < recurrenceEndTime "
+                                    + "AND id > :maxProcessedRecurrenceId"
+                                    + "ORDER BY id ASC",
+                                Recurring.class)
+                            .setParameter("executeTime", executeTime)
+                            .setParameter("maxProcessedRecurrenceId", finalMaxProcessedRecurrenceId)
+                            .setMaxResults(batchSize)
+                            .getResultList();
+                    for (Recurring recurring : recurrings) {
+                      batchBillingEventsSaved +=
+                          expandBillingEvent(recurring, executeTime, cursorTime, isDryRun);
+                      maxRecurrenceId = Math.max(maxRecurrenceId, recurring.getId());
+                    }
+                    return SqlBatchResults.create(batchBillingEventsSaved, maxRecurrenceId);
+                  });
+      totalBillingEventsSaved += sqlBatchResults.batchBillingEventsSaved();
+      maxProcessedRecurrenceId = sqlBatchResults.maxProcessedRecurrenceId();
+      logger.atInfo().log(
+          "Saved %d billing events in batch with max recurrence id %d.",
+          sqlBatchResults.batchBillingEventsSaved(), maxProcessedRecurrenceId);
+    } while (sqlBatchResults.batchBillingEventsSaved() > 0);
+
+    if (!isDryRun) {
+      logger.atInfo().log("Saved OneTime billing events.", totalBillingEventsSaved);
+    } else {
+      logger.atInfo().log("Generated OneTime billing events (dry run).", totalBillingEventsSaved);
+    }
+    logger.atInfo().log(
+        "Recurring event expansion %s complete for billing event range [%s, %s).",
+        isDryRun ? "(dry run) " : "", cursorTime, executeTime);
+    tm().transact(
+            () -> {
+              // Check for the unlikely scenario where the cursor has been altered during the
+              // expansion.
+              DateTime currentCursorTime =
+                  tm().loadByKeyIfPresent(Cursor.createGlobalVKey(RECURRING_BILLING))
+                      .orElse(Cursor.createGlobal(RECURRING_BILLING, START_OF_TIME))
+                      .getCursorTime();
+              if (!currentCursorTime.equals(persistedCursorTime)) {
+                throw new IllegalStateException(
+                    String.format(
+                        "Current cursor position %s does not match persisted cursor position %s.",
+                        currentCursorTime, persistedCursorTime));
+              }
+              if (!isDryRun) {
+                tm().put(Cursor.createGlobal(RECURRING_BILLING, executeTime));
+              }
+            });
+  }
+
+  @AutoValue
+  abstract static class SqlBatchResults {
+    abstract int batchBillingEventsSaved();
+
+    abstract long maxProcessedRecurrenceId();
+
+    static SqlBatchResults create(int batchBillingEventsSaved, long maxProcessedRecurrenceId) {
+      return new AutoValue_ExpandRecurringBillingEventsAction_SqlBatchResults(
+          batchBillingEventsSaved, maxProcessedRecurrenceId);
+    }
+  }
+
   /** Mapper to expand {@link Recurring} billing events into synthetic {@link OneTime} events. */
   public static class ExpandRecurringBillingEventsMapper
       extends Mapper<Recurring, DateTime, DateTime> {
