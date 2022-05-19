@@ -44,6 +44,7 @@ import com.google.common.collect.Range;
 import com.google.common.collect.Streams;
 import com.google.common.flogger.FluentLogger;
 import google.registry.config.RegistryConfig.Config;
+import google.registry.flows.domain.DomainPricingLogic;
 import google.registry.mapreduce.MapreduceRunner;
 import google.registry.mapreduce.inputs.NullInput;
 import google.registry.model.ImmutableObject;
@@ -90,6 +91,8 @@ public class ExpandRecurringBillingEventsAction implements Runnable {
 
   @Inject Clock clock;
   @Inject MapreduceRunner mrRunner;
+  @Inject
+  DomainPricingLogic pricingLogic;
 
   @Inject
   @Config("jdbcBatchSize")
