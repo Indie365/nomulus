@@ -28,7 +28,7 @@ import static google.registry.persistence.transaction.QueryComposer.Comparator.E
 import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 import static google.registry.persistence.transaction.TransactionManagerUtil.transactIfJpaTm;
-import static google.registry.pricing.PricingEngineProxy.getDomainRenewCost;
+import static google.registry.pricing.PricingEngineProxy.getDomainRenewPrice;
 import static google.registry.util.CollectionUtils.union;
 import static google.registry.util.DateTimeUtils.START_OF_TIME;
 import static google.registry.util.DateTimeUtils.earliestOf;
@@ -68,7 +68,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import javax.inject.Inject;
-import org.joda.money.Money;
 import org.joda.time.DateTime;
 
 /**
@@ -413,13 +412,12 @@ public class ExpandRecurringBillingEventsAction implements Runnable {
       historyEntriesBuilder.add(historyEntry);
 
       DateTime eventTime = billingTime.minus(tld.getAutoRenewGracePeriodLength());
-      // Determine the cost for a one-year renewal.
-      Money renewCost = getDomainRenewCost(recurring.getTargetId(), eventTime, 1);
       syntheticOneTimesBuilder.add(
           new OneTime.Builder()
               .setBillingTime(billingTime)
               .setRegistrarId(recurring.getRegistrarId())
-              .setCost(renewCost)
+              // Determine the cost for a one-year renewal.
+              .setCost(getDomainRenewPrice(recurring.getTargetId(), eventTime, recurring))
               .setEventTime(eventTime)
               .setFlags(union(recurring.getFlags(), Flag.SYNTHETIC))
               .setParent(historyEntry)
