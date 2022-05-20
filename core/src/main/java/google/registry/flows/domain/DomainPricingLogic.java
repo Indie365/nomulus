@@ -125,7 +125,14 @@ public final class DomainPricingLogic {
             .build());
   }
 
-  /** Returns a new renewal cost of a domain with no customization. */
+  /**
+   * Returns a new renewal cost of a domain with no customization.
+   *
+   * <p>This method can be used outside of {@link FlowScope}. {@link DomainPricingLogic} should only
+   * be injected in the flow cases and {@link DomainPricingLogic} contains {@link
+   * DomainPricingCustomLogic}, which should not be injected into a generic action file like {@link
+   * google.registry.batch.ExpandRecurringBillingEventsAction}.
+   */
   public static FeesAndCredits getNonCustomRenewPrice(
       String domainName, DateTime dateTime, int years, @Nullable Recurring recurringBillingEvent) {
     checkArgument(years > 0, "Number of years must be positive");

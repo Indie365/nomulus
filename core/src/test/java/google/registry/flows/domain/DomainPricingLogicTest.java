@@ -131,10 +131,16 @@ public class DomainPricingLogicTest {
   }
 
   @TestOfyAndSql
-  void testGetDomainRenewPrice_oneYear_standardDomain_noBilling_isStandardPrice()
-      throws EppException {
+  void testGetRenewPrice_oneYear_standardDomain_noBilling_isStandardPrice() throws EppException {
     assertThat(
             domainPricingLogic.getRenewPrice(registry, "standard.example", clock.nowUtc(), 1, null))
+        .isEqualTo(
+            new FeesAndCredits.Builder()
+                .setCurrency(USD)
+                .addFeeOrCredit(Fee.create(Money.of(USD, 10).getAmount(), RENEW, false))
+                .build());
+    assertThat(
+            DomainPricingLogic.getNonCustomRenewPrice("standard.example", clock.nowUtc(), 1, null))
         .isEqualTo(
             new FeesAndCredits.Builder()
                 .setCurrency(USD)
@@ -152,13 +158,26 @@ public class DomainPricingLogicTest {
                 .setCurrency(USD)
                 .addFeeOrCredit(Fee.create(Money.of(USD, 50).getAmount(), RENEW, false))
                 .build());
+    assertThat(
+            DomainPricingLogic.getNonCustomRenewPrice("standard.example", clock.nowUtc(), 5, null))
+        .isEqualTo(
+            new FeesAndCredits.Builder()
+                .setCurrency(USD)
+                .addFeeOrCredit(Fee.create(Money.of(USD, 50).getAmount(), RENEW, false))
+                .build());
   }
 
   @TestOfyAndSql
-  void testGetDomainRenewPrice_oneYear_premiumDomain_noBilling_isPremiumPrice()
-      throws EppException {
+  void testGetRenewPrice_oneYear_premiumDomain_noBilling_isPremiumPrice() throws EppException {
     assertThat(
             domainPricingLogic.getRenewPrice(registry, "premium.example", clock.nowUtc(), 1, null))
+        .isEqualTo(
+            new FeesAndCredits.Builder()
+                .setCurrency(USD)
+                .addFeeOrCredit(Fee.create(Money.of(USD, 100).getAmount(), RENEW, true))
+                .build());
+    assertThat(
+            DomainPricingLogic.getNonCustomRenewPrice("premium.example", clock.nowUtc(), 1, null))
         .isEqualTo(
             new FeesAndCredits.Builder()
                 .setCurrency(USD)
@@ -167,10 +186,16 @@ public class DomainPricingLogicTest {
   }
 
   @TestOfyAndSql
-  void testGetDomainRenewPrice_multiYear_premiumDomain_noBilling_isPremiumPrice()
-      throws EppException {
+  void testGetRenewPrice_multiYear_premiumDomain_noBilling_isPremiumPrice() throws EppException {
     assertThat(
             domainPricingLogic.getRenewPrice(registry, "premium.example", clock.nowUtc(), 5, null))
+        .isEqualTo(
+            new FeesAndCredits.Builder()
+                .setCurrency(USD)
+                .addFeeOrCredit(Fee.create(Money.of(USD, 500).getAmount(), RENEW, true))
+                .build());
+    assertThat(
+            DomainPricingLogic.getNonCustomRenewPrice("premium.example", clock.nowUtc(), 5, null))
         .isEqualTo(
             new FeesAndCredits.Builder()
                 .setCurrency(USD)
@@ -179,7 +204,7 @@ public class DomainPricingLogicTest {
   }
 
   @TestOfyAndSql
-  void testGetDomainRenewPrice_oneYear_premiumDomain_default_isPremiumPrice() throws EppException {
+  void testGetRenewPrice_oneYear_premiumDomain_default_isPremiumPrice() throws EppException {
     assertThat(
             domainPricingLogic.getRenewPrice(
                 registry,
@@ -193,10 +218,22 @@ public class DomainPricingLogicTest {
                 .setCurrency(USD)
                 .addFeeOrCredit(Fee.create(Money.of(USD, 100).getAmount(), RENEW, true))
                 .build());
+    assertThat(
+            DomainPricingLogic.getNonCustomRenewPrice(
+                "premium.example",
+                clock.nowUtc(),
+                1,
+                persistDomainAndSetRecurringBillingEvent(
+                    "premium.example", DEFAULT, Optional.empty())))
+        .isEqualTo(
+            new FeesAndCredits.Builder()
+                .setCurrency(USD)
+                .addFeeOrCredit(Fee.create(Money.of(USD, 100).getAmount(), RENEW, true))
+                .build());
   }
 
   @TestOfyAndSql
-  void testGetDomainRenewPrice_multiYear_premiumDomain_default_isPremiumCost() throws EppException {
+  void testGetRenewPrice_multiYear_premiumDomain_default_isPremiumCost() throws EppException {
     assertThat(
             domainPricingLogic.getRenewPrice(
                 registry,
@@ -210,11 +247,22 @@ public class DomainPricingLogicTest {
                 .setCurrency(USD)
                 .addFeeOrCredit(Fee.create(Money.of(USD, 500).getAmount(), RENEW, true))
                 .build());
+    assertThat(
+            DomainPricingLogic.getNonCustomRenewPrice(
+                "premium.example",
+                clock.nowUtc(),
+                5,
+                persistDomainAndSetRecurringBillingEvent(
+                    "premium.example", DEFAULT, Optional.empty())))
+        .isEqualTo(
+            new FeesAndCredits.Builder()
+                .setCurrency(USD)
+                .addFeeOrCredit(Fee.create(Money.of(USD, 500).getAmount(), RENEW, true))
+                .build());
   }
 
   @TestOfyAndSql
-  void testGetDomainRenewPrice_oneYear_standardDomain_default_isNonPremiumPrice()
-      throws EppException {
+  void testGetRenewPrice_oneYear_standardDomain_default_isNonPremiumPrice() throws EppException {
     assertThat(
             domainPricingLogic.getRenewPrice(
                 registry,
@@ -228,11 +276,22 @@ public class DomainPricingLogicTest {
                 .setCurrency(USD)
                 .addFeeOrCredit(Fee.create(Money.of(USD, 10).getAmount(), RENEW, false))
                 .build());
+    assertThat(
+            DomainPricingLogic.getNonCustomRenewPrice(
+                "standard.example",
+                clock.nowUtc(),
+                1,
+                persistDomainAndSetRecurringBillingEvent(
+                    "premium.example", DEFAULT, Optional.empty())))
+        .isEqualTo(
+            new FeesAndCredits.Builder()
+                .setCurrency(USD)
+                .addFeeOrCredit(Fee.create(Money.of(USD, 10).getAmount(), RENEW, false))
+                .build());
   }
 
   @TestOfyAndSql
-  void testGetDomainRenewPrice_multiYear_standardDomain_default_isNonPremiumCost()
-      throws EppException {
+  void testGetRenewPrice_multiYear_standardDomain_default_isNonPremiumCost() throws EppException {
     assertThat(
             domainPricingLogic.getRenewPrice(
                 registry,
@@ -246,10 +305,22 @@ public class DomainPricingLogicTest {
                 .setCurrency(USD)
                 .addFeeOrCredit(Fee.create(Money.of(USD, 50).getAmount(), RENEW, false))
                 .build());
+    assertThat(
+            DomainPricingLogic.getNonCustomRenewPrice(
+                "standard.example",
+                clock.nowUtc(),
+                5,
+                persistDomainAndSetRecurringBillingEvent(
+                    "standard.example", DEFAULT, Optional.empty())))
+        .isEqualTo(
+            new FeesAndCredits.Builder()
+                .setCurrency(USD)
+                .addFeeOrCredit(Fee.create(Money.of(USD, 50).getAmount(), RENEW, false))
+                .build());
   }
 
   @TestOfyAndSql
-  void testGetDomainRenewPrice_oneYear_premiumDomain_anchorTenant_isNonPremiumPrice()
+  void testGetRenewPrice_oneYear_premiumDomain_anchorTenant_isNonPremiumPrice()
       throws EppException {
     assertThat(
             domainPricingLogic.getRenewPrice(
@@ -264,10 +335,22 @@ public class DomainPricingLogicTest {
                 .setCurrency(USD)
                 .addFeeOrCredit(Fee.create(Money.of(USD, 10).getAmount(), RENEW, false))
                 .build());
+    assertThat(
+            DomainPricingLogic.getNonCustomRenewPrice(
+                "premium.example",
+                clock.nowUtc(),
+                1,
+                persistDomainAndSetRecurringBillingEvent(
+                    "premium.example", NONPREMIUM, Optional.empty())))
+        .isEqualTo(
+            new FeesAndCredits.Builder()
+                .setCurrency(USD)
+                .addFeeOrCredit(Fee.create(Money.of(USD, 10).getAmount(), RENEW, false))
+                .build());
   }
 
   @TestOfyAndSql
-  void testGetDomainRenewPrice_multiYear_premiumDomain_anchorTenant_isNonPremiumCost()
+  void testGetRenewPrice_multiYear_premiumDomain_anchorTenant_isNonPremiumCost()
       throws EppException {
     assertThat(
             domainPricingLogic.getRenewPrice(
@@ -282,10 +365,22 @@ public class DomainPricingLogicTest {
                 .setCurrency(USD)
                 .addFeeOrCredit(Fee.create(Money.of(USD, 50).getAmount(), RENEW, false))
                 .build());
+    assertThat(
+            DomainPricingLogic.getNonCustomRenewPrice(
+                "premium.example",
+                clock.nowUtc(),
+                5,
+                persistDomainAndSetRecurringBillingEvent(
+                    "premium.example", NONPREMIUM, Optional.empty())))
+        .isEqualTo(
+            new FeesAndCredits.Builder()
+                .setCurrency(USD)
+                .addFeeOrCredit(Fee.create(Money.of(USD, 50).getAmount(), RENEW, false))
+                .build());
   }
 
   @TestOfyAndSql
-  void testGetDomainRenewPrice_oneYear_standardDomain_anchorTenant_isNonPremiumPrice()
+  void testGetRenewPrice_oneYear_standardDomain_anchorTenant_isNonPremiumPrice()
       throws EppException {
     assertThat(
             domainPricingLogic.getRenewPrice(
@@ -300,10 +395,22 @@ public class DomainPricingLogicTest {
                 .setCurrency(USD)
                 .addFeeOrCredit(Fee.create(Money.of(USD, 10).getAmount(), RENEW, false))
                 .build());
+    assertThat(
+            DomainPricingLogic.getNonCustomRenewPrice(
+                "standard.example",
+                clock.nowUtc(),
+                1,
+                persistDomainAndSetRecurringBillingEvent(
+                    "standard.example", NONPREMIUM, Optional.empty())))
+        .isEqualTo(
+            new FeesAndCredits.Builder()
+                .setCurrency(USD)
+                .addFeeOrCredit(Fee.create(Money.of(USD, 10).getAmount(), RENEW, false))
+                .build());
   }
 
   @TestOfyAndSql
-  void testGetDomainRenewPrice_multiYear_standardDomain_anchorTenant_isNonPremiumCost()
+  void testGetRenewPrice_multiYear_standardDomain_anchorTenant_isNonPremiumCost()
       throws EppException {
     assertThat(
             domainPricingLogic.getRenewPrice(
@@ -318,10 +425,22 @@ public class DomainPricingLogicTest {
                 .setCurrency(USD)
                 .addFeeOrCredit(Fee.create(Money.of(USD, 50).getAmount(), RENEW, false))
                 .build());
+    assertThat(
+            DomainPricingLogic.getNonCustomRenewPrice(
+                "standard.example",
+                clock.nowUtc(),
+                5,
+                persistDomainAndSetRecurringBillingEvent(
+                    "standard.example", NONPREMIUM, Optional.empty())))
+        .isEqualTo(
+            new FeesAndCredits.Builder()
+                .setCurrency(USD)
+                .addFeeOrCredit(Fee.create(Money.of(USD, 50).getAmount(), RENEW, false))
+                .build());
   }
 
   @TestOfyAndSql
-  void testGetDomainRenewPrice_oneYear_standardDomain_internalRegistration_isSpecifiedPrice()
+  void testGetRenewPrice_oneYear_standardDomain_internalRegistration_isSpecifiedPrice()
       throws EppException {
     assertThat(
             domainPricingLogic.getRenewPrice(
@@ -336,10 +455,22 @@ public class DomainPricingLogicTest {
                 .setCurrency(USD)
                 .addFeeOrCredit(Fee.create(Money.of(USD, 1).getAmount(), RENEW, false))
                 .build());
+    assertThat(
+            DomainPricingLogic.getNonCustomRenewPrice(
+                "standard.example",
+                clock.nowUtc(),
+                1,
+                persistDomainAndSetRecurringBillingEvent(
+                    "standard.example", SPECIFIED, Optional.of(Money.of(USD, 1)))))
+        .isEqualTo(
+            new FeesAndCredits.Builder()
+                .setCurrency(USD)
+                .addFeeOrCredit(Fee.create(Money.of(USD, 1).getAmount(), RENEW, false))
+                .build());
   }
 
   @TestOfyAndSql
-  void testGetDomainRenewPrice_multiYear_standardDomain_internalRegistration_isSpecifiedPrice()
+  void testGetRenewPrice_multiYear_standardDomain_internalRegistration_isSpecifiedPrice()
       throws EppException {
     assertThat(
             domainPricingLogic.getRenewPrice(
@@ -354,10 +485,22 @@ public class DomainPricingLogicTest {
                 .setCurrency(USD)
                 .addFeeOrCredit(Fee.create(Money.of(USD, 5).getAmount(), RENEW, false))
                 .build());
+    assertThat(
+            DomainPricingLogic.getNonCustomRenewPrice(
+                "standard.example",
+                clock.nowUtc(),
+                5,
+                persistDomainAndSetRecurringBillingEvent(
+                    "standard.example", SPECIFIED, Optional.of(Money.of(USD, 1)))))
+        .isEqualTo(
+            new FeesAndCredits.Builder()
+                .setCurrency(USD)
+                .addFeeOrCredit(Fee.create(Money.of(USD, 5).getAmount(), RENEW, false))
+                .build());
   }
 
   @TestOfyAndSql
-  void testGetDomainRenewPrice_oneYear_premiumDomain_internalRegistration_isSpecifiedPrice()
+  void testGetRenewPrice_oneYear_premiumDomain_internalRegistration_isSpecifiedPrice()
       throws EppException {
     assertThat(
             domainPricingLogic.getRenewPrice(
@@ -372,10 +515,22 @@ public class DomainPricingLogicTest {
                 .setCurrency(USD)
                 .addFeeOrCredit(Fee.create(Money.of(USD, 17).getAmount(), RENEW, false))
                 .build());
+    assertThat(
+            DomainPricingLogic.getNonCustomRenewPrice(
+                "premium.example",
+                clock.nowUtc(),
+                1,
+                persistDomainAndSetRecurringBillingEvent(
+                    "premium.example", SPECIFIED, Optional.of(Money.of(USD, 17)))))
+        .isEqualTo(
+            new FeesAndCredits.Builder()
+                .setCurrency(USD)
+                .addFeeOrCredit(Fee.create(Money.of(USD, 17).getAmount(), RENEW, false))
+                .build());
   }
 
   @TestOfyAndSql
-  void testGetDomainRenewPrice_multiYear_premiumDomain_internalRegistration_isSpecifiedPrice()
+  void testGetRenewPrice_multiYear_premiumDomain_internalRegistration_isSpecifiedPrice()
       throws EppException {
     assertThat(
             domainPricingLogic.getRenewPrice(
@@ -390,16 +545,35 @@ public class DomainPricingLogicTest {
                 .setCurrency(USD)
                 .addFeeOrCredit(Fee.create(Money.of(USD, 85).getAmount(), RENEW, false))
                 .build());
+    assertThat(
+            DomainPricingLogic.getNonCustomRenewPrice(
+                "premium.example",
+                clock.nowUtc(),
+                5,
+                persistDomainAndSetRecurringBillingEvent(
+                    "premium.example", SPECIFIED, Optional.of(Money.of(USD, 17)))))
+        .isEqualTo(
+            new FeesAndCredits.Builder()
+                .setCurrency(USD)
+                .addFeeOrCredit(Fee.create(Money.of(USD, 85).getAmount(), RENEW, false))
+                .build());
   }
 
   @TestOfyAndSql
-  void testGetDomainRenewPrice_negativeYear_throwsException() throws EppException {
-    IllegalArgumentException thrown =
+  void testGetRenewPrice_negativeYear_throwsException() throws EppException {
+    IllegalArgumentException thrown1 =
         assertThrows(
             IllegalArgumentException.class,
             () ->
                 domainPricingLogic.getRenewPrice(
                     registry, "standard.example", clock.nowUtc(), -1, null));
-    assertThat(thrown).hasMessageThat().isEqualTo("Number of years must be positive");
+    assertThat(thrown1).hasMessageThat().isEqualTo("Number of years must be positive");
+    IllegalArgumentException thrown2 =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                DomainPricingLogic.getNonCustomRenewPrice(
+                    "standard.example", clock.nowUtc(), -1, null));
+    assertThat(thrown2).hasMessageThat().isEqualTo("Number of years must be positive");
   }
 }
