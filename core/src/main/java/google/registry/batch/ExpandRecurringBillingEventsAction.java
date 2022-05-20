@@ -91,8 +91,6 @@ public class ExpandRecurringBillingEventsAction implements Runnable {
 
   @Inject Clock clock;
   @Inject MapreduceRunner mrRunner;
-  @Inject
-  DomainPricingLogic pricingLogic;
 
   @Inject
   @Config("jdbcBatchSize")
@@ -422,7 +420,10 @@ public class ExpandRecurringBillingEventsAction implements Runnable {
           new OneTime.Builder()
               .setBillingTime(billingTime)
               .setRegistrarId(recurring.getRegistrarId())
-              .setCost(renewCost)
+              .setCost(
+                  DomainPricingLogic.getNonCustomRenewPrice(
+                          recurring.getTargetId(), eventTime, 1, recurring)
+                      .getRenewCost())
               .setEventTime(eventTime)
               .setFlags(union(recurring.getFlags(), Flag.SYNTHETIC))
               .setParent(historyEntry)
