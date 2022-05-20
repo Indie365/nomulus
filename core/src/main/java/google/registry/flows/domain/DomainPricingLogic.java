@@ -49,10 +49,6 @@ import org.joda.time.DateTime;
  * providing a {@link DomainPricingCustomLogic} implementation that operates on cross-TLD or per-TLD
  * logic.
  */
-<<<<<<< HEAD
-=======
-@FlowScope
->>>>>>> eca8905e6 (Remove attempt to inject)
 public final class DomainPricingLogic {
 
   @Inject DomainPricingCustomLogic customLogic;
@@ -116,20 +112,6 @@ public final class DomainPricingLogic {
       int years,
       @Nullable Recurring recurringBillingEvent)
       throws EppException {
-    return customLogic.customizeRenewPrice(
-        RenewPriceParameters.newBuilder()
-            .setFeesAndCredits(
-                getNonCustomRenewPrice(domainName, dateTime, years, recurringBillingEvent))
-            .setRegistry(registry)
-            .setDomainName(InternetDomainName.from(domainName))
-            .setAsOfDate(dateTime)
-            .setYears(years)
-            .build());
-  }
-
-  /** Returns a new renewal cost of a domain with no customization. */
-  public static FeesAndCredits getNonCustomRenewPrice(
-      String domainName, DateTime dateTime, int years, @Nullable Recurring recurringBillingEvent) {
     checkArgument(years > 0, "Number of years must be positive");
     Money renewCost;
     boolean isRenewCostPremiumPrice;
@@ -172,10 +154,19 @@ public final class DomainPricingLogic {
                   recurringBillingEvent.getRenewalPriceBehavior()));
       }
     }
-    return new FeesAndCredits.Builder()
-        .setCurrency(renewCost.getCurrencyUnit())
-        .addFeeOrCredit(Fee.create(renewCost.getAmount(), FeeType.RENEW, isRenewCostPremiumPrice))
-        .build();
+    return customLogic.customizeRenewPrice(
+        RenewPriceParameters.newBuilder()
+            .setFeesAndCredits(
+                new FeesAndCredits.Builder()
+                    .setCurrency(renewCost.getCurrencyUnit())
+                    .addFeeOrCredit(
+                        Fee.create(renewCost.getAmount(), FeeType.RENEW, isRenewCostPremiumPrice))
+                    .build())
+            .setRegistry(registry)
+            .setDomainName(InternetDomainName.from(domainName))
+            .setAsOfDate(dateTime)
+            .setYears(years)
+            .build());
   }
 
   /** Returns a new restore price for the pricer. */
