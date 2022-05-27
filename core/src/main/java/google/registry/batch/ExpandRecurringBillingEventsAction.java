@@ -43,7 +43,6 @@ import com.google.common.collect.Range;
 import com.google.common.collect.Streams;
 import com.google.common.flogger.FluentLogger;
 import google.registry.config.RegistryConfig.Config;
-import google.registry.flows.EppException;
 import google.registry.flows.domain.DomainPricingLogic;
 import google.registry.mapreduce.MapreduceRunner;
 import google.registry.mapreduce.inputs.NullInput;
@@ -181,13 +180,8 @@ public class ExpandRecurringBillingEventsAction implements Runnable {
                         // expanded on subsequent runs).
                         continue;
                       }
-                      int billingEventsSaved;
-                      try {
-                        billingEventsSaved =
-                            expandBillingEvent(recurring, executeTime, cursorTime, isDryRun);
-                      } catch (EppException e) {
-                        billingEventsSaved = -batchBillingEventsSaved;
-                      }
+                      int billingEventsSaved =
+                          expandBillingEvent(recurring, executeTime, cursorTime, isDryRun);
                       batchBillingEventsSaved += billingEventsSaved;
                       if (billingEventsSaved > 0) {
                         expandedDomains.add(recurring.getTargetId());
@@ -294,17 +288,11 @@ public class ExpandRecurringBillingEventsAction implements Runnable {
         getContext().incrementCounter("Recurring billing events ignored");
         return;
       }
-      int numBillingEventsSaved;
+      int numBillingEventsSaved = 0;
       try {
         numBillingEventsSaved =
             tm().transactNew(
-                    () -> {
-                      try {
-                        return expandBillingEvent(recurring, executeTime, cursorTime, isDryRun);
-                      } catch (EppException e) {
-                        return -1;
-                      }
-                    });
+                    () -> expandBillingEvent(recurring, executeTime, cursorTime, isDryRun));
       } catch (Throwable t) {
         getContext().incrementCounter("error: " + t.getClass().getSimpleName());
         getContext().incrementCounter(ERROR_COUNTER);
@@ -372,8 +360,7 @@ public class ExpandRecurringBillingEventsAction implements Runnable {
   }
 
   private int expandBillingEvent(
-      Recurring recurring, DateTime executeTime, DateTime cursorTime, boolean isDryRun)
-      throws EppException {
+      Recurring recurring, DateTime executeTime, DateTime cursorTime, boolean isDryRun) {
     ImmutableSet.Builder<OneTime> syntheticOneTimesBuilder = new ImmutableSet.Builder<>();
     final Registry tld = Registry.get(getTldFromDomainName(recurring.getTargetId()));
 
