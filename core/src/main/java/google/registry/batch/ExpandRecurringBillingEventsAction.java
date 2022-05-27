@@ -186,7 +186,13 @@ public class ExpandRecurringBillingEventsAction implements Runnable {
                         billingEventsSaved =
                             expandBillingEvent(recurring, executeTime, cursorTime, isDryRun);
                       } catch (EppException e) {
-                        billingEventsSaved = -batchBillingEventsSaved;
+                        billingEventsSaved = Integer.MIN_VALUE;
+                      }
+                      if (billingEventsSaved == Integer.MIN_VALUE) {
+                        throw new RuntimeException(
+                            String.format(
+                                "Error while expanding billing events in batches () for %d",
+                                recurring.getId()));
                       }
                       batchBillingEventsSaved += billingEventsSaved;
                       if (billingEventsSaved > 0) {
@@ -310,8 +316,13 @@ public class ExpandRecurringBillingEventsAction implements Runnable {
         getContext().incrementCounter(ERROR_COUNTER);
         throw new RuntimeException(
             String.format(
-                "Error while expanding Recurring billing events for %d", recurring.getId()),
+                "Error in mapping while expanding Recurring billing events for %d",
+                recurring.getId()),
             t);
+      }
+      if (numBillingEventsSaved == -1) {
+        throw new RuntimeException(
+            String.format("Error from expandBillingEvent() for %d", recurring.getId()));
       }
       if (!isDryRun) {
         getContext().incrementCounter("Saved OneTime billing events", numBillingEventsSaved);
