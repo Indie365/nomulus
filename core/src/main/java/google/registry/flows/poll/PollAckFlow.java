@@ -109,12 +109,6 @@ public final class PollAckFlow implements TransactionalFlow {
     // include the message being acked.
 
     int messageCount = tm().doTransactionless(() -> getPollMessageCount(registrarId, now));
-    // Within the same transaction, Datastore will not reflect the updated count (potentially
-    // reduced by one thanks to the acked poll message). SQL will, however, so we shouldn't reduce
-    // the count in the SQL case.
-    if (!includeAckedMessageInCount && tm().isOfy()) {
-      messageCount--;
-    }
     if (messageCount <= 0) {
       return responseBuilder.setResultFromCode(SUCCESS_WITH_NO_MESSAGES).build();
     }

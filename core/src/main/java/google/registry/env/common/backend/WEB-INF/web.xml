@@ -422,12 +422,6 @@ have been in the database for a certain period of time. -->
     <url-pattern>/_dr/task/wipeOutDatastore</url-pattern>
   </servlet-mapping>
 
-  <!-- Action to create synthetic history entries during async replication to SQL -->
-  <servlet-mapping>
-    <servlet-name>backend-servlet</servlet-name>
-    <url-pattern>/_dr/task/createSyntheticHistoryEntries</url-pattern>
-  </servlet-mapping>
-
   <!-- Action to sync Datastore to a snapshot of the primary SQL database. -->
   <servlet-mapping>
     <servlet-name>backend-servlet</servlet-name>

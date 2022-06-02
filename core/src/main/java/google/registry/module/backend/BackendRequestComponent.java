@@ -93,7 +93,6 @@ import google.registry.tmch.TmchCrlAction;
 import google.registry.tmch.TmchDnlAction;
 import google.registry.tmch.TmchModule;
 import google.registry.tmch.TmchSmdrlAction;
-import google.registry.tools.javascrap.CreateSyntheticHistoryEntriesAction;
 
 /** Dagger component with per-request lifetime for "backend" App Engine module. */
 @RequestScope
@@ -136,8 +135,6 @@ interface BackendRequestComponent {
   CommitLogFanoutAction commitLogFanoutAction();
 
   CopyDetailReportsAction copyDetailReportAction();
-
-  CreateSyntheticHistoryEntriesAction createSyntheticHistoryEntriesAction();
 
   DeleteContactsAndHostsAction deleteContactsAndHostsAction();
 
