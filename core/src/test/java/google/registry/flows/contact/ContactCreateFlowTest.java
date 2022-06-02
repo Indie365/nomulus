@@ -63,9 +63,6 @@ class ContactCreateFlowTest extends ResourceFlowTestCase<ContactCreateFlow, Cont
     ContactResource contact = reloadResourceByForeignKey();
     assertAboutContacts().that(contact).hasOnlyOneHistoryEntryWhich().hasNoXml();
     assertNoBillingEvents();
-    if (tm().isOfy()) {
-      assertEppResourceIndexEntityFor(contact);
-    }
     assertLastHistoryContainsResource(contact);
   }
 

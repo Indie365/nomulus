@@ -105,9 +105,6 @@ class HostCreateFlowTest extends ResourceFlowTestCase<HostCreateFlow, HostResour
         .hasOnlyOneHistoryEntryWhich()
         .hasType(HistoryEntry.Type.HOST_CREATE);
     assertNoBillingEvents();
-    if (tm().isOfy()) {
-      assertEppResourceIndexEntityFor(host);
-    }
     assertLastHistoryContainsResource(host);
   }
 
