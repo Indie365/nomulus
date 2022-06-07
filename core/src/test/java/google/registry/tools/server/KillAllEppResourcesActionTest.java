@@ -125,12 +125,12 @@ class KillAllEppResourcesActionTest extends MapreduceTestCase<KillAllEppResource
               .add(
                   history,
                   new PollMessage.OneTime.Builder()
-                      .setParent(history)
+                      .setHistoryEntry(history)
                       .setRegistrarId("")
                       .setEventTime(START_OF_TIME)
                       .build(),
                   new PollMessage.Autorenew.Builder()
-                      .setParent(history)
+                      .setHistoryEntry(history)
                       .setRegistrarId("")
                       .setEventTime(START_OF_TIME)
                       .build());
