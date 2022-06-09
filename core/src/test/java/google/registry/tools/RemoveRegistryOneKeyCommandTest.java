@@ -56,7 +56,7 @@ public class RemoveRegistryOneKeyCommandTest extends CommandTestCase<RemoveRegis
             .asBuilder()
             .setDeletionTime(DateTime.parse("2016-01-01T00:00:00Z"))
             .setAutorenewBillingEvent(createRegistryOneVKey(BillingEvent.Recurring.class, 100L))
-            .setAutorenewPollMessage(createRegistryOneVKey(PollMessage.Autorenew.class, 200L), 0)
+            .setAutorenewPollMessage(createRegistryOneVKey(PollMessage.Autorenew.class, 200L), 0L)
             .setDeletePollMessage(createRegistryOneVKey(PollMessage.OneTime.class, 300L))
             .build();
   }

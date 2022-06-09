@@ -49,7 +49,7 @@ public class RemoveRegistryOneKeyCommand extends ReadEntityFromKeyPathCommand<Do
       hasChange = true;
     }
     if (isRegistryOneKey(entity.getAutorenewPollMessage())) {
-      domainBuilder.setAutorenewPollMessage(null, 0);
+      domainBuilder.setAutorenewPollMessage(null, 0L);
       hasChange = true;
     }
     if (isRegistryOneKey(entity.getDeletePollMessage())) {
