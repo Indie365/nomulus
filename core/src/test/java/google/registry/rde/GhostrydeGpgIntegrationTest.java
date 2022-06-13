@@ -85,6 +85,12 @@ class GhostrydeGpgIntegrationTest {
       ghostrydeEncoder.write(data);
     }
 
+    Process bad = gpg.exec(command, "--list-keys");
+    String badOut = CharStreams.toString(new InputStreamReader(bad.getInputStream(), UTF_8));
+    if (bad.waitFor() == 0) {
+      throw new RuntimeException(badOut);
+    }
+
     Process pid = gpg.exec(command, "--list-packets", "--keyid-format", "long", file.getPath());
     String stdout = CharStreams.toString(new InputStreamReader(pid.getInputStream(), UTF_8));
     String stderr = CharStreams.toString(new InputStreamReader(pid.getErrorStream(), UTF_8));
