@@ -43,9 +43,9 @@ import org.joda.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-/** Unit tests for {@link RdeStagingAction} in Cloud SQL. */
+/** Unit tests for {@link RdeStagingAction}. */
 @DualDatabaseTest
-public class RdeStagingActionCloudSqlTest extends BeamActionTestBase {
+public class RdeStagingActionTest extends BeamActionTestBase {
 
   private final FakeClock clock = new FakeClock();
   private final GcsUtils gcsUtils = new GcsUtils(LocalStorageHelper.getOptions());

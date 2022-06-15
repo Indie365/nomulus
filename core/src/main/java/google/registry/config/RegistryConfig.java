@@ -27,7 +27,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
@@ -42,7 +41,9 @@ import java.net.URL;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.inject.Named;
@@ -765,17 +766,6 @@ public final class RegistryConfig {
     }
 
     /**
-     * Maximum amount of time generating an escrow deposit for a TLD could take, before killing.
-     *
-     * @see google.registry.rde.RdeStagingReducer
-     */
-    @Provides
-    @Config("rdeStagingLockTimeout")
-    public static Duration provideRdeStagingLockTimeout() {
-      return Duration.standardHours(2);
-    }
-
-    /**
      * Maximum amount of time it should ever take to upload an escrow deposit, before killing.
      *
      * @see google.registry.rde.RdeUploadAction
@@ -791,7 +781,7 @@ public final class RegistryConfig {
      *
      * <p>This value was communicated to us by the escrow provider.
      *
-     * @see google.registry.rde.RdeStagingReducer
+     * @see google.registry.rde.RdeUploadAction
      */
     @Provides
     @Config("rdeUploadSftpCooldown")
@@ -1300,7 +1290,7 @@ public final class RegistryConfig {
                       e.getKey().equals("START_OF_TIME")
                           ? START_OF_TIME
                           : DateTime.parse(e.getKey()),
-                  e -> e.getValue()));
+                  Entry::getValue));
     }
 
     @Provides
