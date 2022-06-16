@@ -90,7 +90,7 @@ public class GenerateSqlSchemaCommand implements Command {
               .withUsername(DB_USERNAME)
               .withPassword(DB_PASSWORD);
       postgresContainer.start();
-      databaseHost = postgresContainer.getContainerIpAddress();
+      databaseHost = postgresContainer.getHost();
       databasePort = postgresContainer.getMappedPort(POSTGRESQL_PORT);
     } else if (databaseHost == null) {
       System.err.println(

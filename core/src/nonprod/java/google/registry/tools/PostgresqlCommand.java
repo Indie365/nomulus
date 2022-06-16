@@ -79,7 +79,7 @@ public abstract class PostgresqlCommand implements Command {
         return false;
       }
       postgresContainer.start();
-      databaseHost = postgresContainer.getContainerIpAddress();
+      databaseHost = postgresContainer.getHost();
       databasePort = postgresContainer.getMappedPort(POSTGRESQL_PORT);
     } else if (databaseHost == null) {
       System.err.println(
