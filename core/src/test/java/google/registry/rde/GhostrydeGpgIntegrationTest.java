@@ -16,6 +16,7 @@ package google.registry.rde;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
+import static google.registry.testing.GpgSystemCommandExtension.GPG_BINARY;
 import static google.registry.testing.SystemInfo.hasCommand;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -52,8 +53,6 @@ class GhostrydeGpgIntegrationTest {
           RdeTestData.loadBytes("pgp-public-keyring.asc"),
           RdeTestData.loadBytes("pgp-private-keyring-registry.asc"));
 
-  // TODO(b/236723363) add in "gpg2" once we figure out why it's broken
-  private static final ImmutableList<String> COMMANDS = ImmutableList.of("gpg");
   private static final ImmutableList<String> CONTENTS =
       ImmutableList.of(
           "(◕‿◕)",
@@ -64,10 +63,8 @@ class GhostrydeGpgIntegrationTest {
   @SuppressWarnings("unused")
   static Stream<Arguments> provideTestCombinations() {
     Stream.Builder<Arguments> stream = Stream.builder();
-    for (String command : COMMANDS) {
-      for (String content : CONTENTS) {
-        stream.add(Arguments.of(command, content));
-      }
+    for (String content : CONTENTS) {
+      stream.add(Arguments.of(GPG_BINARY, content));
     }
     return stream.build();
   }
