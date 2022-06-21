@@ -52,7 +52,7 @@ class GetResourceByKeyCommandTest extends CommandTestCase<GetResourceByKeyComman
     persistActiveDomain("example.tld");
     runCommand("agR0ZXN0chULEgpEb21haW5CYXNlIgUyLVRMRAw");
     assertInStdout("fullyQualifiedDomainName=example.tld");
-    assertInStdout("contact=Key<?>(ContactResource(\"3-ROID\"))");
+    assertInStdout("techContact=VKey<ContactResource>(sql:3-ROID");
   }
 
   @Test
@@ -60,7 +60,7 @@ class GetResourceByKeyCommandTest extends CommandTestCase<GetResourceByKeyComman
     persistActiveDomain("example.tld");
     runCommand("agR0ZXN0chULEgpEb21haW5CYXNlIgUyLVRMRAw", "--expand");
     assertInStdout("fullyQualifiedDomainName=example.tld");
-    assertInStdout("contactId=contact1234");
+    assertInStdout("sqlKey=3-ROID");
     assertNotInStdout("LiveRef");
   }
 
