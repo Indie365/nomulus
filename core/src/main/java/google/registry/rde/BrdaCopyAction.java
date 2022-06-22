@@ -18,7 +18,6 @@ import static google.registry.model.common.Cursor.CursorType.BRDA;
 import static google.registry.model.common.Cursor.getCursorTimeOrStartOfTime;
 import static google.registry.model.rde.RdeMode.THIN;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
-import static google.registry.persistence.transaction.TransactionManagerUtil.transactIfJpaTm;
 import static google.registry.request.Action.Method.POST;
 import static google.registry.util.DateTimeUtils.isBeforeOrAt;
 
@@ -97,7 +96,7 @@ public final class BrdaCopyAction implements Runnable {
     // TODO(b/217772483): consider guarding this action with a lock and check if there is work.
     // Not urgent since file writes on GCS are atomic.
     Optional<Cursor> cursor =
-        transactIfJpaTm(() -> tm().loadByKeyIfPresent(Cursor.createVKey(BRDA, tld)));
+        tm().transact(() -> tm().loadByKeyIfPresent(Cursor.createVKey(BRDA, tld)));
     DateTime brdaCursorTime = getCursorTimeOrStartOfTime(cursor);
     if (isBeforeOrAt(brdaCursorTime, watermark)) {
       throw new NoContentException(

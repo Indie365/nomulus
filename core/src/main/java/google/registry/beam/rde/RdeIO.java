@@ -18,7 +18,6 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
 import static google.registry.model.common.Cursor.getCursorTimeOrStartOfTime;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
-import static google.registry.persistence.transaction.TransactionManagerUtil.transactIfJpaTm;
 import static google.registry.rde.RdeModule.BRDA_QUEUE;
 import static google.registry.rde.RdeModule.RDE_UPLOAD_QUEUE;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -276,10 +275,10 @@ public class RdeIO {
                 PendingDeposit key = input.getKey();
                 Registry registry = Registry.get(key.tld());
                 Optional<Cursor> cursor =
-                    transactIfJpaTm(
-                        () ->
-                            tm().loadByKeyIfPresent(
-                                    Cursor.createVKey(key.cursor(), registry.getTldStr())));
+                    tm().transact(
+                            () ->
+                                tm().loadByKeyIfPresent(
+                                        Cursor.createVKey(key.cursor(), registry.getTldStr())));
                 DateTime position = getCursorTimeOrStartOfTime(cursor);
                 checkState(key.interval() != null, "Interval must be present");
                 DateTime newPosition = key.watermark().plus(key.interval());
