@@ -70,14 +70,17 @@ public final class RegistryConfig {
   private static final String ENVIRONMENT_CONFIG_FORMAT = "files/nomulus-config-%s.yaml";
   private static final String YAML_CONFIG_PROD =
       readResourceUtf8(RegistryConfig.class, "files/default-config.yaml");
+  /**
+   * Memoizes loading of the {@link RegistryConfigSettings} POJO.
+   *
+   * <p>Memoizing without cache expiration is used because the app must be re-deployed in order to
+   * change the contents of the YAML config files.
+   */
+  @VisibleForTesting
+  public static final Supplier<RegistryConfigSettings> CONFIG_SETTINGS =
+      memoize(RegistryConfig::getConfigSettings);
 
-  /** Dagger qualifier for configuration settings. */
-  @Qualifier
-  @Retention(RUNTIME)
-  @Documented
-  public @interface Config {
-    String value() default "";
-  }
+  private RegistryConfig() {}
 
   /**
    * Loads the {@link RegistryConfigSettings} POJO from the YAML configuration files.
@@ -93,6 +96,228 @@ public final class RegistryConfig {
             ENVIRONMENT_CONFIG_FORMAT, Ascii.toLowerCase(RegistryEnvironment.get().name()));
     String customYaml = readResourceUtf8(RegistryConfig.class, configFilePath);
     return YamlUtils.getConfigSettings(YAML_CONFIG_PROD, customYaml, RegistryConfigSettings.class);
+  }
+
+  /** Returns the App Engine project ID, which is based off the environment name. */
+  public static String getProjectId() {
+    return CONFIG_SETTINGS.get().appEngine.projectId;
+  }
+
+  /**
+   * Returns the length of time before commit logs should be deleted from Datastore.
+   *
+   * <p>The only reason you'll want to retain this commit logs in Datastore is for performing
+   * point-in-time restoration queries for subsystems like RDE.
+   *
+   * @see google.registry.tools.server.GenerateZoneFilesAction
+   */
+  public static Duration getDatabaseRetention() {
+    return Duration.standardDays(30);
+  }
+
+  public static boolean areServersLocal() {
+    return CONFIG_SETTINGS.get().appEngine.isLocal;
+  }
+
+  /**
+   * Returns the address of the Nomulus app default HTTP server.
+   *
+   * <p>This is used by the {@code nomulus} tool to connect to the App Engine remote API.
+   */
+  public static URL getDefaultServer() {
+    return makeUrl(CONFIG_SETTINGS.get().appEngine.defaultServiceUrl);
+  }
+
+  /**
+   * Returns the address of the Nomulus app backend HTTP server.
+   *
+   * <p>This is used by the {@code nomulus} tool to connect to the App Engine remote API.
+   */
+  public static URL getBackendServer() {
+    return makeUrl(CONFIG_SETTINGS.get().appEngine.backendServiceUrl);
+  }
+
+  /**
+   * Returns the address of the Nomulus app tools HTTP server.
+   *
+   * <p>This is used by the {@code nomulus} tool to connect to the App Engine remote API.
+   */
+  public static URL getToolsServer() {
+    return makeUrl(CONFIG_SETTINGS.get().appEngine.toolsServiceUrl);
+  }
+
+  /**
+   * Returns the address of the Nomulus app pubapi HTTP server.
+   *
+   * <p>This is used by the {@code nomulus} tool to connect to the App Engine remote API.
+   */
+  public static URL getPubapiServer() {
+    return makeUrl(CONFIG_SETTINGS.get().appEngine.pubapiServiceUrl);
+  }
+
+  /** Returns the amount of time a singleton should be cached, before expiring. */
+  public static java.time.Duration getSingletonCacheRefreshDuration() {
+    return java.time.Duration.ofSeconds(CONFIG_SETTINGS.get().caching.singletonCacheRefreshSeconds);
+  }
+
+  /**
+   * Returns the amount of time a domain label list should be cached in memory before expiring.
+   *
+   * @see google.registry.model.tld.label.ReservedList
+   * @see google.registry.model.tld.label.PremiumList
+   */
+  public static java.time.Duration getDomainLabelListCacheDuration() {
+    return java.time.Duration.ofSeconds(CONFIG_SETTINGS.get().caching.domainLabelCachingSeconds);
+  }
+
+  /** Returns the amount of time a singleton should be cached in persist mode, before expiring. */
+  public static java.time.Duration getSingletonCachePersistDuration() {
+    return java.time.Duration.ofSeconds(CONFIG_SETTINGS.get().caching.singletonCachePersistSeconds);
+  }
+
+  /**
+   * Returns the maximum number of premium list entries across all TLDs to keep in in-memory cache.
+   */
+  public static int getStaticPremiumListMaxCachedEntries() {
+    return CONFIG_SETTINGS.get().caching.staticPremiumListMaxCachedEntries;
+  }
+
+  public static boolean isEppResourceCachingEnabled() {
+    return CONFIG_SETTINGS.get().caching.eppResourceCachingEnabled;
+  }
+
+  @VisibleForTesting
+  public static void overrideIsEppResourceCachingEnabledForTesting(boolean enabled) {
+    CONFIG_SETTINGS.get().caching.eppResourceCachingEnabled = enabled;
+  }
+
+  /**
+   * Returns the amount of time an EPP resource or key should be cached in memory before expiring.
+   */
+  public static java.time.Duration getEppResourceCachingDuration() {
+    return java.time.Duration.ofSeconds(CONFIG_SETTINGS.get().caching.eppResourceCachingSeconds);
+  }
+
+  /** Returns the maximum number of EPP resources and keys to keep in in-memory cache. */
+  public static int getEppResourceMaxCachedEntries() {
+    return CONFIG_SETTINGS.get().caching.eppResourceMaxCachedEntries;
+  }
+
+  /** Returns the email address that outgoing emails from the app are sent from. */
+  public static InternetAddress getGSuiteOutgoingEmailAddress() {
+    return parseEmailAddress(CONFIG_SETTINGS.get().gSuite.outgoingEmailAddress);
+  }
+
+  /** Returns the display name that outgoing emails from the app are sent from. */
+  public static String getGSuiteOutgoingEmailDisplayName() {
+    return CONFIG_SETTINGS.get().gSuite.outgoingEmailDisplayName;
+  }
+
+  /**
+   * Returns default WHOIS server to use when {@code Registrar#getWhoisServer()} is {@code null}.
+   *
+   * @see "google.registry.whois.DomainWhoisResponse"
+   * @see "google.registry.whois.RegistrarWhoisResponse"
+   */
+  public static String getDefaultRegistrarWhoisServer() {
+    return CONFIG_SETTINGS.get().registryPolicy.defaultRegistrarWhoisServer;
+  }
+
+  /** Returns the number of {@code EppResourceIndex} buckets to be used. */
+  public static int getEppResourceIndexBucketCount() {
+    return CONFIG_SETTINGS.get().datastore.eppResourceIndexBucketsNum;
+  }
+
+  /** Returns the base retry duration that gets doubled after each failure within {@code Ofy}. */
+  public static Duration getBaseOfyRetryDuration() {
+    return Duration.millis(CONFIG_SETTINGS.get().datastore.baseOfyRetryMillis);
+  }
+
+  /** Returns the default database transaction isolation. */
+  public static String getHibernateConnectionIsolation() {
+    return CONFIG_SETTINGS.get().hibernate.connectionIsolation;
+  }
+
+  /** Returns true if hibernate.show_sql is enabled. */
+  public static String getHibernateLogSqlQueries() {
+    return CONFIG_SETTINGS.get().hibernate.logSqlQueries;
+  }
+
+  /** Returns the connection timeout for HikariCP. */
+  public static String getHibernateHikariConnectionTimeout() {
+    return CONFIG_SETTINGS.get().hibernate.hikariConnectionTimeout;
+  }
+
+  /** Returns the minimum idle connections for HikariCP. */
+  public static String getHibernateHikariMinimumIdle() {
+    return CONFIG_SETTINGS.get().hibernate.hikariMinimumIdle;
+  }
+
+  /** Returns the maximum pool size for HikariCP. */
+  public static String getHibernateHikariMaximumPoolSize() {
+    return CONFIG_SETTINGS.get().hibernate.hikariMaximumPoolSize;
+  }
+
+  /** Returns the idle timeout for HikariCP. */
+  public static String getHibernateHikariIdleTimeout() {
+    return CONFIG_SETTINGS.get().hibernate.hikariIdleTimeout;
+  }
+
+  /**
+   * JDBC-specific: driver default batch size is 0, which means that every INSERT statement will be
+   * sent to the database individually. Batching allows us to group together multiple inserts into
+   * one single INSERT statement which can dramatically increase speed in situations with many
+   * inserts.
+   *
+   * <p>Hibernate docs, i.e.
+   * https://docs.jboss.org/hibernate/orm/5.6/userguide/html_single/Hibernate_User_Guide.html,
+   * recommend between 10 and 50.
+   */
+  public static int getHibernateJdbcBatchSize() {
+    return CONFIG_SETTINGS.get().hibernate.jdbcBatchSize;
+  }
+
+  /**
+   * Returns the JDBC fetch size.
+   *
+   * <p>Postgresql-specific: driver default fetch size is 0, which disables streaming result sets.
+   * Here we set a small default geared toward Nomulus server transactions. Large queries can
+   * override the defaults using {@link JpaTransactionManager#setQueryFetchSize}.
+   */
+  public static String getHibernateJdbcFetchSize() {
+    return CONFIG_SETTINGS.get().hibernate.jdbcFetchSize;
+  }
+
+  /** Returns the roid suffix to be used for the roids of all contacts and hosts. */
+  public static String getContactAndHostRoidSuffix() {
+    return CONFIG_SETTINGS.get().registryPolicy.contactAndHostRoidSuffix;
+  }
+
+  /** Returns the global automatic transfer length for contacts. */
+  public static Duration getContactAutomaticTransferLength() {
+    return Duration.standardDays(CONFIG_SETTINGS.get().registryPolicy.contactAutomaticTransferDays);
+  }
+
+  private static String formatComments(String text) {
+    return Splitter.on('\n').omitEmptyStrings().trimResults().splitToList(text).stream()
+        .map(s -> "# " + s)
+        .collect(Collectors.joining("\n"));
+  }
+
+  private static InternetAddress parseEmailAddress(String email) {
+    try {
+      return new InternetAddress(email);
+    } catch (AddressException e) {
+      throw new IllegalArgumentException(String.format("Could not parse email address %s.", email));
+    }
+  }
+
+  /** Dagger qualifier for configuration settings. */
+  @Qualifier
+  @Retention(RUNTIME)
+  @Documented
+  public @interface Config {
+    String value() default "";
   }
 
   /** Dagger module for providing configuration settings. */
@@ -466,16 +691,6 @@ public final class RegistryConfig {
     @Config("tmchCaMode")
     public static TmchCaMode provideTmchCaMode(RegistryConfigSettings config) {
       return TmchCaMode.valueOf(config.registryPolicy.tmchCaMode);
-    }
-
-    /** The mode that the {@code TmchCertificateAuthority} operates in. */
-    public enum TmchCaMode {
-
-      /** Production mode, suitable for live environments hosting TLDs. */
-      PRODUCTION,
-
-      /** Pilot mode, for everything else (e.g. sandbox). */
-      PILOT
     }
 
     /**
@@ -1322,240 +1537,15 @@ public final class RegistryConfig {
     public static int provideHibernateJdbcBatchSize(RegistryConfigSettings config) {
       return config.hibernate.jdbcBatchSize;
     }
-  }
 
-  /** Returns the App Engine project ID, which is based off the environment name. */
-  public static String getProjectId() {
-    return CONFIG_SETTINGS.get().appEngine.projectId;
-  }
+    /** The mode that the {@code TmchCertificateAuthority} operates in. */
+    public enum TmchCaMode {
 
-  /**
-   * Returns the Google Cloud Storage bucket for storing Datastore backups.
-   *
-   * @see google.registry.export.BackupDatastoreAction
-   */
-  public static String getDatastoreBackupsBucket() {
-    return "gs://" + getProjectId() + "-datastore-backups";
-  }
+      /** Production mode, suitable for live environments hosting TLDs. */
+      PRODUCTION,
 
-  /**
-   * Returns the length of time before commit logs should be deleted from Datastore.
-   *
-   * <p>The only reason you'll want to retain this commit logs in Datastore is for performing
-   * point-in-time restoration queries for subsystems like RDE.
-   *
-   * @see google.registry.tools.server.GenerateZoneFilesAction
-   */
-  public static Duration getDatabaseRetention() {
-    return Duration.standardDays(30);
-  }
-
-  public static boolean areServersLocal() {
-    return CONFIG_SETTINGS.get().appEngine.isLocal;
-  }
-
-  /**
-   * Returns the address of the Nomulus app default HTTP server.
-   *
-   * <p>This is used by the {@code nomulus} tool to connect to the App Engine remote API.
-   */
-  public static URL getDefaultServer() {
-    return makeUrl(CONFIG_SETTINGS.get().appEngine.defaultServiceUrl);
-  }
-
-  /**
-   * Returns the address of the Nomulus app backend HTTP server.
-   *
-   * <p>This is used by the {@code nomulus} tool to connect to the App Engine remote API.
-   */
-  public static URL getBackendServer() {
-    return makeUrl(CONFIG_SETTINGS.get().appEngine.backendServiceUrl);
-  }
-
-  /**
-   * Returns the address of the Nomulus app tools HTTP server.
-   *
-   * <p>This is used by the {@code nomulus} tool to connect to the App Engine remote API.
-   */
-  public static URL getToolsServer() {
-    return makeUrl(CONFIG_SETTINGS.get().appEngine.toolsServiceUrl);
-  }
-
-  /**
-   * Returns the address of the Nomulus app pubapi HTTP server.
-   *
-   * <p>This is used by the {@code nomulus} tool to connect to the App Engine remote API.
-   */
-  public static URL getPubapiServer() {
-    return makeUrl(CONFIG_SETTINGS.get().appEngine.pubapiServiceUrl);
-  }
-
-  /** Returns the amount of time a singleton should be cached, before expiring. */
-  public static java.time.Duration getSingletonCacheRefreshDuration() {
-    return java.time.Duration.ofSeconds(CONFIG_SETTINGS.get().caching.singletonCacheRefreshSeconds);
-  }
-
-  /**
-   * Returns the amount of time a domain label list should be cached in memory before expiring.
-   *
-   * @see google.registry.model.tld.label.ReservedList
-   * @see google.registry.model.tld.label.PremiumList
-   */
-  public static java.time.Duration getDomainLabelListCacheDuration() {
-    return java.time.Duration.ofSeconds(CONFIG_SETTINGS.get().caching.domainLabelCachingSeconds);
-  }
-
-  /** Returns the amount of time a singleton should be cached in persist mode, before expiring. */
-  public static java.time.Duration getSingletonCachePersistDuration() {
-    return java.time.Duration.ofSeconds(CONFIG_SETTINGS.get().caching.singletonCachePersistSeconds);
-  }
-
-  /**
-   * Returns the maximum number of premium list entries across all TLDs to keep in in-memory cache.
-   */
-  public static int getStaticPremiumListMaxCachedEntries() {
-    return CONFIG_SETTINGS.get().caching.staticPremiumListMaxCachedEntries;
-  }
-
-  public static boolean isEppResourceCachingEnabled() {
-    return CONFIG_SETTINGS.get().caching.eppResourceCachingEnabled;
-  }
-
-  @VisibleForTesting
-  public static void overrideIsEppResourceCachingEnabledForTesting(boolean enabled) {
-    CONFIG_SETTINGS.get().caching.eppResourceCachingEnabled = enabled;
-  }
-
-  /**
-   * Returns the amount of time an EPP resource or key should be cached in memory before expiring.
-   */
-  public static java.time.Duration getEppResourceCachingDuration() {
-    return java.time.Duration.ofSeconds(CONFIG_SETTINGS.get().caching.eppResourceCachingSeconds);
-  }
-
-  /** Returns the maximum number of EPP resources and keys to keep in in-memory cache. */
-  public static int getEppResourceMaxCachedEntries() {
-    return CONFIG_SETTINGS.get().caching.eppResourceMaxCachedEntries;
-  }
-
-  /** Returns the email address that outgoing emails from the app are sent from. */
-  public static InternetAddress getGSuiteOutgoingEmailAddress() {
-    return parseEmailAddress(CONFIG_SETTINGS.get().gSuite.outgoingEmailAddress);
-  }
-
-  /** Returns the display name that outgoing emails from the app are sent from. */
-  public static String getGSuiteOutgoingEmailDisplayName() {
-    return CONFIG_SETTINGS.get().gSuite.outgoingEmailDisplayName;
-  }
-
-  /**
-   * Returns default WHOIS server to use when {@code Registrar#getWhoisServer()} is {@code null}.
-   *
-   * @see "google.registry.whois.DomainWhoisResponse"
-   * @see "google.registry.whois.RegistrarWhoisResponse"
-   */
-  public static String getDefaultRegistrarWhoisServer() {
-    return CONFIG_SETTINGS.get().registryPolicy.defaultRegistrarWhoisServer;
-  }
-
-  /** Returns the number of {@code EppResourceIndex} buckets to be used. */
-  public static int getEppResourceIndexBucketCount() {
-    return CONFIG_SETTINGS.get().datastore.eppResourceIndexBucketsNum;
-  }
-
-  /** Returns the base retry duration that gets doubled after each failure within {@code Ofy}. */
-  public static Duration getBaseOfyRetryDuration() {
-    return Duration.millis(CONFIG_SETTINGS.get().datastore.baseOfyRetryMillis);
-  }
-
-  /** Returns the default database transaction isolation. */
-  public static String getHibernateConnectionIsolation() {
-    return CONFIG_SETTINGS.get().hibernate.connectionIsolation;
-  }
-
-  /** Returns true if hibernate.show_sql is enabled. */
-  public static String getHibernateLogSqlQueries() {
-    return CONFIG_SETTINGS.get().hibernate.logSqlQueries;
-  }
-
-  /** Returns the connection timeout for HikariCP. */
-  public static String getHibernateHikariConnectionTimeout() {
-    return CONFIG_SETTINGS.get().hibernate.hikariConnectionTimeout;
-  }
-
-  /** Returns the minimum idle connections for HikariCP. */
-  public static String getHibernateHikariMinimumIdle() {
-    return CONFIG_SETTINGS.get().hibernate.hikariMinimumIdle;
-  }
-
-  /** Returns the maximum pool size for HikariCP. */
-  public static String getHibernateHikariMaximumPoolSize() {
-    return CONFIG_SETTINGS.get().hibernate.hikariMaximumPoolSize;
-  }
-
-  /** Returns the idle timeout for HikariCP. */
-  public static String getHibernateHikariIdleTimeout() {
-    return CONFIG_SETTINGS.get().hibernate.hikariIdleTimeout;
-  }
-
-  /**
-   * JDBC-specific: driver default batch size is 0, which means that every INSERT statement will be
-   * sent to the database individually. Batching allows us to group together multiple inserts into
-   * one single INSERT statement which can dramatically increase speed in situations with many
-   * inserts.
-   *
-   * <p>Hibernate docs, i.e.
-   * https://docs.jboss.org/hibernate/orm/5.6/userguide/html_single/Hibernate_User_Guide.html,
-   * recommend between 10 and 50.
-   */
-  public static int getHibernateJdbcBatchSize() {
-    return CONFIG_SETTINGS.get().hibernate.jdbcBatchSize;
-  }
-
-  /**
-   * Returns the JDBC fetch size.
-   *
-   * <p>Postgresql-specific: driver default fetch size is 0, which disables streaming result sets.
-   * Here we set a small default geared toward Nomulus server transactions. Large queries can
-   * override the defaults using {@link JpaTransactionManager#setQueryFetchSize}.
-   */
-  public static String getHibernateJdbcFetchSize() {
-    return CONFIG_SETTINGS.get().hibernate.jdbcFetchSize;
-  }
-
-  /** Returns the roid suffix to be used for the roids of all contacts and hosts. */
-  public static String getContactAndHostRoidSuffix() {
-    return CONFIG_SETTINGS.get().registryPolicy.contactAndHostRoidSuffix;
-  }
-
-  /** Returns the global automatic transfer length for contacts. */
-  public static Duration getContactAutomaticTransferLength() {
-    return Duration.standardDays(CONFIG_SETTINGS.get().registryPolicy.contactAutomaticTransferDays);
-  }
-
-  /**
-   * Memoizes loading of the {@link RegistryConfigSettings} POJO.
-   *
-   * <p>Memoizing without cache expiration is used because the app must be re-deployed in order to
-   * change the contents of the YAML config files.
-   */
-  @VisibleForTesting
-  public static final Supplier<RegistryConfigSettings> CONFIG_SETTINGS =
-      memoize(RegistryConfig::getConfigSettings);
-
-  private static String formatComments(String text) {
-    return Splitter.on('\n').omitEmptyStrings().trimResults().splitToList(text).stream()
-        .map(s -> "# " + s)
-        .collect(Collectors.joining("\n"));
-  }
-
-  private static InternetAddress parseEmailAddress(String email) {
-    try {
-      return new InternetAddress(email);
-    } catch (AddressException e) {
-      throw new IllegalArgumentException(String.format("Could not parse email address %s.", email));
+      /** Pilot mode, for everything else (e.g. sandbox). */
+      PILOT
     }
   }
-
-  private RegistryConfig() {}
 }

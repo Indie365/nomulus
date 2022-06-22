@@ -22,7 +22,6 @@ import static google.registry.model.common.Cursor.CursorType.RDE_UPLOAD_SFTP;
 import static google.registry.model.common.Cursor.getCursorTimeOrStartOfTime;
 import static google.registry.model.rde.RdeMode.FULL;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
-import static google.registry.persistence.transaction.TransactionManagerUtil.transactIfJpaTm;
 import static google.registry.rde.RdeModule.RDE_REPORT_QUEUE;
 import static google.registry.request.Action.Method.POST;
 import static google.registry.util.DateTimeUtils.START_OF_TIME;
@@ -163,7 +162,7 @@ public final class RdeUploadAction implements Runnable, EscrowTask {
     }
     logger.atInfo().log("Verifying readiness to upload the RDE deposit.");
     Optional<Cursor> cursor =
-        transactIfJpaTm(() -> tm().loadByKeyIfPresent(Cursor.createVKey(RDE_STAGING, tld)));
+        tm().transact(() -> tm().loadByKeyIfPresent(Cursor.createVKey(RDE_STAGING, tld)));
     DateTime stagingCursorTime = getCursorTimeOrStartOfTime(cursor);
     if (isBeforeOrAt(stagingCursorTime, watermark)) {
       throw new NoContentException(
@@ -173,7 +172,7 @@ public final class RdeUploadAction implements Runnable, EscrowTask {
               tld, watermark, stagingCursorTime));
     }
     DateTime sftpCursorTime =
-        transactIfJpaTm(() -> tm().loadByKeyIfPresent(Cursor.createVKey(RDE_UPLOAD_SFTP, tld)))
+        tm().transact(() -> tm().loadByKeyIfPresent(Cursor.createVKey(RDE_UPLOAD_SFTP, tld)))
             .map(Cursor::getCursorTime)
             .orElse(START_OF_TIME);
     Duration timeSinceLastSftp = new Duration(sftpCursorTime, clock.nowUtc());
