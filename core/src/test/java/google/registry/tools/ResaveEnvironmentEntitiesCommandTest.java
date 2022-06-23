@@ -26,7 +26,7 @@ import google.registry.model.ImmutableObject;
 import google.registry.model.ofy.CommitLogManifest;
 import google.registry.model.ofy.CommitLogMutation;
 import google.registry.model.registrar.Registrar;
-import google.registry.model.registrar.RegistrarContact;
+import google.registry.model.registrar.RegistrarPoc;
 import google.registry.model.tld.Registry;
 import google.registry.testing.TmOverrideExtension;
 import org.junit.jupiter.api.Order;
@@ -47,7 +47,7 @@ class ResaveEnvironmentEntitiesCommandTest
     deleteEntitiesOfTypes(
         Registry.class,
         Registrar.class,
-        RegistrarContact.class,
+        RegistrarPoc.class,
         CommitLogManifest.class,
         CommitLogMutation.class);
     runCommand();
@@ -70,16 +70,15 @@ class ResaveEnvironmentEntitiesCommandTest
         transform(
             auditedOfy().load().type(CommitLogMutation.class).list(),
             mutation -> auditedOfy().load().fromEntity(mutation.getEntity()));
-    ImmutableSortedSet<RegistrarContact> theRegistrarContacts =
-        loadRegistrar("TheRegistrar").getContacts();
+    ImmutableSortedSet<RegistrarPoc> theRegistrarPocs = loadRegistrar("TheRegistrar").getContacts();
     assertThat(savedEntities)
         .containsExactly(
             // The Registrars and RegistrarContacts are created by AppEngineExtension.
             loadRegistrar("TheRegistrar"),
             loadRegistrar("NewRegistrar"),
             Registry.get("tld"),
-            theRegistrarContacts.first(),
-            theRegistrarContacts.last(),
+            theRegistrarPocs.first(),
+            theRegistrarPocs.last(),
             getOnlyElement(loadRegistrar("NewRegistrar").getContacts()));
   }
 

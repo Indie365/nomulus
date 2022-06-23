@@ -38,7 +38,6 @@ import google.registry.model.ofy.CommitLogMutation;
 import google.registry.model.poll.PollMessage;
 import google.registry.model.rde.RdeRevision;
 import google.registry.model.registrar.Registrar;
-import google.registry.model.registrar.RegistrarContact;
 import google.registry.model.replay.LastSqlTransaction;
 import google.registry.model.replay.ReplayGap;
 import google.registry.model.reporting.HistoryEntry;
@@ -85,7 +84,6 @@ public final class EntityClasses {
           PollMessage.OneTime.class,
           RdeRevision.class,
           Registrar.class,
-          RegistrarContact.class,
           Registry.class,
           ReplayGap.class,
           ServerSecret.class);

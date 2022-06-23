@@ -98,7 +98,7 @@ public final class RegistryTool {
           .put("login", LoginCommand.class)
           .put("logout", LogoutCommand.class)
           .put("pending_escrow", PendingEscrowCommand.class)
-          .put("registrar_contact", RegistrarContactCommand.class)
+          .put("registrar_poc", RegistrarPocCommand.class)
           .put("remove_registry_one_key", RemoveRegistryOneKeyCommand.class)
           .put("renew_domain", RenewDomainCommand.class)
           .put("resave_entities", ResaveEntitiesCommand.class)
