@@ -31,13 +31,14 @@ import google.registry.testing.mapreduce.MapreduceTestCase;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 /** Unit tests for {@link DeleteOldCommitLogsAction}. */
-public class DeleteOldCommitLogsActionTest
-    extends MapreduceTestCase<DeleteOldCommitLogsAction> {
+@Disabled
+public class DeleteOldCommitLogsActionTest extends MapreduceTestCase<DeleteOldCommitLogsAction> {
 
   @RegisterExtension
   @Order(Order.DEFAULT - 1)

@@ -29,11 +29,13 @@ import com.beust.jcommander.ParameterException;
 import google.registry.testing.TmOverrideExtension;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 /** Unit tests for {@link GetResourceByKeyCommand}. */
+@Disabled
 class GetResourceByKeyCommandTest extends CommandTestCase<GetResourceByKeyCommand> {
 
   @RegisterExtension

@@ -29,11 +29,13 @@ import google.registry.model.registrar.Registrar;
 import google.registry.model.registrar.RegistrarContact;
 import google.registry.model.tld.Registry;
 import google.registry.testing.TmOverrideExtension;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 /** Unit tests for {@link ResaveEnvironmentEntitiesCommand}. */
+@Disabled
 class ResaveEnvironmentEntitiesCommandTest
     extends CommandTestCase<ResaveEnvironmentEntitiesCommand> {
 

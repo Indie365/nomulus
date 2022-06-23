@@ -53,11 +53,13 @@ import org.bouncycastle.openpgp.PGPPublicKey;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 /** Unit tests for {@link RdeStagingReducer}. */
+@Disabled
 class RdeStagingReducerTest {
 
   @RegisterExtension

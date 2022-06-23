@@ -53,11 +53,13 @@ import java.util.Set;
 import org.joda.money.Money;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 /** Tests {@link ChildEntityInput} */
+@Disabled
 class ChildEntityInputTest {
 
   private static final DateTime now = DateTime.now(DateTimeZone.UTC);

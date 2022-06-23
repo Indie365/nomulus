@@ -31,11 +31,13 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import org.joda.time.DateTime;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 /** Unit tests for {@link CommitLogManifestInput}. */
+@Disabled
 final class CommitLogManifestInputTest {
 
   private static final DateTime DATE_TIME_OLD = DateTime.parse("2015-12-19T12:00Z");

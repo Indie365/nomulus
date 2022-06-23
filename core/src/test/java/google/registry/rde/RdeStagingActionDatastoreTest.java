@@ -85,11 +85,13 @@ import org.joda.time.DateTimeConstants;
 import org.joda.time.Duration;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 /** Unit tests for {@link RdeStagingAction} in Datastore. */
+@Disabled
 public class RdeStagingActionDatastoreTest extends MapreduceTestCase<RdeStagingAction> {
 
   @RegisterExtension

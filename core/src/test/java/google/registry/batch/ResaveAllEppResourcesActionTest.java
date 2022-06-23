@@ -28,6 +28,7 @@ import google.registry.testing.TmOverrideExtension;
 import google.registry.testing.mapreduce.MapreduceTestCase;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -36,6 +37,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 // No longer needed in SQL. Subject to future removal.
 @Deprecated
 @DeleteAfterMigration
+@Disabled
 class ResaveAllEppResourcesActionTest extends MapreduceTestCase<ResaveAllEppResourcesAction> {
 
   @RegisterExtension

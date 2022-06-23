@@ -26,11 +26,13 @@ import google.registry.model.contact.ContactResource;
 import google.registry.model.ofy.CommitLogManifest;
 import google.registry.model.ofy.CommitLogMutation;
 import google.registry.testing.TmOverrideExtension;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 /** Unit tests for {@link ResaveEntitiesCommand}. */
+@Disabled
 class ResaveEntitiesCommandTest extends CommandTestCase<ResaveEntitiesCommand> {
 
   @RegisterExtension

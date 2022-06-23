@@ -45,11 +45,13 @@ import java.io.ObjectOutputStream;
 import java.util.HashSet;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 /** Tests {@link EppResourceInputs} */
+@Disabled
 class EppResourceInputsTest {
 
   private static final double EPSILON = 0.0001;

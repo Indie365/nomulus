@@ -32,11 +32,13 @@ import google.registry.testing.FakeResponse;
 import google.registry.testing.TmOverrideExtension;
 import google.registry.testing.mapreduce.MapreduceTestCase;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 /** Unit tests for {@link ResaveAllHistoryEntriesAction}. */
+@Disabled
 class ResaveAllHistoryEntriesActionTest extends MapreduceTestCase<ResaveAllHistoryEntriesAction> {
 
   @RegisterExtension

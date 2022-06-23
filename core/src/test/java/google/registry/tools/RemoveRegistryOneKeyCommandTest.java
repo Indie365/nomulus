@@ -34,11 +34,13 @@ import google.registry.persistence.VKey;
 import google.registry.testing.TmOverrideExtension;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 /** Unit test for {@link RemoveRegistryOneKeyCommand}. */
+@Disabled
 public class RemoveRegistryOneKeyCommandTest extends CommandTestCase<RemoveRegistryOneKeyCommand> {
 
   @RegisterExtension

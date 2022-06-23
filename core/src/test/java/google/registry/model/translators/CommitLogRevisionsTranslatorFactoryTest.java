@@ -34,11 +34,13 @@ import google.registry.testing.TmOverrideExtension;
 import java.util.List;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 /** Unit tests for {@link CommitLogRevisionsTranslatorFactory}. */
+@Disabled
 public class CommitLogRevisionsTranslatorFactoryTest {
 
   private static final DateTime START_TIME = DateTime.parse("2000-01-01TZ");

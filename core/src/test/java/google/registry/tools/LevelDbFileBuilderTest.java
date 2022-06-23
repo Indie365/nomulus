@@ -30,12 +30,14 @@ import google.registry.tools.EntityWrapper.Property;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 
 /** Unit tests for {@link LevelDbFileBuilder}. */
+@Disabled
 public class LevelDbFileBuilderTest {
 
   private static final int BASE_ID = 1001;

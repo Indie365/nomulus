@@ -28,11 +28,13 @@ import google.registry.model.EntityTestCase;
 import google.registry.model.contact.ContactResource;
 import google.registry.testing.TmOverrideExtension;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 /** Unit tests for {@link EppResourceIndex}. */
+@Disabled
 class EppResourceIndexTest extends EntityTestCase {
 
   @RegisterExtension

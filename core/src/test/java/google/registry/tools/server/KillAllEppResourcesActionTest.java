@@ -57,11 +57,13 @@ import google.registry.testing.mapreduce.MapreduceTestCase;
 import java.util.stream.Stream;
 import org.joda.money.CurrencyUnit;
 import org.joda.money.Money;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 /** Tests for {@link KillAllEppResourcesAction}. */
+@Disabled
 class KillAllEppResourcesActionTest extends MapreduceTestCase<KillAllEppResourcesAction> {
 
   @RegisterExtension

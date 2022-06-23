@@ -32,11 +32,13 @@ import google.registry.testing.FakeClock;
 import google.registry.testing.TmOverrideExtension;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 /** Unit tests for {@link CommitLogCheckpointAction}. */
+@Disabled
 public class CommitLogCheckpointActionTest {
 
   private static final String QUEUE_NAME = "export-commits";

@@ -32,6 +32,7 @@ import google.registry.xml.ValidationMode;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -43,6 +44,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 /** Unit tests for {@link RdeStagingMapper}. */
 @ExtendWith(MockitoExtension.class)
+@Disabled
 class RdeStagingMapperTest {
 
   private static final Pattern REGISTRAR_NAME_PATTERN =
