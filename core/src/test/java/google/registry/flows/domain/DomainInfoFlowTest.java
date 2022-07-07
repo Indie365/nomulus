@@ -856,7 +856,7 @@ class DomainInfoFlowTest extends ResourceFlowTestCase<DomainInfoFlow, DomainBase
     setEppInput(
         "domain_info_fee.xml",
         updateSubstitutions(
-            SUBSTITUTION_BASE, "NAME", "example.tld", "COMMAND", "renew", "PERIOD", "1"));
+            SUBSTITUTION_BASE, "COMMAND", "renew", "PERIOD", "1"));
     persistTestEntities("example.tld", false);
     setUpBillingEventForExistingDomain(NONPREMIUM, null);
     doSuccessfulTest(
@@ -877,7 +877,7 @@ class DomainInfoFlowTest extends ResourceFlowTestCase<DomainInfoFlow, DomainBase
     setEppInput(
         "domain_info_fee.xml",
         updateSubstitutions(
-            SUBSTITUTION_BASE, "NAME", "example.tld", "COMMAND", "renew", "PERIOD", "1"));
+            SUBSTITUTION_BASE, "COMMAND", "renew", "PERIOD", "1"));
     persistTestEntities("example.tld", false);
     setUpBillingEventForExistingDomain(SPECIFIED, Money.of(USD, 3));
     doSuccessfulTest(
@@ -898,7 +898,7 @@ class DomainInfoFlowTest extends ResourceFlowTestCase<DomainInfoFlow, DomainBase
     setEppInput(
         "domain_info_fee.xml",
         updateSubstitutions(
-            SUBSTITUTION_BASE, "NAME", "example.tld", "COMMAND", "renew", "PERIOD", "3"));
+            SUBSTITUTION_BASE, "COMMAND", "renew", "PERIOD", "3"));
     persistTestEntities("example.tld", false);
     setUpBillingEventForExistingDomain(NONPREMIUM, null);
     doSuccessfulTest(
@@ -919,7 +919,7 @@ class DomainInfoFlowTest extends ResourceFlowTestCase<DomainInfoFlow, DomainBase
     setEppInput(
         "domain_info_fee.xml",
         updateSubstitutions(
-            SUBSTITUTION_BASE, "NAME", "example.tld", "COMMAND", "renew", "PERIOD", "3"));
+            SUBSTITUTION_BASE, "COMMAND", "renew", "PERIOD", "3"));
     persistTestEntities("example.tld", false);
     setUpBillingEventForExistingDomain(SPECIFIED, Money.of(USD, 3));
     doSuccessfulTest(
@@ -935,7 +935,7 @@ class DomainInfoFlowTest extends ResourceFlowTestCase<DomainInfoFlow, DomainBase
     setEppInput(
         "domain_info_fee.xml",
         updateSubstitutions(
-            SUBSTITUTION_BASE, "NAME", "example.tld", "COMMAND", "renew", "PERIOD", "1"));
+            SUBSTITUTION_BASE, "COMMAND", "renew", "PERIOD", "1"));
     persistTestEntities("example.tld", false);
     setUpBillingEventForExistingDomain(SPECIFIED, Money.of(USD, 3));
     doSuccessfulTest(
