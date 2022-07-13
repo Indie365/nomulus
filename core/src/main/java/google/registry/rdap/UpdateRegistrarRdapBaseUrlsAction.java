@@ -99,6 +99,8 @@ public final class UpdateRegistrarRdapBaseUrlsAction implements Runnable {
     CSVParser csv;
     try {
       HttpRequest request = httpTransport.createRequestFactory().buildGetRequest(RDAP_IDS_URL);
+      // IANA can return weird encodings, like br even if we ask for gzip
+      request.getHeaders().setAcceptEncoding(null);
       HttpResponse response = request.execute();
       String csvString = new String(ByteStreams.toByteArray(response.getContent()), UTF_8);
       csv =
