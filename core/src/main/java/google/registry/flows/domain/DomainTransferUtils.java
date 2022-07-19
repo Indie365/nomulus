@@ -250,7 +250,8 @@ public final class DomainTransferUtils {
         .setRegistrarId(gainingRegistrarId)
         .setEventTime(serverApproveNewExpirationTime)
         .setRecurrenceEndTime(END_OF_TIME)
-        .setParent(domainHistoryKey)
+        .setDomainHistoryId(
+            new DomainHistoryId(domainHistoryKey.getName(), domainHistoryKey.getId()))
         .build();
   }
 
@@ -285,7 +286,10 @@ public final class DomainTransferUtils {
     if (autorenewGracePeriod != null && transferCost.isPresent()) {
       return Optional.of(
           BillingEvent.Cancellation.forGracePeriod(
-                  autorenewGracePeriod, now, domainHistoryKey, targetId)
+                  autorenewGracePeriod,
+                  now,
+                  new DomainHistoryId(domainHistoryKey.getName(), domainHistoryKey.getId()),
+                  targetId)
               .asBuilder()
               .setEventTime(automaticTransferTime)
               .build());
@@ -308,7 +312,8 @@ public final class DomainTransferUtils {
         .setPeriodYears(1)
         .setEventTime(automaticTransferTime)
         .setBillingTime(automaticTransferTime.plus(registry.getTransferGracePeriodLength()))
-        .setParent(domainHistoryKey)
+        .setDomainHistoryId(
+            new DomainHistoryId(domainHistoryKey.getName(), domainHistoryKey.getId()))
         .build();
   }
 
