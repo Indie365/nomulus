@@ -30,7 +30,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
-import com.googlecode.objectify.Key;
 import google.registry.model.EntityTestCase;
 import google.registry.model.billing.BillingEvent.Flag;
 import google.registry.model.billing.BillingEvent.Reason;
@@ -110,7 +109,7 @@ public class BillingEventTest extends EntityTestCase {
         persistResource(
             commonInit(
                 new BillingEvent.OneTime.Builder()
-                    .setParent(domainHistory)
+                    .setDomainHistory(domainHistory)
                     .setReason(Reason.CREATE)
                     .setFlags(ImmutableSet.of(BillingEvent.Flag.ANCHOR_TENANT))
                     .setPeriodYears(2)
@@ -123,7 +122,7 @@ public class BillingEventTest extends EntityTestCase {
         persistResource(
             commonInit(
                 new BillingEvent.Recurring.Builder()
-                    .setParent(domainHistory)
+                    .setDomainHistory(domainHistory)
                     .setFlags(ImmutableSet.of(Flag.AUTO_RENEW))
                     .setReason(Reason.RENEW)
                     .setEventTime(now.plusYears(1))
@@ -132,7 +131,7 @@ public class BillingEventTest extends EntityTestCase {
         persistResource(
             commonInit(
                 new BillingEvent.OneTime.Builder()
-                    .setParent(domainHistory)
+                    .setDomainHistory(domainHistory)
                     .setReason(Reason.CREATE)
                     .setFlags(
                         ImmutableSet.of(
@@ -148,7 +147,7 @@ public class BillingEventTest extends EntityTestCase {
         persistResource(
             commonInit(
                 new BillingEvent.Cancellation.Builder()
-                    .setParent(domainHistory2)
+                    .setDomainHistory(domainHistory2)
                     .setReason(Reason.CREATE)
                     .setEventTime(now.plusDays(1))
                     .setBillingTime(now.plusDays(5))
@@ -158,14 +157,15 @@ public class BillingEventTest extends EntityTestCase {
         persistResource(
             commonInit(
                 new BillingEvent.Cancellation.Builder()
-                    .setParent(domainHistory2)
+                    .setDomainHistory(domainHistory2)
                     .setReason(Reason.RENEW)
                     .setEventTime(now.plusDays(1))
                     .setBillingTime(now.plusYears(1).plusDays(45))
                     .setRecurringEventKey(recurring.createVKey())));
   }
 
-  private <E extends BillingEvent, B extends BillingEvent.Builder<E, B>> E commonInit(B builder) {
+  private static <E extends BillingEvent, B extends BillingEvent.Builder<E, B>> E commonInit(
+      B builder) {
     return builder.setRegistrarId("TheRegistrar").setTargetId("foo.tld").build();
   }
 
@@ -266,7 +266,7 @@ public class BillingEventTest extends EntityTestCase {
         BillingEvent.Cancellation.forGracePeriod(
             GracePeriod.forBillingEvent(GracePeriodStatus.ADD, domain.getRepoId(), oneTime),
             domainHistory2.getModificationTime(),
-            Key.create(domainHistory2),
+            domainHistory2.getDomainHistoryId(),
             "foo.tld");
     // Set ID to be the same to ignore for the purposes of comparison.
     assertThat(newCancellation.asBuilder().setId(cancellationOneTime.getId()).build())
@@ -284,7 +284,7 @@ public class BillingEventTest extends EntityTestCase {
                 "TheRegistrar",
                 recurring.createVKey()),
             domainHistory2.getModificationTime(),
-            Key.create(domainHistory2),
+            domainHistory2.getDomainHistoryId(),
             "foo.tld");
     // Set ID to be the same to ignore for the purposes of comparison.
     assertThat(newCancellation.asBuilder().setId(cancellationRecurring.getId()).build())
@@ -304,7 +304,7 @@ public class BillingEventTest extends EntityTestCase {
                         now.plusDays(1),
                         "a registrar"),
                     domainHistory.getModificationTime(),
-                    Key.create(domainHistory),
+                    domainHistory.getDomainHistoryId(),
                     "foo.tld"));
     assertThat(thrown).hasMessageThat().contains("grace period without billing event");
   }
@@ -338,12 +338,6 @@ public class BillingEventTest extends EntityTestCase {
   }
 
   @Test
-  void testDeadCodeThatDeletedScrapCommandsReference() {
-    assertThat(recurring.getParentKey()).isEqualTo(Key.create(domainHistory));
-    new BillingEvent.OneTime.Builder().setParent(Key.create(domainHistory));
-  }
-
-  @Test
   void testReasonRequiringPeriodYears_missingPeriodYears_throwsException() {
     IllegalStateException thrown =
         assertThrows(
@@ -357,7 +351,7 @@ public class BillingEventTest extends EntityTestCase {
                     .setCost(Money.of(USD, 10))
                     .setRegistrarId("TheRegistrar")
                     .setTargetId("example.tld")
-                    .setParent(domainHistory)
+                    .setDomainHistory(domainHistory)
                     .build());
     assertThat(thrown)
         .hasMessageThat()
@@ -379,7 +373,7 @@ public class BillingEventTest extends EntityTestCase {
                     .setCost(Money.of(USD, 10))
                     .setRegistrarId("TheRegistrar")
                     .setTargetId("example.tld")
-                    .setParent(domainHistory)
+                    .setDomainHistory(domainHistory)
                     .build());
     assertThat(thrown)
         .hasMessageThat()
@@ -397,7 +391,7 @@ public class BillingEventTest extends EntityTestCase {
         .setCost(Money.of(USD, 10))
         .setRegistrarId("TheRegistrar")
         .setTargetId("example.tld")
-        .setParent(domainHistory)
+        .setDomainHistory(domainHistory)
         .build();
   }
 
@@ -413,7 +407,7 @@ public class BillingEventTest extends EntityTestCase {
         persistResource(
             commonInit(
                 new BillingEvent.Recurring.Builder()
-                    .setParent(domainHistory)
+                    .setDomainHistory(domainHistory)
                     .setFlags(ImmutableSet.of(Flag.AUTO_RENEW))
                     .setReason(Reason.RENEW)
                     .setEventTime(now.plusYears(1))
@@ -429,7 +423,7 @@ public class BillingEventTest extends EntityTestCase {
         persistResource(
             commonInit(
                 new BillingEvent.Recurring.Builder()
-                    .setParent(domainHistory)
+                    .setDomainHistory(domainHistory)
                     .setFlags(ImmutableSet.of(Flag.AUTO_RENEW))
                     .setReason(Reason.RENEW)
                     .setEventTime(now.plusYears(1))
@@ -456,7 +450,7 @@ public class BillingEventTest extends EntityTestCase {
         persistResource(
             commonInit(
                 new BillingEvent.Recurring.Builder()
-                    .setParent(domainHistory)
+                    .setDomainHistory(domainHistory)
                     .setFlags(ImmutableSet.of(Flag.AUTO_RENEW))
                     .setReason(Reason.RENEW)
                     .setEventTime(now.plusYears(1))
@@ -479,7 +473,7 @@ public class BillingEventTest extends EntityTestCase {
         persistResource(
             commonInit(
                 new BillingEvent.Recurring.Builder()
-                    .setParent(domainHistory)
+                    .setDomainHistory(domainHistory)
                     .setFlags(ImmutableSet.of(Flag.AUTO_RENEW))
                     .setReason(Reason.RENEW)
                     .setEventTime(now.plusYears(1))
@@ -506,7 +500,7 @@ public class BillingEventTest extends EntityTestCase {
         persistResource(
             commonInit(
                 new BillingEvent.Recurring.Builder()
-                    .setParent(domainHistory)
+                    .setDomainHistory(domainHistory)
                     .setFlags(ImmutableSet.of(Flag.AUTO_RENEW))
                     .setReason(Reason.RENEW)
                     .setEventTime(now.plusYears(1))
@@ -529,7 +523,7 @@ public class BillingEventTest extends EntityTestCase {
         persistResource(
             commonInit(
                 new BillingEvent.Recurring.Builder()
-                    .setParent(domainHistory)
+                    .setDomainHistory(domainHistory)
                     .setFlags(ImmutableSet.of(Flag.AUTO_RENEW))
                     .setReason(Reason.RENEW)
                     .setEventTime(now.plusYears(1))
@@ -557,7 +551,7 @@ public class BillingEventTest extends EntityTestCase {
         persistResource(
             commonInit(
                 new BillingEvent.Recurring.Builder()
-                    .setParent(domainHistory)
+                    .setDomainHistory(domainHistory)
                     .setFlags(ImmutableSet.of(Flag.AUTO_RENEW))
                     .setReason(Reason.RENEW)
                     .setEventTime(now.plusYears(1))
@@ -585,7 +579,7 @@ public class BillingEventTest extends EntityTestCase {
         persistResource(
             commonInit(
                 new BillingEvent.Recurring.Builder()
-                    .setParent(domainHistory)
+                    .setDomainHistory(domainHistory)
                     .setFlags(ImmutableSet.of(Flag.AUTO_RENEW))
                     .setReason(Reason.RENEW)
                     .setEventTime(now.plusYears(1))
@@ -616,7 +610,7 @@ public class BillingEventTest extends EntityTestCase {
         persistResource(
             commonInit(
                 new BillingEvent.Recurring.Builder()
-                    .setParent(domainHistory)
+                    .setDomainHistory(domainHistory)
                     .setFlags(ImmutableSet.of(Flag.AUTO_RENEW))
                     .setReason(Reason.RENEW)
                     .setEventTime(now.plusYears(1))
@@ -648,7 +642,7 @@ public class BillingEventTest extends EntityTestCase {
         persistResource(
             commonInit(
                 new BillingEvent.Recurring.Builder()
-                    .setParent(domainHistory)
+                    .setDomainHistory(domainHistory)
                     .setFlags(ImmutableSet.of(Flag.AUTO_RENEW))
                     .setReason(Reason.RENEW)
                     .setEventTime(now.plusYears(1))
@@ -680,7 +674,7 @@ public class BillingEventTest extends EntityTestCase {
         persistResource(
             commonInit(
                 new BillingEvent.Recurring.Builder()
-                    .setParent(domainHistory)
+                    .setDomainHistory(domainHistory)
                     .setFlags(ImmutableSet.of(Flag.AUTO_RENEW))
                     .setReason(Reason.RENEW)
                     .setEventTime(now.plusYears(1))
@@ -711,7 +705,7 @@ public class BillingEventTest extends EntityTestCase {
         persistResource(
             commonInit(
                 new BillingEvent.Recurring.Builder()
-                    .setParent(domainHistory)
+                    .setDomainHistory(domainHistory)
                     .setFlags(ImmutableSet.of(Flag.AUTO_RENEW))
                     .setReason(Reason.RENEW)
                     .setEventTime(now.plusYears(1))
@@ -743,7 +737,7 @@ public class BillingEventTest extends EntityTestCase {
         persistResource(
             commonInit(
                 new BillingEvent.Recurring.Builder()
-                    .setParent(domainHistory)
+                    .setDomainHistory(domainHistory)
                     .setFlags(ImmutableSet.of(Flag.AUTO_RENEW))
                     .setReason(Reason.RENEW)
                     .setEventTime(now.plusYears(1))
@@ -775,7 +769,7 @@ public class BillingEventTest extends EntityTestCase {
         persistResource(
             commonInit(
                 new BillingEvent.Recurring.Builder()
-                    .setParent(domainHistory)
+                    .setDomainHistory(domainHistory)
                     .setFlags(ImmutableSet.of(Flag.AUTO_RENEW))
                     .setReason(Reason.RENEW)
                     .setEventTime(now.plusYears(1))
@@ -792,7 +786,7 @@ public class BillingEventTest extends EntityTestCase {
         persistResource(
             commonInit(
                 new BillingEvent.Recurring.Builder()
-                    .setParent(domainHistory)
+                    .setDomainHistory(domainHistory)
                     .setFlags(ImmutableSet.of(Flag.AUTO_RENEW))
                     .setReason(Reason.RENEW)
                     .setEventTime(now.plusYears(1))
@@ -808,7 +802,7 @@ public class BillingEventTest extends EntityTestCase {
         persistResource(
             commonInit(
                 new BillingEvent.Recurring.Builder()
-                    .setParent(domainHistory)
+                    .setDomainHistory(domainHistory)
                     .setFlags(ImmutableSet.of(Flag.AUTO_RENEW))
                     .setReason(Reason.RENEW)
                     .setEventTime(now.plusYears(1))
@@ -826,7 +820,7 @@ public class BillingEventTest extends EntityTestCase {
             IllegalArgumentException.class,
             () ->
                 new BillingEvent.Recurring.Builder()
-                    .setParent(domainHistory)
+                    .setDomainHistory(domainHistory)
                     .setFlags(ImmutableSet.of(Flag.AUTO_RENEW))
                     .setReason(Reason.RENEW)
                     .setEventTime(now.plusYears(1))
@@ -847,7 +841,7 @@ public class BillingEventTest extends EntityTestCase {
             IllegalArgumentException.class,
             () ->
                 new BillingEvent.Recurring.Builder()
-                    .setParent(domainHistory)
+                    .setDomainHistory(domainHistory)
                     .setFlags(ImmutableSet.of(Flag.AUTO_RENEW))
                     .setReason(Reason.RENEW)
                     .setEventTime(now.plusYears(1))
@@ -869,7 +863,7 @@ public class BillingEventTest extends EntityTestCase {
             IllegalArgumentException.class,
             () ->
                 new BillingEvent.Recurring.Builder()
-                    .setParent(domainHistory)
+                    .setDomainHistory(domainHistory)
                     .setFlags(ImmutableSet.of(Flag.AUTO_RENEW))
                     .setReason(Reason.RENEW)
                     .setEventTime(now.plusYears(1))

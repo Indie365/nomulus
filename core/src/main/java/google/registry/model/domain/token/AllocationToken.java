@@ -33,6 +33,7 @@ import com.google.common.collect.Range;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
+import com.googlecode.objectify.annotation.Ignore;
 import com.googlecode.objectify.annotation.Index;
 import com.googlecode.objectify.annotation.OnLoad;
 import google.registry.flows.EppException;
@@ -151,6 +152,7 @@ public class AllocationToken extends BackupGroupRoot implements Buildable {
 
   @Enumerated(EnumType.STRING)
   @Column(name = "renewalPriceBehavior", nullable = false)
+  @Ignore
   RenewalPriceBehavior renewalPriceBehavior = RenewalPriceBehavior.DEFAULT;
 
   // TODO: Remove onLoad once all allocation tokens are migrated to have a discountYears of 1.
