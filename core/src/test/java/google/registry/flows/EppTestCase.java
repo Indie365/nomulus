@@ -327,7 +327,8 @@ public class EppTestCase {
         .setPeriodYears(2)
         .setEventTime(createTime)
         .setBillingTime(createTime.plus(Registry.get(domain.getTld()).getAddGracePeriodLength()))
-        .setParent(getOnlyHistoryEntryOfType(domain, Type.DOMAIN_CREATE, DomainHistory.class))
+        .setDomainHistory(
+            getOnlyHistoryEntryOfType(domain, Type.DOMAIN_CREATE, DomainHistory.class))
         .build();
   }
 
@@ -341,7 +342,7 @@ public class EppTestCase {
         .setPeriodYears(3)
         .setEventTime(renewTime)
         .setBillingTime(renewTime.plus(Registry.get(domain.getTld()).getRenewGracePeriodLength()))
-        .setParent(getOnlyHistoryEntryOfType(domain, Type.DOMAIN_RENEW, DomainHistory.class))
+        .setDomainHistory(getOnlyHistoryEntryOfType(domain, Type.DOMAIN_RENEW, DomainHistory.class))
         .build();
   }
 
@@ -375,7 +376,7 @@ public class EppTestCase {
         .setRegistrarId(domain.getCurrentSponsorRegistrarId())
         .setEventTime(eventTime)
         .setRecurrenceEndTime(endTime)
-        .setParent(historyEntry)
+        .setDomainHistory(historyEntry)
         .build();
   }
 
@@ -389,7 +390,8 @@ public class EppTestCase {
         .setOneTimeEventKey(VKey.from(findKeyToActualOneTimeBillingEvent(billingEventToCancel)))
         .setBillingTime(createTime.plus(Registry.get(domain.getTld()).getAddGracePeriodLength()))
         .setReason(Reason.CREATE)
-        .setParent(getOnlyHistoryEntryOfType(domain, Type.DOMAIN_DELETE, DomainHistory.class))
+        .setDomainHistory(
+            getOnlyHistoryEntryOfType(domain, Type.DOMAIN_DELETE, DomainHistory.class))
         .build();
   }
 
@@ -403,7 +405,8 @@ public class EppTestCase {
         .setOneTimeEventKey(VKey.from(findKeyToActualOneTimeBillingEvent(billingEventToCancel)))
         .setBillingTime(renewTime.plus(Registry.get(domain.getTld()).getRenewGracePeriodLength()))
         .setReason(Reason.RENEW)
-        .setParent(getOnlyHistoryEntryOfType(domain, Type.DOMAIN_DELETE, DomainHistory.class))
+        .setDomainHistory(
+            getOnlyHistoryEntryOfType(domain, Type.DOMAIN_DELETE, DomainHistory.class))
         .build();
   }
 

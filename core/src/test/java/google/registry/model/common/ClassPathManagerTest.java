@@ -17,8 +17,8 @@ package google.registry.model.common;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.google.bigtable.admin.v2.ModifyColumnFamiliesRequest.Modification;
 import google.registry.model.billing.BillingEvent.Cancellation;
-import google.registry.model.billing.BillingEvent.Modification;
 import google.registry.model.billing.BillingEvent.OneTime;
 import google.registry.model.billing.BillingEvent.Recurring;
 import google.registry.model.contact.ContactResource;
@@ -55,7 +55,6 @@ public class ClassPathManagerTest {
      */
     assertThat(ClassPathManager.getClass("ForeignKeyContactIndex"))
         .isEqualTo(ForeignKeyContactIndex.class);
-    assertThat(ClassPathManager.getClass("Modification")).isEqualTo(Modification.class);
     assertThat(ClassPathManager.getClass("AllocationToken")).isEqualTo(AllocationToken.class);
     assertThat(ClassPathManager.getClass("OneTime")).isEqualTo(OneTime.class);
     assertThat(ClassPathManager.getClass("RdeRevision")).isEqualTo(RdeRevision.class);

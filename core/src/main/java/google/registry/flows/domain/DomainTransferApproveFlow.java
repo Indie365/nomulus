@@ -134,7 +134,8 @@ public final class DomainTransferApproveFlow implements TransactionalFlow {
                     .setCost(getDomainRenewCost(targetId, transferData.getTransferRequestTime(), 1))
                     .setEventTime(now)
                     .setBillingTime(now.plus(Registry.get(tld).getTransferGracePeriodLength()))
-                    .setParent(domainHistoryKey)
+                    .setDomainHistoryId(
+                        new DomainHistoryId(domainHistoryKey.getName(), domainHistoryKey.getId()))
                     .build());
     ImmutableList.Builder<ImmutableObject> entitiesToSave = new ImmutableList.Builder<>();
     // If we are within an autorenew grace period, cancel the autorenew billing event and don't
@@ -150,7 +151,10 @@ public final class DomainTransferApproveFlow implements TransactionalFlow {
       if (billingEvent.isPresent()) {
         entitiesToSave.add(
             BillingEvent.Cancellation.forGracePeriod(
-                autorenewGrace, now, domainHistoryKey, targetId));
+                autorenewGrace,
+                now,
+                new DomainHistoryId(domainHistoryKey.getName(), domainHistoryKey.getId()),
+                targetId));
       }
     }
     // Close the old autorenew event and poll message at the transfer time (aka now). This may end
@@ -167,7 +171,8 @@ public final class DomainTransferApproveFlow implements TransactionalFlow {
             .setRegistrarId(gainingRegistrarId)
             .setEventTime(newExpirationTime)
             .setRecurrenceEndTime(END_OF_TIME)
-            .setParent(domainHistoryKey)
+            .setDomainHistoryId(
+                new DomainHistoryId(domainHistoryKey.getName(), domainHistoryKey.getId()))
             .build();
     // Create a new autorenew poll message.
     PollMessage.Autorenew gainingClientAutorenewPollMessage =

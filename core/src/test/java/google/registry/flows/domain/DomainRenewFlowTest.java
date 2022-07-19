@@ -156,7 +156,7 @@ class DomainRenewFlowTest extends ResourceFlowTestCase<DomainRenewFlow, DomainBa
                         .setRegistrarId("TheRegistrar")
                         .setEventTime(expirationTime)
                         .setRecurrenceEndTime(END_OF_TIME)
-                        .setParent(historyEntryDomainCreate)
+                        .setDomainHistory(historyEntryDomainCreate)
                         .setRenewalPriceBehavior(renewalPriceBehavior)
                         .setRenewalPrice(renewalPrice)
                         .build();
@@ -270,7 +270,7 @@ class DomainRenewFlowTest extends ResourceFlowTestCase<DomainRenewFlow, DomainBa
             .setPeriodYears(renewalYears)
             .setEventTime(clock.nowUtc())
             .setBillingTime(clock.nowUtc().plus(Registry.get("tld").getRenewGracePeriodLength()))
-            .setParent(historyEntryDomainRenew)
+            .setDomainHistory(historyEntryDomainRenew)
             .build();
     assertBillingEvents(
         renewBillingEvent,
@@ -283,7 +283,7 @@ class DomainRenewFlowTest extends ResourceFlowTestCase<DomainRenewFlow, DomainBa
             .setRegistrarId("TheRegistrar")
             .setEventTime(expirationTime)
             .setRecurrenceEndTime(clock.nowUtc())
-            .setParent(
+            .setDomainHistory(
                 getOnlyHistoryEntryOfType(
                     domain, HistoryEntry.Type.DOMAIN_CREATE, DomainHistory.class))
             .build(),
@@ -296,7 +296,7 @@ class DomainRenewFlowTest extends ResourceFlowTestCase<DomainRenewFlow, DomainBa
             .setRegistrarId("TheRegistrar")
             .setEventTime(domain.getRegistrationExpirationTime())
             .setRecurrenceEndTime(END_OF_TIME)
-            .setParent(historyEntryDomainRenew)
+            .setDomainHistory(historyEntryDomainRenew)
             .build());
     // There should only be the new autorenew poll message, as the old one will have been deleted
     // since it had no messages left to deliver.

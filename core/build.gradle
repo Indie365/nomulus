@@ -315,8 +315,8 @@ dependencies {
   annotationProcessor project(':processor')
   testAnnotationProcessor project(':processor')
 
-  testCompile deps['com.google.cloud:google-cloud-nio']
   testCompile deps['com.google.appengine:appengine-testing']
+  testCompile deps['com.google.cloud:google-cloud-nio']
   testCompile deps['com.google.guava:guava-testlib']
   testCompile deps['com.google.monitoring-client:contrib']
   testCompile deps['com.google.protobuf:protobuf-java-util']
