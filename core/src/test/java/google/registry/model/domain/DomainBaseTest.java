@@ -106,7 +106,6 @@ public class DomainBaseTest {
     domainHistory =
         persistResource(
             new DomainHistory.Builder()
-                .setDomainRepoId(domain.createVKey().getOfyKey().getName())
                 .setModificationTime(fakeClock.nowUtc())
                 .setType(HistoryEntry.Type.DOMAIN_CREATE)
                 .setRegistrarId("TheRegistrar")
@@ -118,11 +117,10 @@ public class DomainBaseTest {
                     .setReason(Reason.SERVER_STATUS)
                     .setTargetId(domain.getDomainName())
                     .setRegistrarId(domain.getCurrentSponsorRegistrarId())
-                    .setDomainRepoId(domain.getRepoId())
                     .setBillingTime(DateTime.now(UTC))
                     .setCost(Money.of(USD, 100))
                     .setEventTime(DateTime.now(UTC).plusYears(1))
-                    .setParent(domainHistory)
+                    .setDomainHistory(domainHistory)
                     .build())
             .createVKey();
     DomainHistory historyEntry =
@@ -131,7 +129,6 @@ public class DomainBaseTest {
             .setType(HistoryEntry.Type.DOMAIN_CREATE)
             .setPeriod(Period.create(1, Period.Unit.YEARS))
             .setModificationTime(DateTime.now(UTC))
-            .setDomainRepoId(domain.getRepoId())
             .setRegistrarId(domain.getCurrentSponsorRegistrarId())
             // These are non-null, but I don't think some tests set them.
             .setReason("felt like it")
@@ -145,11 +142,10 @@ public class DomainBaseTest {
             .setReason(Reason.SERVER_STATUS)
             .setTargetId("example.com")
             .setRegistrarId("registrar1")
-            .setDomainRepoId("4-COM")
             .setBillingTime(DateTime.now(UTC))
             .setCost(Money.of(USD, 100))
             .setEventTime(DateTime.now(UTC).plusYears(1))
-            .setParent(historyEntry)
+            .setDomainHistory(historyEntry)
             .build();
     oneTimeBillKey = oneTimeBill.createVKey();
     BillingEvent.Recurring recurringBill =
@@ -159,11 +155,9 @@ public class DomainBaseTest {
             .setFlags(ImmutableSet.of(Flag.AUTO_RENEW))
             .setTargetId(domain.getDomainName())
             .setRegistrarId(domain.getCurrentSponsorRegistrarId())
-            .setDomainRepoId(domain.getRepoId())
-            .setDomainHistoryRevisionId(historyEntry.getId())
             .setEventTime(DateTime.now(UTC).plusYears(1))
             .setRecurrenceEndTime(END_OF_TIME)
-            .setParent(historyEntry)
+            .setDomainHistory(historyEntry)
             .build();
     insertInDb(historyEntry, oneTimeBill, recurringBill);
     recurringBillKey = recurringBill.createVKey();
@@ -427,7 +421,7 @@ public class DomainBaseTest {
                         .plus(Registry.get("com").getTransferGracePeriodLength()))
                 .setCost(Money.of(USD, 11))
                 .setPeriodYears(1)
-                .setParent(historyEntry)
+                .setDomainHistory(historyEntry)
                 .build());
     domain =
         domain

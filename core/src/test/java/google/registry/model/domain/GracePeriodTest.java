@@ -22,6 +22,7 @@ import com.googlecode.objectify.Key;
 import google.registry.model.billing.BillingEvent;
 import google.registry.model.billing.BillingEvent.Reason;
 import google.registry.model.billing.BillingEvent.Recurring;
+import google.registry.model.domain.DomainHistory.DomainHistoryId;
 import google.registry.model.domain.rgp.GracePeriodStatus;
 import google.registry.model.reporting.HistoryEntry;
 import google.registry.persistence.VKey;
@@ -54,8 +55,7 @@ public class GracePeriodTest {
             .setBillingTime(now.plusDays(1))
             .setRegistrarId("TheRegistrar")
             .setCost(Money.of(CurrencyUnit.USD, 42))
-            .setParent(
-                Key.create(Key.create(DomainBase.class, "domain"), DomainHistory.class, 12345))
+            .setDomainHistoryId(new DomainHistoryId("domain", 12345))
             .setReason(Reason.CREATE)
             .setPeriodYears(1)
             .setTargetId("foo.google")

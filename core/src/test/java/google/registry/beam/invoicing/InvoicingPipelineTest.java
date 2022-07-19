@@ -512,13 +512,12 @@ class InvoicingPipelineTest {
             .asBuilder()
             .setId(1)
             .setRegistrarId(registrar1.getRegistrarId())
-            .setDomainHistoryRevisionId(domainHistory.getId())
+            .setDomainHistory(domainHistory)
             .setEventTime(DateTime.parse("2017-10-05T00:00:00.0Z"))
             .setBillingTime(DateTime.parse("2017-10-04T00:00:00.0Z"))
             .setOneTimeEventKey(oneTime.createVKey())
             .setTargetId(domain12.getDomainName())
             .setReason(Reason.RENEW)
-            .setParent(domainHistory)
             .build();
     persistResource(cancellation);
 
@@ -532,7 +531,7 @@ class InvoicingPipelineTest {
             .setRegistrarId(registrar1.getRegistrarId())
             .setRecurrenceEndTime(END_OF_TIME)
             .setId(1)
-            .setParent(domainHistoryRecurring)
+            .setDomainHistory(domainHistoryRecurring)
             .setTargetId(domain13.getDomainName())
             .setEventTime(DateTime.parse("2017-10-04T00:00:00.0Z"))
             .setReason(Reason.RENEW)
@@ -554,13 +553,12 @@ class InvoicingPipelineTest {
             .asBuilder()
             .setId(2)
             .setRegistrarId(registrar1.getRegistrarId())
-            .setDomainHistoryRevisionId(domainHistoryRecurring.getId())
             .setEventTime(DateTime.parse("2017-10-05T00:00:00.0Z"))
             .setBillingTime(DateTime.parse("2017-10-04T00:00:00.0Z"))
             .setRecurringEventKey(recurring.createVKey())
             .setTargetId(domain13.getDomainName())
             .setReason(Reason.RENEW)
-            .setParent(domainHistoryRecurring)
+            .setDomainHistory(domainHistoryRecurring)
             .build();
     persistResource(cancellationRecurring);
   }
@@ -608,10 +606,9 @@ class InvoicingPipelineTest {
             .setRegistrarId(registrar.getRegistrarId())
             .setReason(reason)
             .setTargetId(domainBase.getDomainName())
-            .setDomainRepoId("REPO-ID")
             .setCost(money)
             .setFlags(Arrays.stream(flags).collect(toImmutableSet()))
-            .setParent(persistDomainHistory(domainBase, registrar));
+            .setDomainHistory(persistDomainHistory(domainBase, registrar));
 
     if (years > 0) {
       billingEventBuilder.setPeriodYears(years);

@@ -409,11 +409,9 @@ public class DomainBaseSqlTest {
             .setFlags(ImmutableSet.of(Flag.AUTO_RENEW))
             .setTargetId("example.com")
             .setRegistrarId("registrar1")
-            .setDomainRepoId("4-COM")
-            .setDomainHistoryRevisionId(1L)
             .setEventTime(DateTime.now(UTC).plusYears(1))
             .setRecurrenceEndTime(END_OF_TIME)
-            .setParent(historyEntry)
+            .setDomainHistory(historyEntry)
             .build();
     PollMessage.Autorenew autorenewPollMessage =
         new PollMessage.Autorenew.Builder()
@@ -436,11 +434,10 @@ public class DomainBaseSqlTest {
             .setReason(Reason.SERVER_STATUS)
             .setTargetId("example.com")
             .setRegistrarId("registrar1")
-            .setDomainRepoId("4-COM")
             .setBillingTime(DateTime.now(UTC))
             .setCost(Money.of(USD, 100))
             .setEventTime(DateTime.now(UTC).plusYears(1))
-            .setParent(historyEntry)
+            .setDomainHistory(historyEntry)
             .build();
     DomainTransferData transferData =
         new DomainTransferData.Builder()
@@ -522,7 +519,6 @@ public class DomainBaseSqlTest {
             .setType(HistoryEntry.Type.DOMAIN_CREATE)
             .setPeriod(Period.create(1, Period.Unit.YEARS))
             .setModificationTime(DateTime.now(UTC))
-            .setDomainRepoId("4-COM")
             .setRegistrarId("registrar1")
             // These are non-null, but I don't think some tests set them.
             .setReason("felt like it")
@@ -536,11 +532,9 @@ public class DomainBaseSqlTest {
             .setFlags(ImmutableSet.of(Flag.AUTO_RENEW))
             .setTargetId("example.com")
             .setRegistrarId("registrar1")
-            .setDomainRepoId("4-COM")
-            .setDomainHistoryRevisionId(1L)
             .setEventTime(DateTime.now(UTC).plusYears(1))
             .setRecurrenceEndTime(END_OF_TIME)
-            .setParent(historyEntry)
+            .setDomainHistory(historyEntry)
             .build();
     PollMessage.Autorenew autorenewPollMessage =
         new PollMessage.Autorenew.Builder()
@@ -563,11 +557,10 @@ public class DomainBaseSqlTest {
             .setReason(Reason.SERVER_STATUS)
             .setTargetId("example.com")
             .setRegistrarId("registrar1")
-            .setDomainRepoId("4-COM")
             .setBillingTime(DateTime.now(UTC))
             .setCost(Money.of(USD, 100))
             .setEventTime(DateTime.now(UTC).plusYears(1))
-            .setParent(historyEntry)
+            .setDomainHistory(historyEntry)
             .build();
     DomainTransferData transferData =
         createPendingTransferData(
