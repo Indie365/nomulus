@@ -56,6 +56,7 @@ import google.registry.model.contact.ContactResource;
 import google.registry.model.domain.launch.LaunchNotice;
 import google.registry.model.domain.rgp.GracePeriodStatus;
 import google.registry.model.domain.secdns.DelegationSignerData;
+import google.registry.model.domain.token.AllocationToken;
 import google.registry.model.eppcommon.StatusValue;
 import google.registry.model.host.HostResource;
 import google.registry.model.poll.PollMessage;
@@ -287,6 +288,11 @@ public class DomainContent extends EppResource
   @Ignore DateTime dnsRefreshRequestTime;
 
   /**
+   * The {@link AllocationToken} used during domain creation to include this domain in a package.
+   */
+  @Nullable VKey<AllocationToken> allocationToken;
+
+  /**
    * Returns the DNS refresh request time iff this domain's DNS needs refreshing, otherwise absent.
    */
   public Optional<DateTime> getDnsRefreshRequestTime() {
@@ -332,6 +338,10 @@ public class DomainContent extends EppResource
 
   public String getSmdId() {
     return smdId;
+  }
+
+  public Optional<VKey<AllocationToken>> getAllocationToken() {
+    return Optional.ofNullable(allocationToken);
   }
 
   /**
@@ -941,6 +951,11 @@ public class DomainContent extends EppResource
     @Override
     public B setLastTransferTime(DateTime lastTransferTime) {
       getInstance().lastTransferTime = lastTransferTime;
+      return thisCastToDerived();
+    }
+
+    public B setAllocationToken(@Nullable VKey<AllocationToken> allocationToken) {
+      getInstance().allocationToken = allocationToken;
       return thisCastToDerived();
     }
   }

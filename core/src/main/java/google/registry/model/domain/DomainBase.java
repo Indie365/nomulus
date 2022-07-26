@@ -216,7 +216,8 @@ public class DomainBase extends DomainContent implements ForeignKeyedEppResource
           .setSubordinateHosts(domainContent.getSubordinateHosts())
           .setStatusValues(domainContent.getStatusValues())
           .setTransferData(domainContent.getTransferData())
-          .setDnsRefreshRequestTime(domainContent.getDnsRefreshRequestTime());
+          .setDnsRefreshRequestTime(domainContent.getDnsRefreshRequestTime())
+          .setAllocationToken(domainContent.getAllocationToken().orElse(null));
     }
   }
 }
