@@ -287,10 +287,8 @@ public class DomainContent extends EppResource
   // TODO(mcilwain): Start using this field once we are further along in the DB migration.
   @Ignore DateTime dnsRefreshRequestTime;
 
-  /**
-   * The {@link AllocationToken} used during domain creation to include this domain in a package.
-   */
-  @Nullable VKey<AllocationToken> allocationToken;
+  /** The {@link AllocationToken} for the package this domain is currently a part of. */
+  @Nullable VKey<AllocationToken> currentPackageToken;
 
   /**
    * Returns the DNS refresh request time iff this domain's DNS needs refreshing, otherwise absent.
@@ -340,8 +338,8 @@ public class DomainContent extends EppResource
     return smdId;
   }
 
-  public Optional<VKey<AllocationToken>> getAllocationToken() {
-    return Optional.ofNullable(allocationToken);
+  public Optional<VKey<AllocationToken>> getCurrentPackageToken() {
+    return Optional.ofNullable(currentPackageToken);
   }
 
   /**
@@ -954,8 +952,8 @@ public class DomainContent extends EppResource
       return thisCastToDerived();
     }
 
-    public B setAllocationToken(@Nullable VKey<AllocationToken> allocationToken) {
-      getInstance().allocationToken = allocationToken;
+    public B setCurrentPackageToken(@Nullable VKey<AllocationToken> currentPackageToken) {
+      getInstance().currentPackageToken = currentPackageToken;
       return thisCastToDerived();
     }
   }
