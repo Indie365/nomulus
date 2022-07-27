@@ -171,7 +171,7 @@ public class DomainBaseSqlTest {
   }
 
   @Test
-  void testDomainBasePersistenceWithAllocationToken() {
+  void testDomainBasePersistenceWithCurrentPackageToken() {
     domain = domain.asBuilder().setCurrentPackageToken(allocationToken.createVKey()).build();
     persistResource(allocationToken);
     persistDomain();
@@ -185,7 +185,7 @@ public class DomainBaseSqlTest {
   }
 
   @Test
-  void testAllocationTokenForeignKeyConstraints() {
+  void testCurrentPackageTokenForeignKeyConstraints() {
     // Persist the domain without the associated allocation token object.
     domain = domain.asBuilder().setCurrentPackageToken(allocationToken.createVKey()).build();
     assertThrowForeignKeyViolation(() -> persistDomain());
