@@ -21,6 +21,8 @@ import com.google.common.collect.ImmutableMap;
 import google.registry.persistence.transaction.JpaTestExtensions;
 import google.registry.persistence.transaction.JpaTestExtensions.JpaIntegrationWithCoverageExtension;
 import google.registry.testing.FakeClock;
+import google.registry.testing.TestCacheExtension;
+import java.time.Duration;
 import javax.persistence.PersistenceException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -36,6 +38,11 @@ public class ClaimsListDaoTest {
           .withClock(fakeClock)
           .withoutCannedData()
           .buildIntegrationWithCoverageExtension();
+
+  // Set long persist times on the cache so it can be tested (cache times default to 0 in tests).
+  @RegisterExtension
+  public final TestCacheExtension testCacheExtension =
+      new TestCacheExtension.Builder().withClaimsListCache(Duration.ofHours(6)).build();
 
   @Test
   void save_insertsClaimsListSuccessfully() {
@@ -81,6 +88,19 @@ public class ClaimsListDaoTest {
     ClaimsListDao.save(oldClaimsList);
     ClaimsListDao.save(newClaimsList);
     assertClaimsListEquals(newClaimsList, ClaimsListDao.get());
+  }
+
+  @Test
+  void testCaching_savesAndUpdates() {
+    assertThat(ClaimsListDao.CACHE.getIfPresent(ClaimsListDao.class)).isNull();
+    ClaimsList oldList =
+        ClaimsList.create(fakeClock.nowUtc(), ImmutableMap.of("label1", "key1", "label2", "key2"));
+    ClaimsListDao.save(oldList);
+    assertThat(ClaimsListDao.CACHE.getIfPresent(ClaimsListDao.class)).isEqualTo(oldList);
+    ClaimsList newList =
+        ClaimsList.create(fakeClock.nowUtc(), ImmutableMap.of("label3", "key3", "label4", "key4"));
+    ClaimsListDao.save(newList);
+    assertThat(ClaimsListDao.CACHE.getIfPresent(ClaimsListDao.class)).isEqualTo(newList);
   }
 
   private void assertClaimsListEquals(ClaimsList left, ClaimsList right) {
