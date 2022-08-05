@@ -38,6 +38,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import google.registry.dns.DnsMetrics.ActionStatus;
@@ -56,13 +57,18 @@ import google.registry.testing.FakeClock;
 import google.registry.testing.FakeLockHandler;
 import google.registry.testing.FakeResponse;
 import google.registry.testing.InjectExtension;
+import google.registry.ui.server.SendEmailUtils;
+import google.registry.util.EmailMessage;
+import google.registry.util.SendEmailService;
 import java.util.Optional;
 import java.util.Set;
+import javax.mail.internet.InternetAddress;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.mockito.ArgumentCaptor;
 
 /** Unit tests for {@link PublishDnsUpdatesAction}. */
 public class PublishDnsUpdatesActionTest {
@@ -80,10 +86,19 @@ public class PublishDnsUpdatesActionTest {
   private final DnsQueue dnsQueue = mock(DnsQueue.class);
   private final CloudTasksHelper cloudTasksHelper = new CloudTasksHelper();
   private PublishDnsUpdatesAction action;
+  private final SendEmailService emailService = mock(SendEmailService.class);
+  private SendEmailUtils sendEmailUtils;
 
   @BeforeEach
-  void beforeEach() {
+  void beforeEach() throws Exception {
     inject.setStaticField(Ofy.class, "clock", clock);
+    sendEmailUtils =
+        new SendEmailUtils(
+            new InternetAddress("outgoing@registry.example"),
+            "UnitTest Registry",
+            ImmutableList.of("notification@test.example", "notification2@test.example"),
+            emailService);
+
     createTld("xn--q9jyb4c");
     persistResource(
         Registry.get("xn--q9jyb4c")
@@ -142,6 +157,8 @@ public class PublishDnsUpdatesActionTest {
         hosts,
         tld,
         Duration.standardSeconds(10),
+        "Subj",
+        "Body %1$s %2$s %3$s",
         Optional.ofNullable(retryCount),
         Optional.empty(),
         dnsQueue,
@@ -150,6 +167,7 @@ public class PublishDnsUpdatesActionTest {
         lockHandler,
         clock,
         cloudTasksHelper.getTestCloudTasksUtils(),
+        sendEmailUtils,
         response);
   }
 
@@ -383,6 +401,33 @@ public class PublishDnsUpdatesActionTest {
     action.run();
     cloudTasksHelper.assertNoTasksEnqueued(DNS_PUBLISH_PUSH_QUEUE_NAME);
     assertThat(response.getStatus()).isEqualTo(SC_ACCEPTED);
+  }
+
+  @Test
+  void testDomainDnsUpdateRetriesExhausted_emailIsSent() {
+    action =
+        createAction("xn--q9jyb4c", ImmutableSet.of("example.xn--q9jyb4c"), ImmutableSet.of(), 10);
+    doThrow(new RuntimeException()).when(dnsWriter).commit();
+    action.run();
+    ArgumentCaptor<EmailMessage> contentCaptor = ArgumentCaptor.forClass(EmailMessage.class);
+    verify(emailService).sendEmail(contentCaptor.capture());
+    EmailMessage emailMessage = contentCaptor.getValue();
+    assertThat(emailMessage.subject()).isEqualTo("Subj");
+    assertThat(emailMessage.body()).isEqualTo("Body The Registrar example.xn--q9jyb4c domain");
+  }
+
+  @Test
+  void testHostDnsUpdateRetriesExhausted_emailIsSent() {
+    action =
+        createAction(
+            "xn--q9jyb4c", ImmutableSet.of(), ImmutableSet.of("ns1.example.xn--q9jyb4c"), 10);
+    doThrow(new RuntimeException()).when(dnsWriter).commit();
+    action.run();
+    ArgumentCaptor<EmailMessage> contentCaptor = ArgumentCaptor.forClass(EmailMessage.class);
+    verify(emailService).sendEmail(contentCaptor.capture());
+    EmailMessage emailMessage = contentCaptor.getValue();
+    assertThat(emailMessage.subject()).isEqualTo("Subj");
+    assertThat(emailMessage.body()).isEqualTo("Body The Registrar ns1.example.xn--q9jyb4c host");
   }
 
   @Test
