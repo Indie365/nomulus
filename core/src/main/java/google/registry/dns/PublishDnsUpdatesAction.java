@@ -14,6 +14,7 @@
 
 package google.registry.dns;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static google.registry.dns.DnsConstants.DNS_PUBLISH_PUSH_QUEUE_NAME;
 import static google.registry.dns.DnsModule.PARAM_DNS_WRITER;
 import static google.registry.dns.DnsModule.PARAM_DOMAINS;
@@ -22,6 +23,7 @@ import static google.registry.dns.DnsModule.PARAM_LOCK_INDEX;
 import static google.registry.dns.DnsModule.PARAM_NUM_PUBLISH_LOCKS;
 import static google.registry.dns.DnsModule.PARAM_PUBLISH_TASK_ENQUEUED;
 import static google.registry.dns.DnsModule.PARAM_REFRESH_REQUEST_CREATED;
+import static google.registry.model.EppResourceUtils.loadByForeignKey;
 import static google.registry.request.Action.Method.POST;
 import static google.registry.request.RequestParameters.PARAM_TLD;
 import static google.registry.util.CollectionUtils.nullToEmpty;
@@ -37,10 +39,15 @@ import google.registry.dns.DnsMetrics.ActionStatus;
 import google.registry.dns.DnsMetrics.CommitStatus;
 import google.registry.dns.DnsMetrics.PublishStatus;
 import google.registry.dns.writer.DnsWriter;
+import google.registry.model.domain.DomainBase;
+import google.registry.model.host.HostResource;
+import google.registry.model.registrar.Registrar;
+import google.registry.model.registrar.RegistrarPoc;
 import google.registry.model.tld.Registry;
 import google.registry.request.Action;
 import google.registry.request.Action.Service;
 import google.registry.request.Header;
+import google.registry.request.HttpException.NotFoundException;
 import google.registry.request.HttpException.ServiceUnavailableException;
 import google.registry.request.Parameter;
 import google.registry.request.Response;
@@ -48,7 +55,9 @@ import google.registry.request.auth.Auth;
 import google.registry.request.lock.LockHandler;
 import google.registry.util.Clock;
 import google.registry.util.CloudTasksUtils;
+import google.registry.util.DiffUtils;
 import google.registry.util.DomainNameUtils;
+import google.registry.ui.server.SendEmailUtils;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -102,6 +111,7 @@ public final class PublishDnsUpdatesAction implements Runnable, Callable<Void> {
   private final Clock clock;
   private final CloudTasksUtils cloudTasksUtils;
   private final Response response;
+  private final SendEmailUtils sendEmailUtils;
 
   @Inject
   public PublishDnsUpdatesAction(
@@ -122,11 +132,13 @@ public final class PublishDnsUpdatesAction implements Runnable, Callable<Void> {
       LockHandler lockHandler,
       Clock clock,
       CloudTasksUtils cloudTasksUtils,
+      SendEmailUtils sendEmailUtils,
       Response response) {
     this.dnsQueue = dnsQueue;
     this.dnsWriterProxy = dnsWriterProxy;
     this.dnsMetrics = dnsMetrics;
     this.timeout = timeout;
+    this.sendEmailUtils = sendEmailUtils;
     this.retryCount =
         cloudTasksRetryCount.orElse(
             appEngineRetryCount.orElseThrow(
@@ -209,14 +221,60 @@ public final class PublishDnsUpdatesAction implements Runnable, Callable<Void> {
       } else if (retryCount < RETRIES_BEFORE_PERMANENT_FAILURE) {
         // If the batch only contains 1 name, allow it more retries
         throw e;
+      } else {
+        domains.stream()
+            .map(this::getRegistrarIdByDomainName)
+            .forEach(this::notifyWithEmailAboutDnsUpdateFailure);
+
+        hosts.stream()
+            .map(this::getRegistrarIdByHostName)
+            .forEach(this::notifyWithEmailAboutDnsUpdateFailure);
       }
-      // If we get here, we should terminate this task as it is likely a perpetually failing task.
-      // TODO(b/237302821): Send an email notifying partner the dns update failed
+
       recordActionResult(ActionStatus.MAX_RETRIES_EXCEEDED);
       response.setStatus(SC_ACCEPTED);
       logger.atSevere().withCause(e).log("Terminated task after too many retries");
     }
     return null;
+  }
+
+  private String getRegistrarIdByHostName(String hostName) {
+    HostResource hostResource =
+        loadByForeignKey(HostResource.class, hostName, clock.nowUtc())
+            .orElseThrow(
+                () ->
+                    new NotFoundException(String.format("Host entity for %s not found", hostName)));
+
+    return hostResource.getPersistedCurrentSponsorRegistrarId();
+  }
+
+  private String getRegistrarIdByDomainName(String domainName) {
+    DomainBase domainBase =
+        loadByForeignKey(DomainBase.class, domainName, clock.nowUtc())
+            .orElseThrow(
+                () ->
+                    new NotFoundException(
+                        String.format("Domain entity for %s not found", domainName)));
+
+    return domainBase.getCurrentSponsorRegistrarId();
+  }
+
+  /** Sends an email to partners regarding a failure during DNS update  */
+  private void notifyWithEmailAboutDnsUpdateFailure(String registrarId) {
+    Registrar registrar =
+        Registrar.loadByRegistrarIdCached(registrarId)
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        String.format("Could not find registrar %s", registrarId)));
+
+    sendEmailUtils.sendEmail(
+        "Subj",
+        "Body",
+        registrar.getContacts().stream()
+            .filter(c -> c.getTypes().contains(RegistrarPoc.Type.ADMIN))
+            .map(RegistrarPoc::getEmailAddress)
+            .collect(toImmutableList()));
   }
 
   /** Splits the domains and hosts in a batch into smaller batches and adds them to the queue. */
