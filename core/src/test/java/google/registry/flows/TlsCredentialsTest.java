@@ -14,7 +14,9 @@
 
 package google.registry.flows;
 
+import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static google.registry.testing.CertificateSamples.SAMPLE_CERT;
 import static google.registry.testing.DatabaseHelper.loadRegistrar;
 import static google.registry.testing.DatabaseHelper.persistResource;
@@ -81,16 +83,21 @@ final class TlsCredentialsTest {
   @Test
   void test_missingIpAddress_doesntAllowAccess() {
     TlsCredentials tls =
-        new TlsCredentials(false, Optional.of("certHash"), Optional.empty(), certificateChecker);
+        new TlsCredentials(false, Optional.of("certHash"), Optional.of("127.0.0.1"), certificateChecker);
     persistResource(
         loadRegistrar("TheRegistrar")
             .asBuilder()
             .setClientCertificate(SAMPLE_CERT, clock.nowUtc())
             .setIpAddressAllowList(ImmutableSet.of(CidrAddressBlock.create("3.5.8.13")))
             .build());
-    assertThrows(
+
+    BadRegistrarIpAddressException thrown = assertThrows(
         BadRegistrarIpAddressException.class,
         () -> tls.validate(Registrar.loadByRegistrarId("TheRegistrar").get(), "password"));
+
+    assertThat(thrown)
+        .hasMessageThat()
+        .isEqualTo("Registrar IP address /127.0.0.1 is not in stored allow list");
   }
 
   @Test
