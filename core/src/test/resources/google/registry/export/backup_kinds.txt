@@ -1,14 +1,14 @@
 AllocationToken
 Cancellation
 ContactResource
-DomainBase
+Domain
 EntityGroupRoot
 EppResourceIndex
 ForeignKeyContactIndex
 ForeignKeyDomainIndex
 ForeignKeyHostIndex
 HistoryEntry
-HostResource
+Host
 Modification
 OneTime
 PollMessage

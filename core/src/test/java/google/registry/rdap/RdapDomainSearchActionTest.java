@@ -24,8 +24,7 @@ import static google.registry.testing.DatabaseHelper.persistResource;
 import static google.registry.testing.DatabaseHelper.persistResources;
 import static google.registry.testing.DatabaseHelper.persistSimpleResources;
 import static google.registry.testing.FullFieldsTestEntityHelper.makeAndPersistContactResource;
-import static google.registry.testing.FullFieldsTestEntityHelper.makeAndPersistHostResource;
-import static google.registry.testing.FullFieldsTestEntityHelper.makeDomainBase;
+import static google.registry.testing.FullFieldsTestEntityHelper.makeDomain;
 import static google.registry.testing.FullFieldsTestEntityHelper.makeHistoryEntry;
 import static google.registry.testing.FullFieldsTestEntityHelper.makeRegistrar;
 import static google.registry.testing.FullFieldsTestEntityHelper.makeRegistrarContacts;
@@ -38,9 +37,9 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import google.registry.model.contact.ContactResource;
-import google.registry.model.domain.DomainBase;
+import google.registry.model.domain.Domain;
 import google.registry.model.domain.Period;
-import google.registry.model.host.HostResource;
+import google.registry.model.host.Host;
 import google.registry.model.registrar.Registrar;
 import google.registry.model.reporting.HistoryEntry;
 import google.registry.model.tld.Registry;
@@ -50,6 +49,7 @@ import google.registry.rdap.RdapMetrics.SearchType;
 import google.registry.rdap.RdapMetrics.WildcardType;
 import google.registry.rdap.RdapSearchResults.IncompletenessWarningType;
 import google.registry.testing.FakeResponse;
+import google.registry.testing.FullFieldsTestEntityHelper;
 import java.net.URLDecoder;
 import java.util.HashMap;
 import java.util.Optional;
@@ -65,17 +65,17 @@ class RdapDomainSearchActionTest extends RdapSearchActionTestCase<RdapDomainSear
   }
 
   private Registrar registrar;
-  private DomainBase domainCatLol;
-  private DomainBase domainCatLol2;
-  private DomainBase domainCatExample;
-  private DomainBase domainIdn;
-  private DomainBase domainMultipart;
+  private Domain domainCatLol;
+  private Domain domainCatLol2;
+  private Domain domainCatExample;
+  private Domain domainIdn;
+  private Domain domainMultipart;
   private ContactResource contact1;
   private ContactResource contact2;
   private ContactResource contact3;
-  private HostResource hostNs1CatLol;
-  private HostResource hostNs2CatLol;
-  private HashMap<String, HostResource> hostNameToHostMap = new HashMap<>();
+  private Host hostNs1CatLol;
+  private Host hostNs2CatLol;
+  private HashMap<String, Host> hostNameToHostMap = new HashMap<>();
 
   enum RequestType {
     NONE,
@@ -120,7 +120,7 @@ class RdapDomainSearchActionTest extends RdapSearchActionTestCase<RdapDomainSear
     return parseJsonObject(response.getPayload());
   }
 
-  private HostResource addHostToMap(HostResource host) {
+  private Host addHostToMap(Host host) {
     hostNameToHostMap.put(host.getHostName(), host);
     return host;
   }
@@ -146,14 +146,15 @@ class RdapDomainSearchActionTest extends RdapSearchActionTestCase<RdapDomainSear
             "5372808-TRL", "The Raven", "bog@cat.lol", clock.nowUtc().minusYears(3), registrar);
     hostNs1CatLol =
         addHostToMap(
-            makeAndPersistHostResource("ns1.cat.lol", "1.2.3.4", clock.nowUtc().minusYears(1)));
+            FullFieldsTestEntityHelper.makeAndPersistHost(
+                "ns1.cat.lol", "1.2.3.4", clock.nowUtc().minusYears(1)));
     hostNs2CatLol =
         addHostToMap(
-            makeAndPersistHostResource(
+            FullFieldsTestEntityHelper.makeAndPersistHost(
                 "ns2.cat.lol", "bad:f00d:cafe:0:0:0:15:beef", clock.nowUtc().minusYears(2)));
     domainCatLol =
         persistResource(
-            makeDomainBase(
+            makeDomain(
                     "cat.lol",
                     contact1,
                     contact2,
@@ -173,7 +174,7 @@ class RdapDomainSearchActionTest extends RdapSearchActionTestCase<RdapDomainSear
 
     domainCatLol2 =
         persistResource(
-            makeDomainBase(
+            makeDomain(
                     "cat2.lol",
                     makeAndPersistContactResource(
                         "6372808-ERL",
@@ -194,10 +195,10 @@ class RdapDomainSearchActionTest extends RdapSearchActionTestCase<RdapDomainSear
                         clock.nowUtc().minusYears(3),
                         registrar),
                     addHostToMap(
-                        makeAndPersistHostResource(
+                        FullFieldsTestEntityHelper.makeAndPersistHost(
                             "ns1.cat.example", "10.20.30.40", clock.nowUtc().minusYears(1))),
                     addHostToMap(
-                        makeAndPersistHostResource(
+                        FullFieldsTestEntityHelper.makeAndPersistHost(
                             "ns2.dog.lol",
                             "12:feed:5000:0:0:0:15:beef",
                             clock.nowUtc().minusYears(2))),
@@ -214,7 +215,7 @@ class RdapDomainSearchActionTest extends RdapSearchActionTestCase<RdapDomainSear
     persistSimpleResources(makeRegistrarContacts(registrar));
     domainCatExample =
         persistResource(
-            makeDomainBase(
+            makeDomain(
                     "cat.example",
                     makeAndPersistContactResource(
                         "7372808-ERL",
@@ -236,7 +237,7 @@ class RdapDomainSearchActionTest extends RdapSearchActionTestCase<RdapDomainSear
                         registrar),
                     hostNs1CatLol,
                     addHostToMap(
-                        makeAndPersistHostResource(
+                        FullFieldsTestEntityHelper.makeAndPersistHost(
                             "ns2.external.tld",
                             "bad:f00d:cafe:0:0:0:16:beef",
                             clock.nowUtc().minusYears(2))),
@@ -251,7 +252,7 @@ class RdapDomainSearchActionTest extends RdapSearchActionTestCase<RdapDomainSear
     persistSimpleResources(makeRegistrarContacts(registrar));
     domainIdn =
         persistResource(
-            makeDomainBase(
+            makeDomain(
                     "cat.みんな",
                     makeAndPersistContactResource(
                         "8372808-ERL",
@@ -272,10 +273,10 @@ class RdapDomainSearchActionTest extends RdapSearchActionTestCase<RdapDomainSear
                         clock.nowUtc().minusYears(3),
                         registrar),
                     addHostToMap(
-                        makeAndPersistHostResource(
+                        FullFieldsTestEntityHelper.makeAndPersistHost(
                             "ns1.cat.みんな", "1.2.3.5", clock.nowUtc().minusYears(1))),
                     addHostToMap(
-                        makeAndPersistHostResource(
+                        FullFieldsTestEntityHelper.makeAndPersistHost(
                             "ns2.cat.みんな",
                             "bad:f00d:cafe:0:0:0:14:beef",
                             clock.nowUtc().minusYears(2))),
@@ -290,7 +291,7 @@ class RdapDomainSearchActionTest extends RdapSearchActionTestCase<RdapDomainSear
     persistSimpleResources(makeRegistrarContacts(registrar));
     domainMultipart =
         persistResource(
-            makeDomainBase(
+            makeDomain(
                     "cat.1.test",
                     makeAndPersistContactResource(
                         "9372808-ERL",
@@ -311,10 +312,10 @@ class RdapDomainSearchActionTest extends RdapSearchActionTestCase<RdapDomainSear
                         clock.nowUtc().minusYears(3),
                         registrar),
                     addHostToMap(
-                        makeAndPersistHostResource(
+                        FullFieldsTestEntityHelper.makeAndPersistHost(
                             "ns1.cat.1.test", "1.2.3.5", clock.nowUtc().minusYears(1))),
                     addHostToMap(
-                        makeAndPersistHostResource(
+                        FullFieldsTestEntityHelper.makeAndPersistHost(
                             "ns2.cat.2.test",
                             "bad:f00d:cafe:0:0:0:14:beef",
                             clock.nowUtc().minusYears(2))),
@@ -400,26 +401,26 @@ class RdapDomainSearchActionTest extends RdapSearchActionTestCase<RdapDomainSear
 
   private void createManyDomainsAndHosts(
       int numActiveDomains, int numTotalDomainsPerActiveDomain, int numHosts) {
-    ImmutableSet.Builder<VKey<HostResource>> hostKeysBuilder = new ImmutableSet.Builder<>();
+    ImmutableSet.Builder<VKey<Host>> hostKeysBuilder = new ImmutableSet.Builder<>();
     ImmutableSet.Builder<String> subordinateHostnamesBuilder = new ImmutableSet.Builder<>();
     String mainDomainName = String.format("domain%d.lol", numTotalDomainsPerActiveDomain);
     for (int i = numHosts; i >= 1; i--) {
       String hostName = String.format("ns%d.%s", i, mainDomainName);
       subordinateHostnamesBuilder.add(hostName);
-      HostResource host =
-          makeAndPersistHostResource(
+      Host host =
+          FullFieldsTestEntityHelper.makeAndPersistHost(
               hostName,
               String.format("5.5.%d.%d", 5 + i / 250, i % 250),
               clock.nowUtc().minusYears(1));
       hostKeysBuilder.add(host.createVKey());
     }
-    ImmutableSet<VKey<HostResource>> hostKeys = hostKeysBuilder.build();
+    ImmutableSet<VKey<Host>> hostKeys = hostKeysBuilder.build();
     // Create all the domains at once, then persist them in parallel, for increased efficiency.
-    ImmutableList.Builder<DomainBase> domainsBuilder = new ImmutableList.Builder<>();
+    ImmutableList.Builder<Domain> domainsBuilder = new ImmutableList.Builder<>();
     for (int i = numActiveDomains * numTotalDomainsPerActiveDomain; i >= 1; i--) {
       String domainName = String.format("domain%d.lol", i);
-      DomainBase.Builder builder =
-          makeDomainBase(domainName, contact1, contact2, contact3, null, null, registrar)
+      Domain.Builder builder =
+          makeDomain(domainName, contact1, contact2, contact3, null, null, registrar)
               .asBuilder()
               .setNameservers(hostKeys)
               .setCreationTimeForTest(clock.nowUtc().minusYears(3))

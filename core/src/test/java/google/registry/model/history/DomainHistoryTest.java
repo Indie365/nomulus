@@ -20,23 +20,23 @@ import static google.registry.persistence.transaction.TransactionManagerFactory.
 import static google.registry.testing.DatabaseHelper.createTld;
 import static google.registry.testing.DatabaseHelper.insertInDb;
 import static google.registry.testing.DatabaseHelper.newContactResourceWithRoid;
-import static google.registry.testing.DatabaseHelper.newDomainBase;
-import static google.registry.testing.DatabaseHelper.newHostResourceWithRoid;
+import static google.registry.testing.DatabaseHelper.newDomain;
+import static google.registry.testing.DatabaseHelper.newHostWithRoid;
 import static google.registry.util.DateTimeUtils.END_OF_TIME;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.common.collect.ImmutableSet;
 import google.registry.model.EntityTestCase;
 import google.registry.model.contact.ContactResource;
+import google.registry.model.domain.Domain;
 import google.registry.model.domain.DomainBase;
-import google.registry.model.domain.DomainContent;
 import google.registry.model.domain.DomainHistory;
 import google.registry.model.domain.GracePeriod;
 import google.registry.model.domain.Period;
 import google.registry.model.domain.rgp.GracePeriodStatus;
 import google.registry.model.domain.secdns.DelegationSignerData;
 import google.registry.model.eppcommon.Trid;
-import google.registry.model.host.HostResource;
+import google.registry.model.host.Host;
 import google.registry.model.reporting.DomainTransactionRecord;
 import google.registry.model.reporting.DomainTransactionRecord.TransactionReportField;
 import google.registry.model.reporting.HistoryEntry;
@@ -60,7 +60,7 @@ public class DomainHistoryTest extends EntityTestCase {
 
   @Test
   void testPersistence() {
-    DomainBase domain = addGracePeriodForSql(createDomainWithContactsAndHosts());
+    Domain domain = addGracePeriodForSql(createDomainWithContactsAndHosts());
     DomainHistory domainHistory = createDomainHistory(domain);
     insertInDb(domainHistory);
 
@@ -75,7 +75,7 @@ public class DomainHistoryTest extends EntityTestCase {
 
   @Test
   void testSerializable() {
-    DomainBase domain = addGracePeriodForSql(createDomainWithContactsAndHosts());
+    Domain domain = addGracePeriodForSql(createDomainWithContactsAndHosts());
     DomainHistory domainHistory = createDomainHistory(domain);
     insertInDb(domainHistory);
     DomainHistory fromDatabase =
@@ -85,7 +85,7 @@ public class DomainHistoryTest extends EntityTestCase {
 
   @Test
   void testLegacyPersistence_nullResource() {
-    DomainBase domain = addGracePeriodForSql(createDomainWithContactsAndHosts());
+    Domain domain = addGracePeriodForSql(createDomainWithContactsAndHosts());
     DomainHistory domainHistory = createDomainHistory(domain).asBuilder().setDomain(null).build();
     insertInDb(domainHistory);
 
@@ -100,9 +100,9 @@ public class DomainHistoryTest extends EntityTestCase {
             });
   }
 
-  static DomainBase createDomainWithContactsAndHosts() {
+  static Domain createDomainWithContactsAndHosts() {
     createTld("tld");
-    HostResource host = newHostResourceWithRoid("ns1.example.com", "host1");
+    Host host = newHostWithRoid("ns1.example.com", "host1");
     ContactResource contact = newContactResourceWithRoid("contactId", "contact1");
 
     jpaTm()
@@ -112,8 +112,8 @@ public class DomainHistoryTest extends EntityTestCase {
               jpaTm().insert(contact);
             });
 
-    DomainBase domain =
-        newDomainBase("example.tld", "domainRepoId", contact)
+    Domain domain =
+        newDomain("example.tld", "domainRepoId", contact)
             .asBuilder()
             .setNameservers(host.createVKey())
             .setDsData(ImmutableSet.of(DelegationSignerData.create(1, 2, 3, new byte[] {0, 1, 2})))
@@ -123,8 +123,8 @@ public class DomainHistoryTest extends EntityTestCase {
     return domain;
   }
 
-  private static DomainBase addGracePeriodForSql(DomainBase domainBase) {
-    return domainBase
+  private static Domain addGracePeriodForSql(Domain domain) {
+    return domain
         .asBuilder()
         .setGracePeriods(
             ImmutableSet.of(
@@ -134,13 +134,13 @@ public class DomainHistoryTest extends EntityTestCase {
   }
 
   static void assertDomainHistoriesEqual(DomainHistory one, DomainHistory two) {
-    assertAboutImmutableObjects().that(one).isEqualExceptFields(two, "domainContent");
+    assertAboutImmutableObjects().that(one).isEqualExceptFields(two, "domainBase");
     assertAboutImmutableObjects()
-        .that(one.getDomainContent().get())
-        .isEqualExceptFields(two.getDomainContent().get(), "updateTimestamp");
+        .that(one.getDomainBase().get())
+        .isEqualExceptFields(two.getDomainBase().get(), "updateTimestamp");
   }
 
-  private DomainHistory createDomainHistory(DomainContent domain) {
+  private DomainHistory createDomainHistory(DomainBase domain) {
     DomainTransactionRecord transactionRecord =
         new DomainTransactionRecord.Builder()
             .setTld("tld")

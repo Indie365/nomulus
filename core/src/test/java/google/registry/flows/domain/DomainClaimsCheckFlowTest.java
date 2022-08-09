@@ -38,16 +38,22 @@ import google.registry.flows.domain.DomainFlowUtils.MissingBillingAccountMapExce
 import google.registry.flows.domain.DomainFlowUtils.NotAuthorizedForTldException;
 import google.registry.flows.domain.DomainFlowUtils.TldDoesNotExistException;
 import google.registry.flows.exceptions.TooManyResourceChecksException;
-import google.registry.model.domain.DomainBase;
+import google.registry.model.domain.Domain;
 import google.registry.model.tld.Registry;
 import google.registry.model.tld.Registry.TldState;
+import google.registry.testing.TestCacheExtension;
+import java.time.Duration;
 import org.joda.money.Money;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 /** Unit tests for {@link DomainClaimsCheckFlow}. */
-public class DomainClaimsCheckFlowTest
-    extends ResourceFlowTestCase<DomainClaimsCheckFlow, DomainBase> {
+public class DomainClaimsCheckFlowTest extends ResourceFlowTestCase<DomainClaimsCheckFlow, Domain> {
+
+  @RegisterExtension
+  public final TestCacheExtension testCacheExtension =
+      new TestCacheExtension.Builder().withClaimsListCache(Duration.ofHours(6)).build();
 
   DomainClaimsCheckFlowTest() {
     setEppInput("domain_check_claims.xml");

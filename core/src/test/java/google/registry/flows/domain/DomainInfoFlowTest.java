@@ -22,7 +22,6 @@ import static google.registry.model.billing.BillingEvent.RenewalPriceBehavior.SP
 import static google.registry.model.tld.Registry.TldState.QUIET_PERIOD;
 import static google.registry.testing.DatabaseHelper.assertNoBillingEvents;
 import static google.registry.testing.DatabaseHelper.createTld;
-import static google.registry.testing.DatabaseHelper.newDomainBase;
 import static google.registry.testing.DatabaseHelper.persistActiveContact;
 import static google.registry.testing.DatabaseHelper.persistActiveHost;
 import static google.registry.testing.DatabaseHelper.persistBillingRecurrenceForDomain;
@@ -57,19 +56,20 @@ import google.registry.model.contact.ContactAuthInfo;
 import google.registry.model.contact.ContactResource;
 import google.registry.model.domain.DesignatedContact;
 import google.registry.model.domain.DesignatedContact.Type;
+import google.registry.model.domain.Domain;
 import google.registry.model.domain.DomainAuthInfo;
-import google.registry.model.domain.DomainBase;
 import google.registry.model.domain.DomainHistory;
 import google.registry.model.domain.GracePeriod;
 import google.registry.model.domain.rgp.GracePeriodStatus;
 import google.registry.model.domain.secdns.DelegationSignerData;
 import google.registry.model.eppcommon.AuthInfo.PasswordAuth;
 import google.registry.model.eppcommon.StatusValue;
-import google.registry.model.host.HostResource;
+import google.registry.model.host.Host;
 import google.registry.model.reporting.HistoryEntry;
 import google.registry.model.tld.Registry;
 import google.registry.persistence.VKey;
 import google.registry.testing.AppEngineExtension;
+import google.registry.testing.DatabaseHelper;
 import google.registry.testing.SetClockExtension;
 import javax.annotation.Nullable;
 import org.joda.money.Money;
@@ -80,7 +80,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 /** Unit tests for {@link DomainInfoFlow}. */
-class DomainInfoFlowTest extends ResourceFlowTestCase<DomainInfoFlow, DomainBase> {
+class DomainInfoFlowTest extends ResourceFlowTestCase<DomainInfoFlow, Domain> {
 
   @Order(value = Order.DEFAULT - 3)
   @RegisterExtension
@@ -101,10 +101,10 @@ class DomainInfoFlowTest extends ResourceFlowTestCase<DomainInfoFlow, DomainBase
 
   private ContactResource registrant;
   private ContactResource contact;
-  private HostResource host1;
-  private HostResource host2;
-  private HostResource host3;
-  private DomainBase domain;
+  private Host host1;
+  private Host host2;
+  private Host host3;
+  private Domain domain;
 
   @BeforeEach
   void setup() {
@@ -122,7 +122,7 @@ class DomainInfoFlowTest extends ResourceFlowTestCase<DomainInfoFlow, DomainBase
     host2 = persistActiveHost("ns1.example.net");
     domain =
         persistResource(
-            new DomainBase.Builder()
+            new Domain.Builder()
                 .setDomainName(domainName)
                 .setRepoId("2FF-TLD")
                 .setPersistedCurrentSponsorRegistrarId("NewRegistrar")
@@ -147,7 +147,7 @@ class DomainInfoFlowTest extends ResourceFlowTestCase<DomainInfoFlow, DomainBase
     // Create a subordinate host that is not delegated to by anyone.
     host3 =
         persistResource(
-            new HostResource.Builder()
+            new Host.Builder()
                 .setHostName("ns2.example.tld")
                 .setRepoId("3FF-TLD")
                 .setSuperordinateDomain(domain.createVKey())
@@ -554,7 +554,7 @@ class DomainInfoFlowTest extends ResourceFlowTestCase<DomainInfoFlow, DomainBase
   @Test
   void testFailure_existedButWasDeleted() throws Exception {
     persistResource(
-        newDomainBase("example.tld")
+        DatabaseHelper.newDomain("example.tld")
             .asBuilder()
             .setDeletionTime(clock.nowUtc().minusDays(1))
             .build());

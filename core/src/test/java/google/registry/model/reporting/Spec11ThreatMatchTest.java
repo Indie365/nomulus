@@ -27,8 +27,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.google.common.collect.ImmutableSet;
 import google.registry.model.EntityTestCase;
 import google.registry.model.contact.ContactResource;
-import google.registry.model.domain.DomainBase;
-import google.registry.model.host.HostResource;
+import google.registry.model.domain.Domain;
+import google.registry.model.host.Host;
 import google.registry.model.transfer.ContactTransferData;
 import google.registry.persistence.VKey;
 import org.joda.time.LocalDate;
@@ -44,8 +44,8 @@ public final class Spec11ThreatMatchTest extends EntityTestCase {
   private static final LocalDate DATE = LocalDate.parse("2020-06-10", ISODateTimeFormat.date());
 
   private Spec11ThreatMatch threat;
-  private DomainBase domain;
-  private HostResource host;
+  private Domain domain;
+  private Host host;
   private ContactResource registrantContact;
 
   Spec11ThreatMatchTest() {
@@ -54,7 +54,7 @@ public final class Spec11ThreatMatchTest extends EntityTestCase {
 
   @BeforeEach
   void setUp() {
-    VKey<HostResource> hostVKey = VKey.createSql(HostResource.class, "host");
+    VKey<Host> hostVKey = VKey.createSql(Host.class, "host");
     VKey<ContactResource> registrantContactVKey =
         VKey.createSql(ContactResource.class, "contact_id");
     String domainRepoId = "4-TLD";
@@ -62,7 +62,7 @@ public final class Spec11ThreatMatchTest extends EntityTestCase {
 
     // Create a domain for the purpose of testing a foreign key reference in the Threat table.
     domain =
-        new DomainBase()
+        new Domain()
             .asBuilder()
             .setCreationRegistrarId(REGISTRAR_ID)
             .setPersistedCurrentSponsorRegistrarId(REGISTRAR_ID)
@@ -84,7 +84,7 @@ public final class Spec11ThreatMatchTest extends EntityTestCase {
 
     // Create a host for the purpose of testing a foreign key reference in the Domain table. */
     host =
-        new HostResource.Builder()
+        new Host.Builder()
             .setRepoId("host")
             .setHostName("ns1.example.com")
             .setCreationRegistrarId(REGISTRAR_ID)

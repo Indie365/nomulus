@@ -18,8 +18,7 @@ import static com.google.common.io.BaseEncoding.base16;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static google.registry.testing.DatabaseHelper.createTld;
-import static google.registry.testing.DatabaseHelper.newDomainBase;
-import static google.registry.testing.DatabaseHelper.newHostResource;
+import static google.registry.testing.DatabaseHelper.newHost;
 import static google.registry.testing.DatabaseHelper.persistActiveDomain;
 import static google.registry.testing.DatabaseHelper.persistActiveHost;
 import static google.registry.testing.DatabaseHelper.persistActiveSubordinateHost;
@@ -36,12 +35,13 @@ import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.net.InetAddresses;
-import google.registry.model.domain.DomainBase;
+import google.registry.model.domain.Domain;
 import google.registry.model.domain.secdns.DelegationSignerData;
 import google.registry.model.eppcommon.StatusValue;
-import google.registry.model.host.HostResource;
+import google.registry.model.host.Host;
 import google.registry.model.ofy.Ofy;
 import google.registry.testing.AppEngineExtension;
+import google.registry.testing.DatabaseHelper;
 import google.registry.testing.FakeClock;
 import google.registry.testing.InjectExtension;
 import java.util.ArrayList;
@@ -98,9 +98,9 @@ public class DnsUpdateWriterTest {
 
   @Test
   void testPublishDomainCreate_publishesNameServers() throws Exception {
-    HostResource host1 = persistActiveHost("ns1.example.tld");
-    HostResource host2 = persistActiveHost("ns2.example.tld");
-    DomainBase domain =
+    Host host1 = persistActiveHost("ns1.example.tld");
+    Host host2 = persistActiveHost("ns2.example.tld");
+    Domain domain =
         persistActiveDomain("example.tld")
             .asBuilder()
             .setNameservers(ImmutableSet.of(host1.createVKey(), host2.createVKey()))
@@ -121,16 +121,16 @@ public class DnsUpdateWriterTest {
   @MockitoSettings(strictness = Strictness.LENIENT)
   @Test
   void testPublishAtomic_noCommit() {
-    HostResource host1 = persistActiveHost("ns.example1.tld");
-    DomainBase domain1 =
+    Host host1 = persistActiveHost("ns.example1.tld");
+    Domain domain1 =
         persistActiveDomain("example1.tld")
             .asBuilder()
             .setNameservers(ImmutableSet.of(host1.createVKey()))
             .build();
     persistResource(domain1);
 
-    HostResource host2 = persistActiveHost("ns.example2.tld");
-    DomainBase domain2 =
+    Host host2 = persistActiveHost("ns.example2.tld");
+    Domain domain2 =
         persistActiveDomain("example2.tld")
             .asBuilder()
             .setNameservers(ImmutableSet.of(host2.createVKey()))
@@ -145,16 +145,16 @@ public class DnsUpdateWriterTest {
 
   @Test
   void testPublishAtomic_oneUpdate() throws Exception {
-    HostResource host1 = persistActiveHost("ns.example1.tld");
-    DomainBase domain1 =
+    Host host1 = persistActiveHost("ns.example1.tld");
+    Domain domain1 =
         persistActiveDomain("example1.tld")
             .asBuilder()
             .setNameservers(ImmutableSet.of(host1.createVKey()))
             .build();
     persistResource(domain1);
 
-    HostResource host2 = persistActiveHost("ns.example2.tld");
-    DomainBase domain2 =
+    Host host2 = persistActiveHost("ns.example2.tld");
+    Domain domain2 =
         persistActiveDomain("example2.tld")
             .asBuilder()
             .setNameservers(ImmutableSet.of(host2.createVKey()))
@@ -177,7 +177,7 @@ public class DnsUpdateWriterTest {
 
   @Test
   void testPublishDomainCreate_publishesDelegationSigner() throws Exception {
-    DomainBase domain =
+    Domain domain =
         persistActiveDomain("example.tld")
             .asBuilder()
             .setNameservers(ImmutableSet.of(persistActiveHost("ns1.example.tld").createVKey()))
@@ -201,7 +201,7 @@ public class DnsUpdateWriterTest {
 
   @Test
   void testPublishDomainWhenNotActive_removesDnsRecords() throws Exception {
-    DomainBase domain =
+    Domain domain =
         persistActiveDomain("example.tld")
             .asBuilder()
             .addStatusValue(StatusValue.SERVER_HOLD)
@@ -235,9 +235,9 @@ public class DnsUpdateWriterTest {
 
   @Test
   void testPublishHostCreate_publishesAddressRecords() throws Exception {
-    HostResource host =
+    Host host =
         persistResource(
-            newHostResource("ns1.example.tld")
+            newHost("ns1.example.tld")
                 .asBuilder()
                 .setInetAddresses(
                     ImmutableSet.of(
@@ -246,7 +246,7 @@ public class DnsUpdateWriterTest {
                         InetAddresses.forString("fd0e:a5c8:6dfb:6a5e:0:0:0:1")))
                 .build());
     persistResource(
-        newDomainBase("example.tld")
+        DatabaseHelper.newDomain("example.tld")
             .asBuilder()
             .addSubordinateHost("ns1.example.tld")
             .addNameserver(host.createVKey())
@@ -305,10 +305,10 @@ public class DnsUpdateWriterTest {
 
   @Test
   void testPublishDomainExternalAndInBailiwickNameServer() throws Exception {
-    HostResource externalNameserver = persistResource(newHostResource("ns1.example.com"));
-    HostResource inBailiwickNameserver =
+    Host externalNameserver = persistResource(newHost("ns1.example.com"));
+    Host inBailiwickNameserver =
         persistResource(
-            newHostResource("ns1.example.tld")
+            newHost("ns1.example.tld")
                 .asBuilder()
                 .setInetAddresses(
                     ImmutableSet.of(
@@ -318,7 +318,7 @@ public class DnsUpdateWriterTest {
                 .build());
 
     persistResource(
-        newDomainBase("example.tld")
+        DatabaseHelper.newDomain("example.tld")
             .asBuilder()
             .addSubordinateHost("ns1.example.tld")
             .addNameservers(
@@ -342,9 +342,9 @@ public class DnsUpdateWriterTest {
 
   @Test
   void testPublishDomainDeleteOrphanGlues() throws Exception {
-    HostResource inBailiwickNameserver =
+    Host inBailiwickNameserver =
         persistResource(
-            newHostResource("ns1.example.tld")
+            newHost("ns1.example.tld")
                 .asBuilder()
                 .setInetAddresses(
                     ImmutableSet.of(
@@ -354,7 +354,7 @@ public class DnsUpdateWriterTest {
                 .build());
 
     persistResource(
-        newDomainBase("example.tld")
+        DatabaseHelper.newDomain("example.tld")
             .asBuilder()
             .addSubordinateHost("ns1.example.tld")
             .addSubordinateHost("foo.example.tld")
@@ -380,7 +380,7 @@ public class DnsUpdateWriterTest {
   @SuppressWarnings("AssertThrowsMultipleStatements")
   @Test
   void testPublishDomainFails_whenDnsUpdateReturnsError() throws Exception {
-    DomainBase domain =
+    Domain domain =
         persistActiveDomain("example.tld")
             .asBuilder()
             .setNameservers(ImmutableSet.of(persistActiveHost("ns1.example.tld").createVKey()))
@@ -401,7 +401,7 @@ public class DnsUpdateWriterTest {
   @SuppressWarnings("AssertThrowsMultipleStatements")
   @Test
   void testPublishHostFails_whenDnsUpdateReturnsError() throws Exception {
-    HostResource host =
+    Host host =
         persistActiveSubordinateHost("ns1.example.tld", persistActiveDomain("example.tld"))
             .asBuilder()
             .setInetAddresses(ImmutableSet.of(InetAddresses.forString("10.0.0.1")))

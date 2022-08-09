@@ -33,8 +33,8 @@ import google.registry.model.contact.ContactPhoneNumber;
 import google.registry.model.contact.ContactResource;
 import google.registry.model.contact.PostalInfo;
 import google.registry.model.domain.DesignatedContact;
+import google.registry.model.domain.Domain;
 import google.registry.model.domain.DomainAuthInfo;
-import google.registry.model.domain.DomainBase;
 import google.registry.model.domain.DomainHistory;
 import google.registry.model.domain.GracePeriod;
 import google.registry.model.domain.rgp.GracePeriodStatus;
@@ -42,7 +42,7 @@ import google.registry.model.domain.secdns.DelegationSignerData;
 import google.registry.model.eppcommon.AuthInfo.PasswordAuth;
 import google.registry.model.eppcommon.StatusValue;
 import google.registry.model.eppcommon.Trid;
-import google.registry.model.host.HostResource;
+import google.registry.model.host.Host;
 import google.registry.model.poll.PollMessage;
 import google.registry.model.poll.PollMessage.Autorenew;
 import google.registry.model.reporting.HistoryEntry;
@@ -56,9 +56,9 @@ import org.joda.time.DateTime;
 /** Utility class for creating {@code EppResource} entities that'll successfully marshal. */
 final class RdeFixtures {
 
-  static DomainBase makeDomainBase(FakeClock clock, String tld) {
-    DomainBase domain =
-        new DomainBase.Builder()
+  static Domain makeDomain(FakeClock clock, String tld) {
+    Domain domain =
+        new Domain.Builder()
             .setDomainName("example." + tld)
             .setRepoId(generateNewDomainRoid(tld))
             .setRegistrant(
@@ -121,8 +121,8 @@ final class RdeFixtures {
             .setIdnTableName("extended_latin")
             .setNameservers(
                 ImmutableSet.of(
-                    makeHostResource(clock, "bird.or.devil.みんな", "1.2.3.4").createVKey(),
-                    makeHostResource(clock, "ns2.cat.みんな", "bad:f00d:cafe::15:beef").createVKey()))
+                    makeHost(clock, "bird.or.devil.みんな", "1.2.3.4").createVKey(),
+                    makeHost(clock, "ns2.cat.みんな", "bad:f00d:cafe::15:beef").createVKey()))
             .setRegistrationExpirationTime(DateTime.parse("1994-01-01T00:00:00Z"))
             .setGracePeriods(
                 ImmutableSet.of(
@@ -253,10 +253,10 @@ final class RdeFixtures {
             .build());
   }
 
-  static HostResource makeHostResource(FakeClock clock, String fqhn, String ip) {
+  static Host makeHost(FakeClock clock, String fqhn, String ip) {
     clock.advanceOneMilli();
     return persistResource(
-        new HostResource.Builder()
+        new Host.Builder()
             .setRepoId(generateNewContactHostRoid())
             .setCreationRegistrarId("LawyerCat")
             .setCreationTimeForTest(clock.nowUtc())

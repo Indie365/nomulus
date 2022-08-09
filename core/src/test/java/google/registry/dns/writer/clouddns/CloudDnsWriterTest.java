@@ -18,8 +18,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.io.BaseEncoding.base16;
 import static com.google.common.truth.Truth.assertThat;
 import static google.registry.testing.DatabaseHelper.createTld;
-import static google.registry.testing.DatabaseHelper.newDomainBase;
-import static google.registry.testing.DatabaseHelper.newHostResource;
+import static google.registry.testing.DatabaseHelper.newHost;
 import static google.registry.testing.DatabaseHelper.persistResource;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
@@ -39,12 +38,13 @@ import com.google.common.collect.Sets;
 import com.google.common.net.InetAddresses;
 import com.google.common.util.concurrent.RateLimiter;
 import google.registry.dns.writer.clouddns.CloudDnsWriter.ZoneStateException;
-import google.registry.model.domain.DomainBase;
+import google.registry.model.domain.Domain;
 import google.registry.model.domain.secdns.DelegationSignerData;
 import google.registry.model.eppcommon.StatusValue;
-import google.registry.model.host.HostResource;
+import google.registry.model.host.Host;
 import google.registry.persistence.VKey;
 import google.registry.testing.AppEngineExtension;
+import google.registry.testing.DatabaseHelper;
 import google.registry.util.Retrier;
 import google.registry.util.SystemClock;
 import google.registry.util.SystemSleeper;
@@ -282,32 +282,29 @@ public class CloudDnsWriterTest {
   }
 
   /** Returns a domain to be persisted in Datastore. */
-  private static DomainBase fakeDomain(
-      String domainName, ImmutableSet<HostResource> nameservers, int numDsRecords) {
+  private static Domain fakeDomain(
+      String domainName, ImmutableSet<Host> nameservers, int numDsRecords) {
     ImmutableSet.Builder<DelegationSignerData> dsDataBuilder = new ImmutableSet.Builder<>();
 
     for (int i = 0; i < numDsRecords; i++) {
       dsDataBuilder.add(DelegationSignerData.create(i, 3, 1, base16().decode("1234567890ABCDEF")));
     }
 
-    ImmutableSet.Builder<VKey<HostResource>> hostResourceRefBuilder = new ImmutableSet.Builder<>();
-    for (HostResource nameserver : nameservers) {
-      hostResourceRefBuilder.add(nameserver.createVKey());
+    ImmutableSet.Builder<VKey<Host>> hostRefBuilder = new ImmutableSet.Builder<>();
+    for (Host nameserver : nameservers) {
+      hostRefBuilder.add(nameserver.createVKey());
     }
 
-    return newDomainBase(domainName)
+    return DatabaseHelper.newDomain(domainName)
         .asBuilder()
-        .setNameservers(hostResourceRefBuilder.build())
+        .setNameservers(hostRefBuilder.build())
         .setDsData(dsDataBuilder.build())
         .build();
   }
 
   /** Returns a nameserver used for its NS record. */
-  private static HostResource fakeHost(String nameserver, InetAddress... addresses) {
-    return newHostResource(nameserver)
-        .asBuilder()
-        .setInetAddresses(ImmutableSet.copyOf(addresses))
-        .build();
+  private static Host fakeHost(String nameserver, InetAddress... addresses) {
+    return newHost(nameserver).asBuilder().setInetAddresses(ImmutableSet.copyOf(addresses)).build();
   }
 
   @MockitoSettings(strictness = Strictness.LENIENT)

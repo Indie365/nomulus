@@ -78,9 +78,9 @@ import google.registry.model.contact.ContactHistory;
 import google.registry.model.contact.ContactResource;
 import google.registry.model.domain.DesignatedContact;
 import google.registry.model.domain.DesignatedContact.Type;
+import google.registry.model.domain.Domain;
 import google.registry.model.domain.DomainAuthInfo;
 import google.registry.model.domain.DomainBase;
-import google.registry.model.domain.DomainContent;
 import google.registry.model.domain.DomainHistory;
 import google.registry.model.domain.GracePeriod;
 import google.registry.model.domain.rgp.GracePeriodStatus;
@@ -88,7 +88,7 @@ import google.registry.model.domain.token.AllocationToken;
 import google.registry.model.eppcommon.AuthInfo.PasswordAuth;
 import google.registry.model.eppcommon.StatusValue;
 import google.registry.model.eppcommon.Trid;
-import google.registry.model.host.HostResource;
+import google.registry.model.host.Host;
 import google.registry.model.index.EppResourceIndex;
 import google.registry.model.index.EppResourceIndexBucket;
 import google.registry.model.index.ForeignKeyIndex;
@@ -154,12 +154,12 @@ public class DatabaseHelper {
     }
   }
 
-  public static HostResource newHostResource(String hostName) {
-    return newHostResourceWithRoid(hostName, generateNewContactHostRoid());
+  public static Host newHost(String hostName) {
+    return newHostWithRoid(hostName, generateNewContactHostRoid());
   }
 
-  public static HostResource newHostResourceWithRoid(String hostName, String repoId) {
-    return new HostResource.Builder()
+  public static Host newHostWithRoid(String hostName, String repoId) {
+    return new Host.Builder()
         .setHostName(hostName)
         .setCreationRegistrarId("TheRegistrar")
         .setPersistedCurrentSponsorRegistrarId("TheRegistrar")
@@ -168,26 +168,24 @@ public class DatabaseHelper {
         .build();
   }
 
-  public static DomainBase newDomainBase(String domainName) {
+  public static Domain newDomain(String domainName) {
     String repoId = generateNewDomainRoid(getTldFromDomainName(domainName));
-    return newDomainBase(domainName, repoId, persistActiveContact("contact1234"));
+    return newDomain(domainName, repoId, persistActiveContact("contact1234"));
   }
 
-  public static DomainBase newDomainBase(String domainName, ContactResource contact) {
-    return newDomainBase(
-        domainName, generateNewDomainRoid(getTldFromDomainName(domainName)), contact);
+  public static Domain newDomain(String domainName, ContactResource contact) {
+    return newDomain(domainName, generateNewDomainRoid(getTldFromDomainName(domainName)), contact);
   }
 
-  public static DomainBase newDomainBase(String domainName, HostResource... hosts) {
-    ImmutableSet<VKey<HostResource>> hostKeys =
-        Arrays.stream(hosts).map(HostResource::createVKey).collect(toImmutableSet());
-    return newDomainBase(domainName).asBuilder().setNameservers(hostKeys).build();
+  public static Domain newDomain(String domainName, Host... hosts) {
+    ImmutableSet<VKey<Host>> hostKeys =
+        Arrays.stream(hosts).map(Host::createVKey).collect(toImmutableSet());
+    return newDomain(domainName).asBuilder().setNameservers(hostKeys).build();
   }
 
-  public static DomainBase newDomainBase(
-      String domainName, String repoId, ContactResource contact) {
+  public static Domain newDomain(String domainName, String repoId, ContactResource contact) {
     VKey<ContactResource> contactKey = contact.createVKey();
-    return new DomainBase.Builder()
+    return new Domain.Builder()
         .setRepoId(repoId)
         .setDomainName(domainName)
         .setCreationRegistrarId("TheRegistrar")
@@ -271,15 +269,14 @@ public class DatabaseHelper {
         newContactResource(contactId).asBuilder().setDeletionTime(deletionTime).build());
   }
 
-  public static HostResource persistActiveHost(String hostName) {
-    return persistResource(newHostResource(hostName));
+  public static Host persistActiveHost(String hostName) {
+    return persistResource(newHost(hostName));
   }
 
-  public static HostResource persistActiveSubordinateHost(
-      String hostName, DomainBase superordinateDomain) {
+  public static Host persistActiveSubordinateHost(String hostName, Domain superordinateDomain) {
     checkNotNull(superordinateDomain);
     return persistResource(
-        newHostResource(hostName)
+        newHost(hostName)
             .asBuilder()
             .setSuperordinateDomain(superordinateDomain.createVKey())
             .setInetAddresses(
@@ -288,24 +285,23 @@ public class DatabaseHelper {
   }
 
   /** Persists a host resource with the given hostname deleted at the specified time. */
-  public static HostResource persistDeletedHost(String hostName, DateTime deletionTime) {
+  public static Host persistDeletedHost(String hostName, DateTime deletionTime) {
+    return persistResource(newHost(hostName).asBuilder().setDeletionTime(deletionTime).build());
+  }
+
+  public static Domain persistActiveDomain(String domainName) {
+    return persistResource(newDomain(domainName));
+  }
+
+  public static Domain persistActiveDomain(String domainName, DateTime creationTime) {
     return persistResource(
-        newHostResource(hostName).asBuilder().setDeletionTime(deletionTime).build());
+        newDomain(domainName).asBuilder().setCreationTimeForTest(creationTime).build());
   }
 
-  public static DomainBase persistActiveDomain(String domainName) {
-    return persistResource(newDomainBase(domainName));
-  }
-
-  public static DomainBase persistActiveDomain(String domainName, DateTime creationTime) {
-    return persistResource(
-        newDomainBase(domainName).asBuilder().setCreationTimeForTest(creationTime).build());
-  }
-
-  public static DomainBase persistActiveDomain(
+  public static Domain persistActiveDomain(
       String domainName, DateTime creationTime, DateTime expirationTime) {
     return persistResource(
-        newDomainBase(domainName)
+        newDomain(domainName)
             .asBuilder()
             .setCreationTimeForTest(creationTime)
             .setRegistrationExpirationTime(expirationTime)
@@ -313,31 +309,33 @@ public class DatabaseHelper {
   }
 
   /** Persists a domain resource with the given domain name deleted at the specified time. */
-  public static DomainBase persistDeletedDomain(String domainName, DateTime deletionTime) {
-    return persistDomainAsDeleted(newDomainBase(domainName), deletionTime);
+  public static Domain persistDeletedDomain(String domainName, DateTime deletionTime) {
+    return persistDomainAsDeleted(newDomain(domainName), deletionTime);
   }
 
   /**
    * Returns a persisted domain that is the passed-in domain modified to be deleted at the specified
    * time.
    */
-  public static DomainBase persistDomainAsDeleted(DomainBase domain, DateTime deletionTime) {
+  public static Domain persistDomainAsDeleted(Domain domain, DateTime deletionTime) {
     return persistResource(domain.asBuilder().setDeletionTime(deletionTime).build());
   }
 
   /** Persists a domain and enqueues a LORDN task of the appropriate type for it. */
-  public static DomainBase persistDomainAndEnqueueLordn(final DomainBase domain) {
-    final DomainBase persistedDomain = persistResource(domain);
-    // Calls {@link LordnTaskUtils#enqueueDomainBaseTask} wrapped in a transaction so that the
-    // transaction time is set correctly.
-    tm().transactNew(() -> LordnTaskUtils.enqueueDomainBaseTask(persistedDomain));
+  public static Domain persistDomainAndEnqueueLordn(final Domain domain) {
+    final Domain persistedDomain = persistResource(domain);
+    /**
+     * Calls {@link LordnTaskUtils#enqueueDomainTask} wrapped in a transaction so that the
+     * transaction time is set correctly.
+     */
+    tm().transactNew(() -> LordnTaskUtils.enqueueDomainTask(persistedDomain));
     maybeAdvanceClock();
     return persistedDomain;
   }
 
   /** Persists a {@link Recurring} and {@link HistoryEntry} for a domain that already exists. */
-  public static DomainBase persistBillingRecurrenceForDomain(
-      DomainBase domain, RenewalPriceBehavior renewalPriceBehavior, @Nullable Money renewalPrice) {
+  public static Domain persistBillingRecurrenceForDomain(
+      Domain domain, RenewalPriceBehavior renewalPriceBehavior, @Nullable Money renewalPrice) {
     DomainHistory historyEntry =
         persistResource(
             new DomainHistory.Builder()
@@ -465,7 +463,7 @@ public class DatabaseHelper {
   /**
    * Deletes "domain" and all history records, billing events, poll messages and subordinate hosts.
    */
-  public static void deleteTestDomain(DomainBase domain, DateTime now) {
+  public static void deleteTestDomain(Domain domain, DateTime now) {
     Iterable<BillingEvent> billingEvents = getBillingEvents(domain);
     Iterable<? extends HistoryEntry> historyEntries =
         HistoryEntryDao.loadHistoryObjectsForResource(domain.createVKey());
@@ -484,8 +482,7 @@ public class DatabaseHelper {
                   .forEach(
                       hostname ->
                           deleteResource(
-                              EppResourceUtils.loadByForeignKey(HostResource.class, hostname, now)
-                                  .get()));
+                              EppResourceUtils.loadByForeignKey(Host.class, hostname, now).get()));
               for (HistoryEntry hist : historyEntries) {
                 deleteResource(hist);
               }
@@ -547,7 +544,7 @@ public class DatabaseHelper {
   }
 
   public static BillingEvent.OneTime createBillingEventForTransfer(
-      DomainBase domain, DomainHistory historyEntry, DateTime costLookupTime, DateTime eventTime) {
+      Domain domain, DomainHistory historyEntry, DateTime costLookupTime, DateTime eventTime) {
     return new BillingEvent.OneTime.Builder()
         .setReason(Reason.TRANSFER)
         .setTargetId(domain.getDomainName())
@@ -609,7 +606,7 @@ public class DatabaseHelper {
             .build());
   }
 
-  public static DomainBase persistDomainWithDependentResources(
+  public static Domain persistDomainWithDependentResources(
       String label,
       String tld,
       ContactResource contact,
@@ -618,9 +615,9 @@ public class DatabaseHelper {
       DateTime expirationTime) {
     String domainName = String.format("%s.%s", label, tld);
     String repoId = generateNewDomainRoid(tld);
-    DomainBase domain =
+    Domain domain =
         persistResource(
-            new DomainBase.Builder()
+            new Domain.Builder()
                 .setRepoId(repoId)
                 .setDomainName(domainName)
                 .setPersistedCurrentSponsorRegistrarId("TheRegistrar")
@@ -675,8 +672,8 @@ public class DatabaseHelper {
             .build());
   }
 
-  public static DomainBase persistDomainWithPendingTransfer(
-      DomainBase domain,
+  public static Domain persistDomainWithPendingTransfer(
+      Domain domain,
       DateTime requestTime,
       DateTime expirationTime,
       DateTime extendedRegistrationExpirationTime) {
@@ -906,7 +903,7 @@ public class DatabaseHelper {
     assertPollMessagesEqual(getPollMessages(), asList(expected));
   }
 
-  public static void assertPollMessagesForResource(DomainContent domain, PollMessage... expected) {
+  public static void assertPollMessagesForResource(DomainBase domain, PollMessage... expected) {
     assertPollMessagesEqual(getPollMessages(domain), asList(expected));
   }
 
@@ -922,7 +919,7 @@ public class DatabaseHelper {
                     .collect(toImmutableList()));
   }
 
-  public static ImmutableList<PollMessage> getPollMessages(DomainContent domain) {
+  public static ImmutableList<PollMessage> getPollMessages(DomainBase domain) {
     return tm().transact(
             () ->
                 tm().loadAllOf(PollMessage.class).stream()
@@ -973,10 +970,7 @@ public class DatabaseHelper {
   }
 
   public static PollMessage getOnlyPollMessage(
-      DomainContent domain,
-      String registrarId,
-      DateTime now,
-      Class<? extends PollMessage> subType) {
+      DomainBase domain, String registrarId, DateTime now, Class<? extends PollMessage> subType) {
     return getPollMessages(domain, registrarId, now).stream()
         .filter(subType::isInstance)
         .map(subType::cast)
@@ -1161,11 +1155,11 @@ public class DatabaseHelper {
       return resource.getRepoId() != null
           ? HistoryEntry.Type.CONTACT_CREATE
           : HistoryEntry.Type.CONTACT_UPDATE;
-    } else if (resource instanceof HostResource) {
+    } else if (resource instanceof Host) {
       return resource.getRepoId() != null
           ? HistoryEntry.Type.HOST_CREATE
           : HistoryEntry.Type.HOST_UPDATE;
-    } else if (resource instanceof DomainBase) {
+    } else if (resource instanceof Domain) {
       return resource.getRepoId() != null
           ? HistoryEntry.Type.DOMAIN_CREATE
           : HistoryEntry.Type.DOMAIN_UPDATE;

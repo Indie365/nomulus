@@ -20,11 +20,11 @@ import google.registry.model.common.EntityGroupRoot;
 import google.registry.model.common.GaeUserIdConverter;
 import google.registry.model.contact.ContactHistory;
 import google.registry.model.contact.ContactResource;
-import google.registry.model.domain.DomainBase;
+import google.registry.model.domain.Domain;
 import google.registry.model.domain.DomainHistory;
 import google.registry.model.domain.token.AllocationToken;
+import google.registry.model.host.Host;
 import google.registry.model.host.HostHistory;
-import google.registry.model.host.HostResource;
 import google.registry.model.index.EppResourceIndex;
 import google.registry.model.index.EppResourceIndexBucket;
 import google.registry.model.index.ForeignKeyIndex;
@@ -45,7 +45,7 @@ public final class EntityClasses {
           AllocationToken.class,
           ContactHistory.class,
           ContactResource.class,
-          DomainBase.class,
+          Domain.class,
           DomainHistory.class,
           EntityGroupRoot.class,
           EppResourceIndex.class,
@@ -55,8 +55,8 @@ public final class EntityClasses {
           ForeignKeyIndex.ForeignKeyHostIndex.class,
           GaeUserIdConverter.class,
           HistoryEntry.class,
+          Host.class,
           HostHistory.class,
-          HostResource.class,
           Lock.class,
           PollMessage.class,
           PollMessage.Autorenew.class,

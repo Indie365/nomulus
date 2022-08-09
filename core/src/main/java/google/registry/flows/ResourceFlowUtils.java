@@ -39,8 +39,8 @@ import google.registry.model.EppResource;
 import google.registry.model.EppResource.ForeignKeyedEppResource;
 import google.registry.model.EppResource.ResourceWithTransferData;
 import google.registry.model.contact.ContactResource;
+import google.registry.model.domain.Domain;
 import google.registry.model.domain.DomainBase;
-import google.registry.model.domain.DomainContent;
 import google.registry.model.domain.Period;
 import google.registry.model.domain.rgp.GracePeriodStatus;
 import google.registry.model.eppcommon.AuthInfo;
@@ -147,7 +147,7 @@ public final class ResourceFlowUtils {
   }
 
   /** Check that the given AuthInfo is either missing or else is valid for the given resource. */
-  public static void verifyOptionalAuthInfo(Optional<AuthInfo> authInfo, DomainBase domain)
+  public static void verifyOptionalAuthInfo(Optional<AuthInfo> authInfo, Domain domain)
       throws EppException {
     if (authInfo.isPresent()) {
       verifyAuthInfo(authInfo.get(), domain);
@@ -155,7 +155,7 @@ public final class ResourceFlowUtils {
   }
 
   /** Check that the given {@link AuthInfo} is valid for the given domain. */
-  public static void verifyAuthInfo(AuthInfo authInfo, DomainBase domain) throws EppException {
+  public static void verifyAuthInfo(AuthInfo authInfo, Domain domain) throws EppException {
     final String authRepoId = authInfo.getPw().getRepoId();
     String authPassword = authInfo.getPw().getValue();
     if (authRepoId == null) {
@@ -236,7 +236,7 @@ public final class ResourceFlowUtils {
    * @param domain is the domain already projected at approvalTime
    */
   public static DateTime computeExDateForApprovalTime(
-      DomainContent domain, DateTime approvalTime, Period period) {
+      DomainBase domain, DateTime approvalTime, Period period) {
     boolean inAutoRenew = domain.getGracePeriodStatuses().contains(GracePeriodStatus.AUTO_RENEW);
     // inAutoRenew is set to false if the period is zero because a zero-period transfer should not
     // subsume an autorenew.
@@ -246,7 +246,7 @@ public final class ResourceFlowUtils {
     if (period.getValue() == 0) {
       inAutoRenew = false;
     }
-    return DomainBase.extendRegistrationWithCap(
+    return Domain.extendRegistrationWithCap(
         approvalTime,
         domain.getRegistrationExpirationTime(),
         period.getValue() - (inAutoRenew ? 1 : 0));

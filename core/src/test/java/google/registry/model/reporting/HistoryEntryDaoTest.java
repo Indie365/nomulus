@@ -18,7 +18,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static google.registry.model.ImmutableObjectSubject.immutableObjectCorrespondence;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 import static google.registry.testing.DatabaseHelper.createTld;
-import static google.registry.testing.DatabaseHelper.newDomainBase;
+import static google.registry.testing.DatabaseHelper.newDomain;
 import static google.registry.testing.DatabaseHelper.persistActiveDomain;
 import static google.registry.testing.DatabaseHelper.persistResource;
 import static google.registry.util.DateTimeUtils.END_OF_TIME;
@@ -27,18 +27,19 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.common.collect.ImmutableSet;
 import google.registry.model.EntityTestCase;
-import google.registry.model.domain.DomainBase;
+import google.registry.model.domain.Domain;
 import google.registry.model.domain.DomainHistory;
 import google.registry.model.domain.Period;
 import google.registry.model.eppcommon.Trid;
 import google.registry.model.reporting.DomainTransactionRecord.TransactionReportField;
+import google.registry.testing.DatabaseHelper;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class HistoryEntryDaoTest extends EntityTestCase {
 
-  private DomainBase domain;
+  private Domain domain;
   private HistoryEntry domainHistory;
 
   @BeforeEach
@@ -75,7 +76,7 @@ class HistoryEntryDaoTest extends EntityTestCase {
   @Test
   void testSimpleLoadAll() {
     assertThat(HistoryEntryDao.loadAllHistoryObjects(START_OF_TIME, END_OF_TIME))
-        .comparingElementsUsing(immutableObjectCorrespondence("nsHosts", "domainContent"))
+        .comparingElementsUsing(immutableObjectCorrespondence("nsHosts", "domainBase"))
         .containsExactly(domainHistory);
   }
 
@@ -97,8 +98,7 @@ class HistoryEntryDaoTest extends EntityTestCase {
     tm().transact(
             () ->
                 assertThat(HistoryEntryDao.loadHistoryObjectsForResource(domain.createVKey()))
-                    .comparingElementsUsing(
-                        immutableObjectCorrespondence("nsHosts", "domainContent"))
+                    .comparingElementsUsing(immutableObjectCorrespondence("nsHosts", "domainBase"))
                     .containsExactly(domainHistory));
   }
 
@@ -120,7 +120,7 @@ class HistoryEntryDaoTest extends EntityTestCase {
 
   @Test
   void testLoadByResource_noEntriesForResource() {
-    DomainBase newDomain = persistResource(newDomainBase("new.foobar"));
+    Domain newDomain = persistResource(DatabaseHelper.newDomain("new.foobar"));
     assertThat(HistoryEntryDao.loadHistoryObjectsForResource(newDomain.createVKey())).isEmpty();
   }
 }

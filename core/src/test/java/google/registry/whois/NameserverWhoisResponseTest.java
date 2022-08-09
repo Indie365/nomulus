@@ -17,7 +17,6 @@ package google.registry.whois;
 import static com.google.common.truth.Truth.assertThat;
 import static google.registry.testing.DatabaseHelper.createTld;
 import static google.registry.testing.DatabaseHelper.loadRegistrar;
-import static google.registry.testing.DatabaseHelper.newDomainBase;
 import static google.registry.testing.DatabaseHelper.persistNewRegistrar;
 import static google.registry.testing.DatabaseHelper.persistResource;
 import static google.registry.whois.WhoisTestData.loadFile;
@@ -25,10 +24,11 @@ import static google.registry.whois.WhoisTestData.loadFile;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.net.InetAddresses;
-import google.registry.model.domain.DomainBase;
-import google.registry.model.host.HostResource;
+import google.registry.model.domain.Domain;
+import google.registry.model.host.Host;
 import google.registry.model.registrar.Registrar;
 import google.registry.testing.AppEngineExtension;
+import google.registry.testing.DatabaseHelper;
 import google.registry.testing.FakeClock;
 import google.registry.whois.WhoisResponse.WhoisResponseResults;
 import org.joda.time.DateTime;
@@ -42,9 +42,9 @@ class NameserverWhoisResponseTest {
   @RegisterExtension
   final AppEngineExtension appEngine = AppEngineExtension.builder().withCloudSql().build();
 
-  private HostResource hostResource1;
-  private HostResource hostResource2;
-  private HostResource hostResource3;
+  private Host host1;
+  private Host host2;
+  private Host host3;
 
   private final FakeClock clock = new FakeClock(DateTime.parse("2009-05-29T20:15:00Z"));
 
@@ -53,10 +53,10 @@ class NameserverWhoisResponseTest {
     persistNewRegistrar("example", "Hänsel & Gretel Registrar, Inc.", Registrar.Type.REAL, 8L);
     persistResource(loadRegistrar("example").asBuilder().setUrl("http://my.fake.url").build());
     createTld("tld");
-    DomainBase domain = persistResource(newDomainBase("zobo.tld"));
+    Domain domain = persistResource(DatabaseHelper.newDomain("zobo.tld"));
 
-    hostResource1 =
-        new HostResource.Builder()
+    host1 =
+        new Host.Builder()
             .setHostName("ns1.example.tld")
             .setPersistedCurrentSponsorRegistrarId("example")
             .setInetAddresses(
@@ -66,8 +66,8 @@ class NameserverWhoisResponseTest {
             .setRepoId("1-EXAMPLE")
             .build();
 
-    hostResource2 =
-        new HostResource.Builder()
+    host2 =
+        new Host.Builder()
             .setHostName("ns2.example.tld")
             .setPersistedCurrentSponsorRegistrarId("example")
             .setInetAddresses(
@@ -77,8 +77,8 @@ class NameserverWhoisResponseTest {
             .setRepoId("2-EXAMPLE")
             .build();
 
-    hostResource3 =
-        new HostResource.Builder()
+    host3 =
+        new Host.Builder()
             .setHostName("ns1.zobo.tld")
             .setSuperordinateDomain(domain.createVKey())
             .setPersistedCurrentSponsorRegistrarId("example")
@@ -93,7 +93,7 @@ class NameserverWhoisResponseTest {
   @Test
   void testGetTextOutput() {
     NameserverWhoisResponse nameserverWhoisResponse =
-        new NameserverWhoisResponse(hostResource1, clock.nowUtc());
+        new NameserverWhoisResponse(host1, clock.nowUtc());
     assertThat(
             nameserverWhoisResponse.getResponse(
                 false,
@@ -104,7 +104,7 @@ class NameserverWhoisResponseTest {
   @Test
   void testGetMultipleNameserversResponse() {
     NameserverWhoisResponse nameserverWhoisResponse =
-        new NameserverWhoisResponse(ImmutableList.of(hostResource1, hostResource2), clock.nowUtc());
+        new NameserverWhoisResponse(ImmutableList.of(host1, host2), clock.nowUtc());
     assertThat(
             nameserverWhoisResponse.getResponse(
                 false,
@@ -115,7 +115,7 @@ class NameserverWhoisResponseTest {
   @Test
   void testSubordinateDomains() {
     NameserverWhoisResponse nameserverWhoisResponse =
-        new NameserverWhoisResponse(hostResource3, clock.nowUtc());
+        new NameserverWhoisResponse(host3, clock.nowUtc());
     assertThat(
             nameserverWhoisResponse.getResponse(
                 false,

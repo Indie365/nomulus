@@ -22,7 +22,6 @@ import static google.registry.reporting.spec11.Spec11RegistrarThreatMatchesParse
 import static google.registry.reporting.spec11.Spec11RegistrarThreatMatchesParserTest.sampleThreatMatches;
 import static google.registry.testing.DatabaseHelper.createTld;
 import static google.registry.testing.DatabaseHelper.loadByEntity;
-import static google.registry.testing.DatabaseHelper.newDomainBase;
 import static google.registry.testing.DatabaseHelper.persistActiveHost;
 import static google.registry.testing.DatabaseHelper.persistResource;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -35,10 +34,11 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.net.MediaType;
-import google.registry.model.domain.DomainBase;
-import google.registry.model.host.HostResource;
+import google.registry.model.domain.Domain;
+import google.registry.model.host.Host;
 import google.registry.reporting.spec11.soy.Spec11EmailSoyInfo;
 import google.registry.testing.AppEngineExtension;
+import google.registry.testing.DatabaseHelper;
 import google.registry.util.EmailMessage;
 import google.registry.util.SendEmailService;
 import java.util.LinkedHashSet;
@@ -101,8 +101,8 @@ class Spec11EmailUtilsTest {
   private ArgumentCaptor<EmailMessage> contentCaptor;
   private final LocalDate date = new LocalDate(2018, 7, 15);
 
-  private DomainBase aDomain;
-  private DomainBase bDomain;
+  private Domain aDomain;
+  private Domain bDomain;
 
   @BeforeEach
   void beforeEach() throws Exception {
@@ -121,7 +121,7 @@ class Spec11EmailUtilsTest {
             "Super Cool Registry");
 
     createTld("com");
-    HostResource host = persistActiveHost("ns1.example.com");
+    Host host = persistActiveHost("ns1.example.com");
     aDomain = persistDomainWithHost("a.com", host);
     bDomain = persistDomainWithHost("b.com", host);
     persistDomainWithHost("c.com", host);
@@ -238,7 +238,7 @@ class Spec11EmailUtilsTest {
   void testSuccess_dealsWithDeletedDomains() throws Exception {
     // Create an inactive domain and an active domain with the same name.
     persistResource(loadByEntity(aDomain).asBuilder().addStatusValue(SERVER_HOLD).build());
-    HostResource host = persistActiveHost("ns1.example.com");
+    Host host = persistActiveHost("ns1.example.com");
     aDomain = persistDomainWithHost("a.com", host);
 
     emailUtils.emailSpec11Reports(
@@ -408,9 +408,9 @@ class Spec11EmailUtilsTest {
     assertThat(message).isEqualTo(expectedContentBuilder.build());
   }
 
-  private static DomainBase persistDomainWithHost(String domainName, HostResource host) {
+  private static Domain persistDomainWithHost(String domainName, Host host) {
     return persistResource(
-        newDomainBase(domainName)
+        DatabaseHelper.newDomain(domainName)
             .asBuilder()
             .setNameservers(ImmutableSet.of(host.createVKey()))
             .build());

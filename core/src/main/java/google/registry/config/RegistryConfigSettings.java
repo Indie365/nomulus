@@ -156,6 +156,7 @@ public class RegistryConfigSettings {
     public boolean eppResourceCachingEnabled;
     public int eppResourceCachingSeconds;
     public int eppResourceMaxCachedEntries;
+    public int claimsListCachingSeconds;
   }
 
   /** Configuration for ICANN monthly reporting. */

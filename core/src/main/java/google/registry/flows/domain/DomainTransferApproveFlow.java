@@ -31,7 +31,6 @@ import static google.registry.model.ResourceTransferUtils.approvePendingTransfer
 import static google.registry.model.reporting.DomainTransactionRecord.TransactionReportField.TRANSFER_SUCCESSFUL;
 import static google.registry.model.reporting.HistoryEntry.Type.DOMAIN_TRANSFER_APPROVE;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
-import static google.registry.pricing.PricingEngineProxy.getDomainRenewCost;
 import static google.registry.util.CollectionUtils.union;
 import static google.registry.util.DateTimeUtils.END_OF_TIME;
 
@@ -45,17 +44,22 @@ import google.registry.flows.FlowModule.Superuser;
 import google.registry.flows.FlowModule.TargetId;
 import google.registry.flows.TransactionalFlow;
 import google.registry.flows.annotations.ReportingSpec;
+import google.registry.flows.domain.token.AllocationTokenFlowUtils;
 import google.registry.model.ImmutableObject;
 import google.registry.model.billing.BillingEvent;
 import google.registry.model.billing.BillingEvent.Flag;
 import google.registry.model.billing.BillingEvent.Reason;
-import google.registry.model.domain.DomainBase;
+import google.registry.model.billing.BillingEvent.Recurring;
+import google.registry.model.domain.Domain;
 import google.registry.model.domain.DomainHistory;
 import google.registry.model.domain.DomainHistory.DomainHistoryId;
 import google.registry.model.domain.GracePeriod;
 import google.registry.model.domain.metadata.MetadataExtension;
 import google.registry.model.domain.rgp.GracePeriodStatus;
+import google.registry.model.domain.token.AllocationToken;
+import google.registry.model.domain.token.AllocationTokenExtension;
 import google.registry.model.eppcommon.AuthInfo;
+import google.registry.model.eppinput.EppInput;
 import google.registry.model.eppoutput.EppResponse;
 import google.registry.model.poll.PollMessage;
 import google.registry.model.reporting.DomainTransactionRecord;
@@ -85,6 +89,18 @@ import org.joda.time.DateTime;
  * @error {@link google.registry.flows.ResourceFlowUtils.ResourceNotOwnedException}
  * @error {@link google.registry.flows.exceptions.NotPendingTransferException}
  * @error {@link DomainFlowUtils.NotAuthorizedForTldException}
+ * @error {@link
+ *     google.registry.flows.domain.token.AllocationTokenFlowUtils.AllocationTokenNotValidForDomainException}
+ * @error {@link
+ *     google.registry.flows.domain.token.AllocationTokenFlowUtils.InvalidAllocationTokenException}
+ * @error {@link
+ *     google.registry.flows.domain.token.AllocationTokenFlowUtils.AllocationTokenNotInPromotionException}
+ * @error {@link
+ *     google.registry.flows.domain.token.AllocationTokenFlowUtils.AllocationTokenNotValidForRegistrarException}
+ * @error {@link
+ *     google.registry.flows.domain.token.AllocationTokenFlowUtils.AllocationTokenNotValidForTldException}
+ * @error {@link
+ *     google.registry.flows.domain.token.AllocationTokenFlowUtils.AlreadyRedeemedAllocationTokenException}
  */
 @ReportingSpec(ActivityReportField.DOMAIN_TRANSFER_APPROVE)
 public final class DomainTransferApproveFlow implements TransactionalFlow {
@@ -96,19 +112,32 @@ public final class DomainTransferApproveFlow implements TransactionalFlow {
   @Inject @Superuser boolean isSuperuser;
   @Inject DomainHistory.Builder historyBuilder;
   @Inject EppResponse.Builder responseBuilder;
+  @Inject DomainPricingLogic pricingLogic;
+  @Inject AllocationTokenFlowUtils allocationTokenFlowUtils;
+  @Inject EppInput eppInput;
+
   @Inject DomainTransferApproveFlow() {}
 
   /**
    * The logic in this flow, which handles client approvals, very closely parallels the logic in
-   * {@link DomainBase#cloneProjectedAtTime} which handles implicit server approvals.
+   * {@link Domain#cloneProjectedAtTime} which handles implicit server approvals.
    */
   @Override
   public EppResponse run() throws EppException {
-    extensionManager.register(MetadataExtension.class);
+    extensionManager.register(MetadataExtension.class, AllocationTokenExtension.class);
     validateRegistrarIsLoggedIn(registrarId);
     extensionManager.validate();
     DateTime now = tm().getTransactionTime();
-    DomainBase existingDomain = loadAndVerifyExistence(DomainBase.class, targetId, now);
+    Domain existingDomain = loadAndVerifyExistence(Domain.class, targetId, now);
+    // Currently we do not do anything with this allocation token, but just want it loaded and
+    // available in this flow in case we use it in the future
+    Optional<AllocationToken> allocationToken =
+        allocationTokenFlowUtils.verifyAllocationTokenIfPresent(
+            existingDomain,
+            Registry.get(existingDomain.getTld()),
+            registrarId,
+            now,
+            eppInput.getSingleExtension(AllocationTokenExtension.class));
     verifyOptionalAuthInfo(authInfo, existingDomain);
     verifyHasPendingTransfer(existingDomain);
     verifyResourceOwnership(registrarId, existingDomain);
@@ -120,6 +149,7 @@ public final class DomainTransferApproveFlow implements TransactionalFlow {
     String gainingRegistrarId = transferData.getGainingRegistrarId();
     // Create a transfer billing event for 1 year, unless the superuser extension was used to set
     // the transfer period to zero. There is not a transfer cost if the transfer period is zero.
+    Recurring existingRecurring = tm().loadByKey(existingDomain.getAutorenewBillingEvent());
     Key<DomainHistory> domainHistoryKey = createHistoryKey(existingDomain, DomainHistory.class);
     historyBuilder.setId(domainHistoryKey.getId());
     Optional<BillingEvent.OneTime> billingEvent =
@@ -131,7 +161,14 @@ public final class DomainTransferApproveFlow implements TransactionalFlow {
                     .setTargetId(targetId)
                     .setRegistrarId(gainingRegistrarId)
                     .setPeriodYears(1)
-                    .setCost(getDomainRenewCost(targetId, transferData.getTransferRequestTime(), 1))
+                    .setCost(
+                        pricingLogic
+                            .getTransferPrice(
+                                Registry.get(tld),
+                                targetId,
+                                transferData.getTransferRequestTime(),
+                                existingRecurring)
+                            .getRenewCost())
                     .setEventTime(now)
                     .setBillingTime(now.plus(Registry.get(tld).getTransferGracePeriodLength()))
                     .setDomainHistoryId(
@@ -161,7 +198,7 @@ public final class DomainTransferApproveFlow implements TransactionalFlow {
     }
     // Close the old autorenew event and poll message at the transfer time (aka now). This may end
     // up deleting the poll message.
-    updateAutorenewRecurrenceEndTime(existingDomain, now);
+    updateAutorenewRecurrenceEndTime(existingDomain, existingRecurring, now);
     DateTime newExpirationTime =
         computeExDateForApprovalTime(existingDomain, now, transferData.getTransferPeriod());
     // Create a new autorenew event starting at the expiration time.
@@ -172,6 +209,8 @@ public final class DomainTransferApproveFlow implements TransactionalFlow {
             .setTargetId(targetId)
             .setRegistrarId(gainingRegistrarId)
             .setEventTime(newExpirationTime)
+            .setRenewalPriceBehavior(existingRecurring.getRenewalPriceBehavior())
+            .setRenewalPrice(existingRecurring.getRenewalPrice().orElse(null))
             .setRecurrenceEndTime(END_OF_TIME)
             .setDomainHistoryId(
                 new DomainHistoryId(
@@ -190,9 +229,9 @@ public final class DomainTransferApproveFlow implements TransactionalFlow {
                     domainHistoryKey.getParent().getName(), domainHistoryKey.getId()))
             .build();
     // Construct the post-transfer domain.
-    DomainBase partiallyApprovedDomain =
+    Domain partiallyApprovedDomain =
         approvePendingTransfer(existingDomain, TransferStatus.CLIENT_APPROVED, now);
-    DomainBase newDomain =
+    Domain newDomain =
         partiallyApprovedDomain
             .asBuilder()
             // Update the transferredRegistrationExpirationTime here since approvePendingTransfer()
@@ -246,7 +285,7 @@ public final class DomainTransferApproveFlow implements TransactionalFlow {
   }
 
   private DomainHistory buildDomainHistory(
-      DomainBase newDomain, Registry registry, DateTime now, String gainingRegistrarId) {
+      Domain newDomain, Registry registry, DateTime now, String gainingRegistrarId) {
     ImmutableSet<DomainTransactionRecord> cancelingRecords =
         createCancelingRecords(
             newDomain,

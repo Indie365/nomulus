@@ -19,7 +19,6 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static com.google.common.truth.Truth8.assertThat;
 import static google.registry.testing.DatabaseHelper.createTld;
-import static google.registry.testing.DatabaseHelper.newDomainBase;
 import static google.registry.testing.DatabaseHelper.persistEppResource;
 import static google.registry.testing.DatabaseHelper.persistResource;
 import static google.registry.util.DateTimeUtils.END_OF_TIME;
@@ -39,8 +38,8 @@ import google.registry.model.contact.ContactPhoneNumber;
 import google.registry.model.contact.ContactResource;
 import google.registry.model.contact.PostalInfo;
 import google.registry.model.domain.DesignatedContact;
+import google.registry.model.domain.Domain;
 import google.registry.model.domain.DomainAuthInfo;
-import google.registry.model.domain.DomainBase;
 import google.registry.model.domain.DomainHistory;
 import google.registry.model.domain.GracePeriod;
 import google.registry.model.domain.rgp.GracePeriodStatus;
@@ -48,7 +47,7 @@ import google.registry.model.domain.secdns.DelegationSignerData;
 import google.registry.model.eppcommon.AuthInfo.PasswordAuth;
 import google.registry.model.eppcommon.StatusValue;
 import google.registry.model.eppcommon.Trid;
-import google.registry.model.host.HostResource;
+import google.registry.model.host.Host;
 import google.registry.model.poll.PollMessage;
 import google.registry.model.poll.PollMessage.Autorenew;
 import google.registry.model.rde.RdeMode;
@@ -56,6 +55,7 @@ import google.registry.model.reporting.HistoryEntry;
 import google.registry.model.transfer.DomainTransferData;
 import google.registry.model.transfer.TransferStatus;
 import google.registry.testing.AppEngineExtension;
+import google.registry.testing.DatabaseHelper;
 import google.registry.testing.FakeClock;
 import google.registry.util.Idn;
 import google.registry.xjc.domain.XjcDomainStatusType;
@@ -76,12 +76,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 /**
- * Unit tests for {@link DomainBaseToXjcConverter}.
+ * Unit tests for {@link DomainToXjcConverter}.
  *
- * <p>This tests the mapping between {@link DomainBase} and {@link XjcRdeDomain} as well as some
+ * <p>This tests the mapping between {@link Domain} and {@link XjcRdeDomain} as well as some
  * exceptional conditions.
  */
-public class DomainBaseToXjcConverterTest {
+public class DomainToXjcConverterTest {
 
   @RegisterExtension
   public final AppEngineExtension appEngine = AppEngineExtension.builder().withCloudSql().build();
@@ -96,7 +96,7 @@ public class DomainBaseToXjcConverterTest {
 
   @Test
   void testConvertThick() {
-    XjcRdeDomain bean = DomainBaseToXjcConverter.convertDomain(makeDomainBase(clock), RdeMode.FULL);
+    XjcRdeDomain bean = DomainToXjcConverter.convertDomain(makeDomain(clock), RdeMode.FULL);
 
     assertThat(bean.getClID()).isEqualTo("TheRegistrar");
 
@@ -177,7 +177,7 @@ public class DomainBaseToXjcConverterTest {
 
   @Test
   void testConvertThin() {
-    XjcRdeDomain bean = DomainBaseToXjcConverter.convertDomain(makeDomainBase(clock), RdeMode.THIN);
+    XjcRdeDomain bean = DomainToXjcConverter.convertDomain(makeDomain(clock), RdeMode.THIN);
     assertThat(bean.getRegistrant()).isNull();
     assertThat(bean.getContacts()).isEmpty();
     assertThat(bean.getSecDNS()).isNull();
@@ -185,13 +185,13 @@ public class DomainBaseToXjcConverterTest {
 
   @Test
   void testMarshalThick() throws Exception {
-    XjcRdeDomain bean = DomainBaseToXjcConverter.convertDomain(makeDomainBase(clock), RdeMode.FULL);
+    XjcRdeDomain bean = DomainToXjcConverter.convertDomain(makeDomain(clock), RdeMode.FULL);
     wrapDeposit(bean).marshal(new ByteArrayOutputStream(), UTF_8);
   }
 
   @Test
   void testMarshalThin() throws Exception {
-    XjcRdeDomain bean = DomainBaseToXjcConverter.convertDomain(makeDomainBase(clock), RdeMode.THIN);
+    XjcRdeDomain bean = DomainToXjcConverter.convertDomain(makeDomain(clock), RdeMode.THIN);
     wrapDeposit(bean).marshal(new ByteArrayOutputStream(), UTF_8);
   }
 
@@ -212,10 +212,13 @@ public class DomainBaseToXjcConverterTest {
     return deposit;
   }
 
-  static DomainBase makeDomainBase(FakeClock clock) {
-    DomainBase domain =
+  static Domain makeDomain(FakeClock clock) {
+    Domain domain =
         persistResource(
-            newDomainBase("example.xn--q9jyb4c").asBuilder().setRepoId("2-Q9JYB4C").build());
+            DatabaseHelper.newDomain("example.xn--q9jyb4c")
+                .asBuilder()
+                .setRepoId("2-Q9JYB4C")
+                .build());
     DomainHistory domainHistory =
         persistResource(
             new DomainHistory.Builder()
@@ -272,9 +275,8 @@ public class DomainBaseToXjcConverterTest {
             .setLastEppUpdateTime(DateTime.parse("1920-01-01T00:00:00Z"))
             .setNameservers(
                 ImmutableSet.of(
-                    makeHostResource(clock, "3-Q9JYB4C", "bird.or.devil.みんな", "1.2.3.4")
-                        .createVKey(),
-                    makeHostResource(clock, "4-Q9JYB4C", "ns2.cat.みんな", "bad:f00d:cafe::15:beef")
+                    makeHost(clock, "3-Q9JYB4C", "bird.or.devil.みんな", "1.2.3.4").createVKey(),
+                    makeHost(clock, "4-Q9JYB4C", "ns2.cat.みんな", "bad:f00d:cafe::15:beef")
                         .createVKey()))
             .setRegistrant(
                 makeContactResource(
@@ -409,11 +411,10 @@ public class DomainBaseToXjcConverterTest {
             .build());
   }
 
-  private static HostResource makeHostResource(
-      FakeClock clock, String repoId, String fqhn, String ip) {
+  private static Host makeHost(FakeClock clock, String repoId, String fqhn, String ip) {
     clock.advanceOneMilli();
     return persistEppResource(
-        new HostResource.Builder()
+        new Host.Builder()
             .setCreationRegistrarId("TheRegistrar")
             .setCreationTimeForTest(DateTime.parse("1900-01-01T00:00:00Z"))
             .setPersistedCurrentSponsorRegistrarId("TheRegistrar")

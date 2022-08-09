@@ -22,7 +22,6 @@ import static google.registry.model.billing.BillingEvent.RenewalPriceBehavior.SP
 import static google.registry.model.domain.fee.BaseFee.FeeType.RENEW;
 import static google.registry.model.reporting.HistoryEntry.Type.DOMAIN_CREATE;
 import static google.registry.testing.DatabaseHelper.createTld;
-import static google.registry.testing.DatabaseHelper.newDomainBase;
 import static google.registry.testing.DatabaseHelper.persistPremiumList;
 import static google.registry.testing.DatabaseHelper.persistResource;
 import static google.registry.util.DateTimeUtils.END_OF_TIME;
@@ -42,12 +41,13 @@ import google.registry.model.billing.BillingEvent;
 import google.registry.model.billing.BillingEvent.Reason;
 import google.registry.model.billing.BillingEvent.Recurring;
 import google.registry.model.billing.BillingEvent.RenewalPriceBehavior;
-import google.registry.model.domain.DomainBase;
+import google.registry.model.domain.Domain;
 import google.registry.model.domain.DomainHistory;
 import google.registry.model.domain.fee.Fee;
 import google.registry.model.eppinput.EppInput;
 import google.registry.model.tld.Registry;
 import google.registry.testing.AppEngineExtension;
+import google.registry.testing.DatabaseHelper;
 import google.registry.testing.FakeClock;
 import google.registry.testing.FakeHttpSession;
 import google.registry.util.Clock;
@@ -72,7 +72,7 @@ public class DomainPricingLogicTest {
   SessionMetadata sessionMetadata;
   @Mock FlowMetadata flowMetadata;
   Registry registry;
-  DomainBase domain;
+  Domain domain;
 
   @BeforeEach
   void beforeEach() throws Exception {
@@ -97,7 +97,7 @@ public class DomainPricingLogicTest {
       String domainName, RenewalPriceBehavior renewalPriceBehavior, Optional<Money> renewalPrice) {
     domain =
         persistResource(
-            newDomainBase(domainName)
+            DatabaseHelper.newDomain(domainName)
                 .asBuilder()
                 .setCreationTimeForTest(DateTime.parse("1999-01-05T00:00:00Z"))
                 .build());
@@ -398,5 +398,129 @@ public class DomainPricingLogicTest {
                 domainPricingLogic.getRenewPrice(
                     registry, "standard.example", clock.nowUtc(), -1, null));
     assertThat(thrown).hasMessageThat().isEqualTo("Number of years must be positive");
+  }
+
+  @Test
+  void testGetDomainTransferPrice_standardDomain_default_noBilling_defaultRenewalPrice()
+      throws EppException {
+    assertThat(
+            domainPricingLogic.getTransferPrice(registry, "standard.example", clock.nowUtc(), null))
+        .isEqualTo(
+            new FeesAndCredits.Builder()
+                .setCurrency(USD)
+                .addFeeOrCredit(Fee.create(Money.of(USD, 10).getAmount(), RENEW, false))
+                .build());
+  }
+
+  @Test
+  void testGetDomainTransferPrice_premiumDomain_default_noBilling_premiumRenewalPrice()
+      throws EppException {
+    assertThat(
+            domainPricingLogic.getTransferPrice(registry, "premium.example", clock.nowUtc(), null))
+        .isEqualTo(
+            new FeesAndCredits.Builder()
+                .setCurrency(USD)
+                .addFeeOrCredit(Fee.create(Money.of(USD, 100).getAmount(), RENEW, true))
+                .build());
+  }
+
+  @Test
+  void testGetDomainTransferPrice_standardDomain_default_defaultRenewalPrice() throws EppException {
+    assertThat(
+            domainPricingLogic.getTransferPrice(
+                registry,
+                "standard.example",
+                clock.nowUtc(),
+                persistDomainAndSetRecurringBillingEvent(
+                    "standard.example", DEFAULT, Optional.empty())))
+        .isEqualTo(
+            new FeesAndCredits.Builder()
+                .setCurrency(USD)
+                .addFeeOrCredit(Fee.create(Money.of(USD, 10).getAmount(), RENEW, false))
+                .build());
+  }
+
+  @Test
+  void testGetDomainTransferPrice_premiumDomain_default_premiumRenewalPrice() throws EppException {
+    assertThat(
+            domainPricingLogic.getTransferPrice(
+                registry,
+                "premium.example",
+                clock.nowUtc(),
+                persistDomainAndSetRecurringBillingEvent(
+                    "premium.example", DEFAULT, Optional.empty())))
+        .isEqualTo(
+            new FeesAndCredits.Builder()
+                .setCurrency(USD)
+                .addFeeOrCredit(Fee.create(Money.of(USD, 100).getAmount(), RENEW, true))
+                .build());
+  }
+
+  @Test
+  void testGetDomainTransferPrice_standardDomain_nonPremium_nonPremiumRenewalPrice()
+      throws EppException {
+    assertThat(
+            domainPricingLogic.getTransferPrice(
+                registry,
+                "standard.example",
+                clock.nowUtc(),
+                persistDomainAndSetRecurringBillingEvent(
+                    "standard.example", NONPREMIUM, Optional.empty())))
+        .isEqualTo(
+            new FeesAndCredits.Builder()
+                .setCurrency(USD)
+                .addFeeOrCredit(Fee.create(Money.of(USD, 10).getAmount(), RENEW, false))
+                .build());
+  }
+
+  @Test
+  void testGetDomainTransferPrice_premiumDomain_nonPremium_nonPremiumRenewalPrice()
+      throws EppException {
+    assertThat(
+            domainPricingLogic.getTransferPrice(
+                registry,
+                "premium.example",
+                clock.nowUtc(),
+                persistDomainAndSetRecurringBillingEvent(
+                    "premium.example", NONPREMIUM, Optional.empty())))
+        .isEqualTo(
+            new FeesAndCredits.Builder()
+                .setCurrency(USD)
+                .addFeeOrCredit(Fee.create(Money.of(USD, 10).getAmount(), RENEW, false))
+                .build());
+  }
+
+  @Test
+  void testGetDomainTransferPrice_standardDomain_specified_specifiedRenewalPrice()
+      throws EppException {
+    assertThat(
+            domainPricingLogic.getTransferPrice(
+                registry,
+                "standard.example",
+                clock.nowUtc(),
+                persistDomainAndSetRecurringBillingEvent(
+                    "standard.example", SPECIFIED, Optional.of(Money.of(USD, 1.23)))))
+        .isEqualTo(
+            new FeesAndCredits.Builder()
+                .setCurrency(USD)
+                .addFeeOrCredit(Fee.create(Money.of(USD, 1.23).getAmount(), RENEW, false))
+                .build());
+  }
+
+  @Test
+  void testGetDomainTransferPrice_premiumDomain_specified_specifiedRenewalPrice()
+      throws EppException {
+    assertThat(
+            domainPricingLogic.getTransferPrice(
+                registry,
+                "premium.example",
+                clock.nowUtc(),
+                persistDomainAndSetRecurringBillingEvent(
+                    "premium.example", SPECIFIED, Optional.of(Money.of(USD, 1.23)))))
+        .isEqualTo(
+            new FeesAndCredits.Builder()
+                .setCurrency(USD)
+                .addFeeOrCredit(Fee.create(Money.of(USD, 1.23).getAmount(), RENEW, false))
+                .build());
   }
 }

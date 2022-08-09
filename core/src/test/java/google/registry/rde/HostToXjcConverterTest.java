@@ -16,17 +16,17 @@ package google.registry.rde;
 
 import static com.google.common.truth.Truth.assertThat;
 import static google.registry.testing.DatabaseHelper.createTld;
-import static google.registry.testing.DatabaseHelper.newDomainBase;
 import static google.registry.xjc.XjcXmlTransformer.marshalStrict;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.net.InetAddresses;
-import google.registry.model.domain.DomainBase;
+import google.registry.model.domain.Domain;
 import google.registry.model.eppcommon.StatusValue;
-import google.registry.model.host.HostResource;
+import google.registry.model.host.Host;
 import google.registry.testing.AppEngineExtension;
+import google.registry.testing.DatabaseHelper;
 import google.registry.xjc.host.XjcHostStatusType;
 import google.registry.xjc.host.XjcHostStatusValueType;
 import google.registry.xjc.rdehost.XjcRdeHost;
@@ -38,12 +38,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 /**
- * Unit tests for {@link HostResourceToXjcConverter}.
+ * Unit tests for {@link HostToXjcConverter}.
  *
- * <p>This tests the mapping between {@link HostResource} and {@link XjcRdeHost} as well as some
- * exceptional conditions.
+ * <p>This tests the mapping between {@link Host} and {@link XjcRdeHost} as well as some exceptional
+ * conditions.
  */
-public class HostResourceToXjcConverterTest {
+public class HostToXjcConverterTest {
 
   @RegisterExtension
   public final AppEngineExtension appEngine = AppEngineExtension.builder().withCloudSql().build();
@@ -55,16 +55,16 @@ public class HostResourceToXjcConverterTest {
 
   @Test
   void testConvertSubordinateHost() {
-    DomainBase domain =
-        newDomainBase("love.foobar")
+    Domain domain =
+        DatabaseHelper.newDomain("love.foobar")
             .asBuilder()
             .setPersistedCurrentSponsorRegistrarId("LeisureDog")
             .setLastTransferTime(DateTime.parse("2010-01-01T00:00:00Z"))
             .addStatusValue(StatusValue.PENDING_TRANSFER)
             .build();
     XjcRdeHost bean =
-        HostResourceToXjcConverter.convertSubordinateHost(
-            new HostResource.Builder()
+        HostToXjcConverter.convertSubordinateHost(
+            new Host.Builder()
                 .setCreationRegistrarId("LawyerCat")
                 .setCreationTimeForTest(DateTime.parse("1900-01-01T00:00:00Z"))
                 .setPersistedCurrentSponsorRegistrarId("BusinessCat")
@@ -119,8 +119,8 @@ public class HostResourceToXjcConverterTest {
   @Test
   void testConvertExternalHost() {
     XjcRdeHost bean =
-        HostResourceToXjcConverter.convertExternalHost(
-            new HostResource.Builder()
+        HostToXjcConverter.convertExternalHost(
+            new Host.Builder()
                 .setCreationRegistrarId("LawyerCat")
                 .setCreationTimeForTest(DateTime.parse("1900-01-01T00:00:00Z"))
                 .setPersistedCurrentSponsorRegistrarId("BusinessCat")
@@ -168,8 +168,8 @@ public class HostResourceToXjcConverterTest {
   @Test
   void testConvertExternalHost_ipv6() {
     XjcRdeHost bean =
-        HostResourceToXjcConverter.convertExternalHost(
-            new HostResource.Builder()
+        HostToXjcConverter.convertExternalHost(
+            new Host.Builder()
                 .setCreationRegistrarId("LawyerCat")
                 .setCreationTimeForTest(DateTime.parse("1900-01-01T00:00:00Z"))
                 .setPersistedCurrentSponsorRegistrarId("BusinessCat")
@@ -191,8 +191,8 @@ public class HostResourceToXjcConverterTest {
     assertThrows(
         IllegalArgumentException.class,
         () ->
-            HostResourceToXjcConverter.convertExternalHost(
-                new HostResource.Builder()
+            HostToXjcConverter.convertExternalHost(
+                new Host.Builder()
                     .setCreationRegistrarId("LawyerCat")
                     .setCreationTimeForTest(DateTime.parse("1900-01-01T00:00:00Z"))
                     .setPersistedCurrentSponsorRegistrarId("BusinessCat")
@@ -210,8 +210,8 @@ public class HostResourceToXjcConverterTest {
   void testMarshal() throws Exception {
     // Bean! Bean! Bean!
     XjcRdeHostElement bean =
-        HostResourceToXjcConverter.convertExternal(
-            new HostResource.Builder()
+        HostToXjcConverter.convertExternal(
+            new Host.Builder()
                 .setCreationRegistrarId("LawyerCat")
                 .setCreationTimeForTest(DateTime.parse("1900-01-01T00:00:00Z"))
                 .setPersistedCurrentSponsorRegistrarId("BusinessCat")

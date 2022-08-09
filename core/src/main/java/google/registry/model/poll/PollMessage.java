@@ -35,14 +35,14 @@ import google.registry.model.annotations.ReportedOn;
 import google.registry.model.contact.ContactHistory;
 import google.registry.model.contact.ContactHistory.ContactHistoryId;
 import google.registry.model.contact.ContactResource;
-import google.registry.model.domain.DomainBase;
+import google.registry.model.domain.Domain;
 import google.registry.model.domain.DomainHistory;
 import google.registry.model.domain.DomainHistory.DomainHistoryId;
 import google.registry.model.domain.DomainRenewData;
 import google.registry.model.eppoutput.EppResponse.ResponseData;
+import google.registry.model.host.Host;
 import google.registry.model.host.HostHistory;
 import google.registry.model.host.HostHistory.HostHistoryId;
-import google.registry.model.host.HostResource;
 import google.registry.model.poll.PendingActionNotificationResponse.ContactPendingActionNotificationResponse;
 import google.registry.model.poll.PendingActionNotificationResponse.DomainPendingActionNotificationResponse;
 import google.registry.model.poll.PendingActionNotificationResponse.HostPendingActionNotificationResponse;
@@ -103,9 +103,9 @@ public abstract class PollMessage extends ImmutableObject
 
   /** Indicates the type of entity the poll message is for. */
   public enum Type {
-    DOMAIN(1L, DomainBase.class),
+    DOMAIN(1L, Domain.class),
     CONTACT(2L, ContactResource.class),
-    HOST(3L, HostResource.class);
+    HOST(3L, Host.class);
 
     private final long id;
     private final Class<?> clazz;
@@ -216,7 +216,7 @@ public abstract class PollMessage extends ImmutableObject
   /**
    * Returns the host repo id.
    *
-   * <p>This may only be used on a HostResource poll event.
+   * <p>This may only be used on a Host poll event.
    */
   public String getHostRepoId() {
     checkArgument(getType() == Type.DOMAIN);

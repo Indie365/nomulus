@@ -57,7 +57,7 @@ import google.registry.model.billing.BillingEvent;
 import google.registry.model.billing.BillingEvent.OneTime;
 import google.registry.model.billing.BillingEvent.Reason;
 import google.registry.model.billing.BillingEvent.Recurring;
-import google.registry.model.domain.DomainBase;
+import google.registry.model.domain.Domain;
 import google.registry.model.domain.DomainCommand.Renew;
 import google.registry.model.domain.DomainHistory;
 import google.registry.model.domain.DomainHistory.DomainHistoryId;
@@ -166,7 +166,7 @@ public final class DomainRenewFlow implements TransactionalFlow {
     DateTime now = tm().getTransactionTime();
     Renew command = (Renew) resourceCommand;
     // Loads the target resource if it exists
-    DomainBase existingDomain = loadAndVerifyExistence(DomainBase.class, targetId, now);
+    Domain existingDomain = loadAndVerifyExistence(Domain.class, targetId, now);
     Optional<AllocationToken> allocationToken =
         allocationTokenFlowUtils.verifyAllocationTokenIfPresent(
             existingDomain,
@@ -222,8 +222,9 @@ public final class DomainRenewFlow implements TransactionalFlow {
                     domainHistoryKey.getParent().getName(), domainHistoryKey.getId()))
             .build();
     // End the old autorenew billing event and poll message now. This may delete the poll message.
-    updateAutorenewRecurrenceEndTime(existingDomain, now);
-    DomainBase newDomain =
+    Recurring existingRecurring = tm().loadByKey(existingDomain.getAutorenewBillingEvent());
+    updateAutorenewRecurrenceEndTime(existingDomain, existingRecurring, now);
+    Domain newDomain =
         existingDomain
             .asBuilder()
             .setLastEppUpdateTime(now)
@@ -275,7 +276,7 @@ public final class DomainRenewFlow implements TransactionalFlow {
   }
 
   private DomainHistory buildDomainHistory(
-      DomainBase newDomain, DateTime now, Period period, Duration renewGracePeriod) {
+      Domain newDomain, DateTime now, Period period, Duration renewGracePeriod) {
     Optional<MetadataExtension> metadataExtensionOpt =
         eppInput.getSingleExtension(MetadataExtension.class);
     if (metadataExtensionOpt.isPresent()) {
@@ -299,10 +300,8 @@ public final class DomainRenewFlow implements TransactionalFlow {
         .build();
   }
 
-  private void verifyRenewAllowed(
-      Optional<AuthInfo> authInfo,
-      DomainBase existingDomain,
-      Renew command) throws EppException {
+  private void verifyRenewAllowed(Optional<AuthInfo> authInfo, Domain existingDomain, Renew command)
+      throws EppException {
     verifyOptionalAuthInfo(authInfo, existingDomain);
     verifyNoDisallowedStatuses(existingDomain, RENEW_DISALLOWED_STATUSES);
     if (!isSuperuser) {
