@@ -130,7 +130,8 @@ public final class DomainTransferApproveFlow implements TransactionalFlow {
     DateTime now = tm().getTransactionTime();
     Domain existingDomain = loadAndVerifyExistence(Domain.class, targetId, now);
     // Currently we do not do anything with this allocation token, but just want it loaded and
-    // available in this flow in case we use it in the future
+    // available in this flow in case we use it in the future.
+    @SuppressWarnings("unused")
     Optional<AllocationToken> allocationToken =
         allocationTokenFlowUtils.verifyAllocationTokenIfPresent(
             existingDomain,
