@@ -33,7 +33,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import google.registry.groups.DirectoryGroupsConnection;
 import google.registry.groups.GroupsConnection.Role;
 import google.registry.model.registrar.Registrar;
@@ -42,9 +41,10 @@ import google.registry.request.Response;
 import google.registry.testing.AppEngineExtension;
 import google.registry.testing.FakeClock;
 import google.registry.testing.FakeSleeper;
-import google.registry.testing.InjectExtension;
 import google.registry.util.Retrier;
 import java.io.IOException;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -58,8 +58,6 @@ public class SyncGroupMembersActionTest {
 
   @RegisterExtension
   public final AppEngineExtension appEngine = AppEngineExtension.builder().withCloudSql().build();
-
-  @RegisterExtension public final InjectExtension inject = new InjectExtension();
 
   private final DirectoryGroupsConnection connection = mock(DirectoryGroupsConnection.class);
   private final Response response = mock(Response.class);
@@ -76,8 +74,7 @@ public class SyncGroupMembersActionTest {
   @Test
   void test_getGroupEmailAddressForContactType_convertsToLowercase() {
     assertThat(
-            getGroupEmailAddressForContactType(
-                "SomeRegistrar", RegistrarPoc.Type.ADMIN, "domain-registry.example"))
+            getGroupEmailAddressForContactType("SomeRegistrar", ADMIN, "domain-registry.example"))
         .isEqualTo("someregistrar-primary-contacts@domain-registry.example");
   }
 
@@ -184,7 +181,10 @@ public class SyncGroupMembersActionTest {
         "hexadecimal@snow.fall",
         Role.MEMBER);
     verify(response).setStatus(SC_OK);
-    assertThat(Iterables.filter(Registrar.loadAll(), Registrar::getContactsRequireSyncing))
+    assertThat(
+            StreamSupport.stream(Registrar.loadAll().spliterator(), false)
+                .filter(Registrar::getContactsRequireSyncing)
+                .collect(Collectors.toList()))
         .isEmpty();
   }
 
