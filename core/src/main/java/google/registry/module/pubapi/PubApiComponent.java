@@ -15,9 +15,11 @@
 package google.registry.module.pubapi;
 
 import com.google.monitoring.metrics.MetricReporter;
+import dagger.BindsInstance;
 import dagger.Component;
 import dagger.Lazy;
 import google.registry.config.CredentialModule;
+import google.registry.config.RegistryConfig.Config;
 import google.registry.config.RegistryConfig.ConfigModule;
 import google.registry.flows.ServerTridProviderModule;
 import google.registry.flows.custom.CustomLogicFactoryModule;
@@ -37,6 +39,7 @@ import google.registry.request.Modules.NetHttpTransportModule;
 import google.registry.request.Modules.UserServiceModule;
 import google.registry.request.auth.AuthModule;
 import google.registry.util.UtilsModule;
+import javax.annotation.Nullable;
 import javax.inject.Singleton;
 
 /** Dagger component with instance lifetime for "pubapi" App Engine module. */
@@ -68,4 +71,12 @@ interface PubApiComponent {
   PubApiRequestHandler requestHandler();
 
   Lazy<MetricReporter> metricReporter();
+
+  @Component.Builder
+  interface Builder {
+    @BindsInstance
+    Builder forceUseReplica(
+        @Nullable @Config("forceUseReplica") Boolean forceUseReplica);
+    PubApiComponent build();
+  }
 }

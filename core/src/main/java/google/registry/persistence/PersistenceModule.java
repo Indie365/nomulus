@@ -148,6 +148,13 @@ public abstract class PersistenceModule {
   @Config("instanceConnectionNameOverride")
   abstract String instanceConnectionNameOverride();
 
+  /**
+   * Test test test
+   */
+  @BindsOptionalOf
+  @Config("forceUseReplica")
+  abstract Boolean bindForceUseReplica();
+
   @Provides
   @Singleton
   @BeamPipelineCloudSqlConfigs
@@ -178,6 +185,7 @@ public abstract class PersistenceModule {
         .ifPresent(
             instanceConnectionName ->
                 overrides.put(HIKARI_DS_CLOUD_SQL_INSTANCE, instanceConnectionName));
+
     isolationOverride
         .map(Provider::get)
         .ifPresent(isolation -> overrides.put(Environment.ISOLATION, isolation.name()));
@@ -227,7 +235,15 @@ public abstract class PersistenceModule {
   static JpaTransactionManager provideAppEngineJpaTm(
       SqlCredentialStore credentialStore,
       @PartialCloudSqlConfigs ImmutableMap<String, String> cloudSqlConfigs,
-      Clock clock) {
+      Clock clock,
+      @Config("forceUseReplica") Optional<Boolean> forceUseReplica,
+      @Config("cloudSqlReplicaInstanceConnectionName")
+          Optional<String> replicaInstanceConnectionName) {
+    // if flag is set return replica instance instead
+    if(forceUseReplica.isPresent() && forceUseReplica.get()) {
+      return provideReadOnlyReplicaJpaTm(credentialStore, cloudSqlConfigs, replicaInstanceConnectionName, clock);
+    }
+
     HashMap<String, String> overrides = Maps.newHashMap(cloudSqlConfigs);
     setSqlCredential(credentialStore, new RobotUser(RobotId.NOMULUS), overrides);
     return new JpaTransactionManagerImpl(create(overrides), clock);
