@@ -184,7 +184,29 @@ public class RegistryLockPostAction implements Runnable, JsonActionRunner.JsonAc
   private String verifyPasswordAndGetEmail(
       UserAuthInfo userAuthInfo, RegistryLockPostInput postInput)
       throws RegistrarAccessDeniedException {
-    User user = userAuthInfo.user();
+    if (userAuthInfo.user().isPresent()) {
+      return verifyPasswordAndGetEmailLegacyUser(userAuthInfo.user().get(), postInput);
+    } else {
+      return verifyPasswordAndGetEmailConsoleUser(userAuthInfo.consoleUser().get(), postInput);
+    }
+  }
+
+  private String verifyPasswordAndGetEmailConsoleUser(
+      google.registry.model.console.User user, RegistryLockPostInput postInput)
+      throws RegistrarAccessDeniedException {
+    if (registrarAccessor.isAdmin()) {
+      return user.getEmailAddress();
+    }
+    // Verify that the registrar has locking enabled
+    getRegistrarAndVerifyLockAccess(registrarAccessor, postInput.registrarId, false);
+    checkArgument(
+        user.verifyRegistryLockPassword(postInput.password),
+        "Incorrect registry lock password for user");
+    return user.getEmailAddress();
+  }
+
+  private String verifyPasswordAndGetEmailLegacyUser(User user, RegistryLockPostInput postInput)
+      throws RegistrarAccessDeniedException {
     if (registrarAccessor.isAdmin()) {
       return user.getEmail();
     }
