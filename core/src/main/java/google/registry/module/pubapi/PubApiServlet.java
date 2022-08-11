@@ -21,7 +21,7 @@ import google.registry.module.ServletBase;
 /** Servlet that should handle all requests to our "default" App Engine module. */
 public final class PubApiServlet extends ServletBase {
 
-  private static final PubApiComponent component = DaggerPubApiComponent.create();
+  private static final PubApiComponent component = DaggerPubApiComponent.builder().useReplicaIfAvailable(true).build();
   private static final PubApiRequestHandler requestHandler = component.requestHandler();
   private static final Lazy<MetricReporter> metricReporter = component.metricReporter();
 

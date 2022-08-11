@@ -148,6 +148,13 @@ public abstract class PersistenceModule {
   @Config("instanceConnectionNameOverride")
   abstract String instanceConnectionNameOverride();
 
+  /**
+   * Test test test
+   */
+  @BindsOptionalOf
+  @Config("useReplicaIfAvailable")
+  abstract Boolean bindUseReplicaIfAvailable();
+
   @Provides
   @Singleton
   @BeamPipelineCloudSqlConfigs
@@ -157,7 +164,9 @@ public abstract class PersistenceModule {
           Optional<Provider<String>> instanceConnectionNameOverride,
       @Config("beamIsolationOverride")
           Optional<Provider<TransactionIsolationLevel>> isolationOverride,
-      @PartialCloudSqlConfigs ImmutableMap<String, String> cloudSqlConfigs) {
+      @PartialCloudSqlConfigs ImmutableMap<String, String> cloudSqlConfigs,
+      @Config("useReplicaIfAvailable")
+          Optional<Provider<Boolean>> useReplicaIfAvailable) {
     HashMap<String, String> overrides = Maps.newHashMap(cloudSqlConfigs);
     // TODO(b/175700623): make sql username configurable from config file.
     SqlCredential credential = credentialStore.getCredential(new RobotUser(RobotId.NOMULUS));
@@ -173,11 +182,19 @@ public abstract class PersistenceModule {
      * information.
      */
     overrides.put(HIKARI_MAXIMUM_POOL_SIZE, String.valueOf(Integer.MAX_VALUE));
-    instanceConnectionNameOverride
+    useReplicaIfAvailable
         .map(Provider::get)
         .ifPresent(
-            instanceConnectionName ->
-                overrides.put(HIKARI_DS_CLOUD_SQL_INSTANCE, instanceConnectionName));
+            val -> {
+              if (val) {
+                instanceConnectionNameOverride
+                    .map(Provider::get)
+                    .ifPresent(
+                        instanceConnectionName ->
+                            overrides.put(HIKARI_DS_CLOUD_SQL_INSTANCE, instanceConnectionName));
+              }
+            });
+
     isolationOverride
         .map(Provider::get)
         .ifPresent(isolation -> overrides.put(Environment.ISOLATION, isolation.name()));
@@ -272,11 +289,14 @@ public abstract class PersistenceModule {
       @PartialCloudSqlConfigs ImmutableMap<String, String> cloudSqlConfigs,
       @Config("cloudSqlReplicaInstanceConnectionName")
           Optional<String> replicaInstanceConnectionName,
-      Clock clock) {
+      Clock clock,
+      @Config("useReplicaIfAvailable")
+          Optional<Provider<Boolean>> useReplicaIfAvailable) {
     HashMap<String, String> overrides = Maps.newHashMap(cloudSqlConfigs);
     setSqlCredential(credentialStore, new RobotUser(RobotId.NOMULUS), overrides);
-    replicaInstanceConnectionName.ifPresent(
-        name -> overrides.put(HIKARI_DS_CLOUD_SQL_INSTANCE, name));
+    if(useReplicaIfAvailable.isPresent() && replicaInstanceConnectionName.isPresent()) {
+      overrides.put(HIKARI_DS_CLOUD_SQL_INSTANCE, replicaInstanceConnectionName.get());
+    }
     overrides.put(
         Environment.ISOLATION, TransactionIsolationLevel.TRANSACTION_READ_COMMITTED.name());
     return new JpaTransactionManagerImpl(create(overrides), clock);
@@ -289,10 +309,14 @@ public abstract class PersistenceModule {
       @BeamPipelineCloudSqlConfigs ImmutableMap<String, String> beamCloudSqlConfigs,
       @Config("cloudSqlReplicaInstanceConnectionName")
           Optional<String> replicaInstanceConnectionName,
-      Clock clock) {
+      Clock clock,
+      @Config("useReplicaIfAvailable")
+          Optional<Provider<Boolean>> useReplicaIfAvailable) {
     HashMap<String, String> overrides = Maps.newHashMap(beamCloudSqlConfigs);
-    replicaInstanceConnectionName.ifPresent(
-        name -> overrides.put(HIKARI_DS_CLOUD_SQL_INSTANCE, name));
+    if(useReplicaIfAvailable.isPresent() && replicaInstanceConnectionName.isPresent()) {
+      overrides.put(HIKARI_DS_CLOUD_SQL_INSTANCE, replicaInstanceConnectionName.get());
+    }
+
     overrides.put(
         Environment.ISOLATION, TransactionIsolationLevel.TRANSACTION_READ_COMMITTED.name());
     return new JpaTransactionManagerImpl(create(overrides), clock);
