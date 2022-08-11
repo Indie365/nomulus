@@ -39,10 +39,13 @@ public abstract class AuthResult {
   public String userIdForLogging() {
     return userAuthInfo()
         .map(
-            userAuthInfo ->
-                String.format(
-                    "%s %s",
-                    userAuthInfo.isUserAdmin() ? "admin" : "user", userAuthInfo.user().getEmail()))
+            userAuthInfo -> {
+              String email =
+                  userAuthInfo.user().isPresent()
+                      ? userAuthInfo.user().get().getEmail()
+                      : userAuthInfo.consoleUser().get().getEmailAddress();
+              return String.format("%s %s", userAuthInfo.isUserAdmin() ? "admin" : "user", email);
+            })
         .orElse("<logged-out user>");
   }
 
