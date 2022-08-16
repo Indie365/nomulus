@@ -647,6 +647,21 @@ CREATE TABLE public."Lock" (
 
 
 --
+-- Name: PackagePromotion; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public."PackagePromotion" (
+    token text NOT NULL,
+    last_notification_sent timestamp with time zone,
+    max_creates integer NOT NULL,
+    max_domains integer NOT NULL,
+    next_billing_date timestamp with time zone,
+    package_price_amount numeric(19,2),
+    package_price_currency text
+);
+
+
+--
 -- Name: PollMessage; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1262,6 +1277,14 @@ ALTER TABLE ONLY public."Host"
 
 ALTER TABLE ONLY public."Lock"
     ADD CONSTRAINT "Lock_pkey" PRIMARY KEY (resource_name, scope);
+
+
+--
+-- Name: PackagePromotion PackagePromotion_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."PackagePromotion"
+    ADD CONSTRAINT "PackagePromotion_pkey" PRIMARY KEY (token);
 
 
 --
