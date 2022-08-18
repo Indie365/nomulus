@@ -655,10 +655,10 @@ CREATE TABLE public."PackagePromotion" (
     last_notification_sent timestamp with time zone,
     max_creates integer NOT NULL,
     max_domains integer NOT NULL,
-    next_billing_date timestamp with time zone,
+    next_billing_date timestamp with time zone NOT NULL,
     package_price_amount numeric(19,2),
     package_price_currency text,
-    token text
+    token text NOT NULL
 );
 
 
