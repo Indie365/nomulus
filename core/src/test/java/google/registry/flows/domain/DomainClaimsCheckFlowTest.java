@@ -51,10 +51,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 /** Unit tests for {@link DomainClaimsCheckFlow}. */
 public class DomainClaimsCheckFlowTest extends ResourceFlowTestCase<DomainClaimsCheckFlow, Domain> {
 
-  @RegisterExtension
-  public final TestCacheExtension testCacheExtension =
-      new TestCacheExtension.Builder().withClaimsListCache(Duration.ofHours(6)).build();
-
   DomainClaimsCheckFlowTest() {
     setEppInput("domain_check_claims.xml");
   }
