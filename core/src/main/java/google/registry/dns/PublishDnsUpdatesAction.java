@@ -52,14 +52,12 @@ import google.registry.request.Parameter;
 import google.registry.request.Response;
 import google.registry.request.auth.Auth;
 import google.registry.request.lock.LockHandler;
-import google.registry.ui.server.SendEmailUtils;
-import google.registry.util.Clock;
-import google.registry.util.CloudTasksUtils;
-import google.registry.util.DomainNameUtils;
+import google.registry.util.*;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import javax.inject.Inject;
+import javax.mail.internet.InternetAddress;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
@@ -109,11 +107,13 @@ public final class PublishDnsUpdatesAction implements Runnable, Callable<Void> {
   private final Clock clock;
   private final CloudTasksUtils cloudTasksUtils;
   private final Response response;
-  private final SendEmailUtils sendEmailUtils;
+  private final SendEmailService sendEmailService;
   private final String dnsUpdateFailEmailSubjectText;
   private final String dnsUpdateFailEmailBodyText;
   private final String dnsUpdateFailRegistryName;
   private final String registrySupportEmail;
+  private final String registryCcEmail;
+  private final InternetAddress gSuiteOutgoingEmailAddress;
 
   @Inject
   public PublishDnsUpdatesAction(
@@ -130,6 +130,8 @@ public final class PublishDnsUpdatesAction implements Runnable, Callable<Void> {
       @Config("dnsUpdateFailEmailBodyText") String dnsUpdateFailEmailBodyText,
       @Config("dnsUpdateFailRegistryName") String dnsUpdateFailRegistryName,
       @Config("registrySupportEmail") String registrySupportEmail,
+      @Config("registryCcEmail") String registryCcEmail,
+      @Config("gSuiteOutgoingEmailAddress") InternetAddress gSuiteOutgoingEmailAddress,
       @Header(APP_ENGINE_RETRY_HEADER) Optional<Integer> appEngineRetryCount,
       @Header(CLOUD_TASKS_RETRY_HEADER) Optional<Integer> cloudTasksRetryCount,
       DnsQueue dnsQueue,
@@ -138,13 +140,13 @@ public final class PublishDnsUpdatesAction implements Runnable, Callable<Void> {
       LockHandler lockHandler,
       Clock clock,
       CloudTasksUtils cloudTasksUtils,
-      SendEmailUtils sendEmailUtils,
+      SendEmailService sendEmailService,
       Response response) {
     this.dnsQueue = dnsQueue;
     this.dnsWriterProxy = dnsWriterProxy;
     this.dnsMetrics = dnsMetrics;
     this.timeout = timeout;
-    this.sendEmailUtils = sendEmailUtils;
+    this.sendEmailService = sendEmailService;
     this.retryCount =
         cloudTasksRetryCount.orElse(
             appEngineRetryCount.orElseThrow(
@@ -165,6 +167,8 @@ public final class PublishDnsUpdatesAction implements Runnable, Callable<Void> {
     this.dnsUpdateFailEmailSubjectText = dnsUpdateFailEmailSubjectText;
     this.dnsUpdateFailRegistryName = dnsUpdateFailRegistryName;
     this.registrySupportEmail = registrySupportEmail;
+    this.registryCcEmail = registryCcEmail;
+    this.gSuiteOutgoingEmailAddress = gSuiteOutgoingEmailAddress;
   }
 
   private void recordActionResult(ActionStatus status) {
@@ -267,25 +271,51 @@ public final class PublishDnsUpdatesAction implements Runnable, Callable<Void> {
     return null;
   }
 
+  private InternetAddress emailToInternetAddress(String email) {
+    try {
+      return new InternetAddress(email, true);
+    } catch (Exception e) {
+      logger.atWarning().withCause(e).log(
+          String.format(
+              "Could not parse email contact %s to send DNS failure notification", email));
+      return null;
+    }
+  }
+
   /** Sends an email to partners regarding a failure during DNS update */
   private void notifyWithEmailAboutDnsUpdateFailure(
       String registrarId, String hostOrDomainName, Boolean isHost) {
     Optional<Registrar> registrar = Registrar.loadByRegistrarIdCached(registrarId);
 
+
     if (registrar.isPresent()) {
-      sendEmailUtils.sendEmail(
-          dnsUpdateFailEmailSubjectText,
+      String body =
           String.format(
               dnsUpdateFailEmailBodyText,
               registrar.get().getRegistrarName(),
               hostOrDomainName,
               isHost ? "host" : "domain",
               registrySupportEmail,
-              dnsUpdateFailRegistryName),
+              dnsUpdateFailRegistryName);
+
+      ImmutableList<InternetAddress> recipients =
           registrar.get().getContacts().stream()
               .filter(c -> c.getTypes().contains(RegistrarPoc.Type.ADMIN))
               .map(RegistrarPoc::getEmailAddress)
-              .collect(toImmutableList()));
+              .map(this::emailToInternetAddress)
+              .collect(toImmutableList());
+
+      InternetAddress bcc = emailToInternetAddress(registryCcEmail);
+
+      sendEmailService.sendEmail(
+          EmailMessage.newBuilder()
+              .setBody(body)
+              .setSubject(dnsUpdateFailEmailSubjectText)
+              .setRecipients(recipients)
+              .addBcc(bcc)
+              .setFrom(gSuiteOutgoingEmailAddress)
+              .build());
+
     } else {
       logger.atSevere().log(String.format("Could not find registrar %s", registrarId));
     }

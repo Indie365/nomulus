@@ -38,7 +38,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import google.registry.dns.DnsMetrics.ActionStatus;
@@ -55,7 +54,6 @@ import google.registry.testing.CloudTasksHelper.TaskMatcher;
 import google.registry.testing.FakeClock;
 import google.registry.testing.FakeLockHandler;
 import google.registry.testing.FakeResponse;
-import google.registry.ui.server.SendEmailUtils;
 import google.registry.util.EmailMessage;
 import google.registry.util.SendEmailService;
 import java.util.Optional;
@@ -84,17 +82,9 @@ public class PublishDnsUpdatesActionTest {
   private final CloudTasksHelper cloudTasksHelper = new CloudTasksHelper();
   private PublishDnsUpdatesAction action;
   private final SendEmailService emailService = mock(SendEmailService.class);
-  private SendEmailUtils sendEmailUtils;
 
   @BeforeEach
   void beforeEach() throws Exception {
-    sendEmailUtils =
-        new SendEmailUtils(
-            new InternetAddress("outgoing@registry.example"),
-            "UnitTest Registry",
-            ImmutableList.of("notification@test.example", "notification2@test.example"),
-            emailService);
-
     createTld("xn--q9jyb4c");
     persistResource(
         Registry.get("xn--q9jyb4c")
@@ -143,6 +133,12 @@ public class PublishDnsUpdatesActionTest {
       int lockIndex,
       int numPublishLocks,
       LockHandler lockHandler) {
+    InternetAddress outgoingRegistry = null;
+    try {
+      outgoingRegistry = new InternetAddress("outgoing@registry.example");
+    } catch (Exception e) {
+    }
+
     return new PublishDnsUpdatesAction(
         dnsWriterString,
         clock.nowUtc().minusHours(1),
@@ -155,8 +151,10 @@ public class PublishDnsUpdatesActionTest {
         Duration.standardSeconds(10),
         "Subj",
         "Body %1$s %2$s %3$s %4$s %5$s",
-        "registry@test.com",
         "awesomeRegistry",
+        "registry@test.com",
+        "registry-cc@test.com",
+        outgoingRegistry,
         Optional.ofNullable(retryCount),
         Optional.empty(),
         dnsQueue,
@@ -165,7 +163,7 @@ public class PublishDnsUpdatesActionTest {
         lockHandler,
         clock,
         cloudTasksHelper.getTestCloudTasksUtils(),
-        sendEmailUtils,
+        emailService,
         response);
   }
 
@@ -413,7 +411,9 @@ public class PublishDnsUpdatesActionTest {
     assertThat(emailMessage.subject()).isEqualTo("Subj");
     assertThat(emailMessage.body())
         .isEqualTo(
-            "Body The Registrar example.xn--q9jyb4c domain awesomeRegistry registry@test.com");
+            "Body The Registrar example.xn--q9jyb4c domain registry@test.com awesomeRegistry");
+    assertThat(emailMessage.bccs().stream().findFirst().get().toString())
+        .isEqualTo("registry-cc@test.com");
   }
 
   @Test
@@ -429,7 +429,9 @@ public class PublishDnsUpdatesActionTest {
     assertThat(emailMessage.subject()).isEqualTo("Subj");
     assertThat(emailMessage.body())
         .isEqualTo(
-            "Body The Registrar ns1.example.xn--q9jyb4c host awesomeRegistry registry@test.com");
+            "Body The Registrar ns1.example.xn--q9jyb4c host registry@test.com awesomeRegistry");
+    assertThat(emailMessage.bccs().stream().findFirst().get().toString())
+        .isEqualTo("registry-cc@test.com");
   }
 
   @Test
