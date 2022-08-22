@@ -38,7 +38,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import google.registry.dns.DnsMetrics.ActionStatus;
@@ -55,11 +54,11 @@ import google.registry.testing.CloudTasksHelper.TaskMatcher;
 import google.registry.testing.FakeClock;
 import google.registry.testing.FakeLockHandler;
 import google.registry.testing.FakeResponse;
-import google.registry.ui.server.SendEmailUtils;
 import google.registry.util.EmailMessage;
 import google.registry.util.SendEmailService;
 import java.util.Optional;
 import java.util.Set;
+import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -84,17 +83,9 @@ public class PublishDnsUpdatesActionTest {
   private final CloudTasksHelper cloudTasksHelper = new CloudTasksHelper();
   private PublishDnsUpdatesAction action;
   private final SendEmailService emailService = mock(SendEmailService.class);
-  private SendEmailUtils sendEmailUtils;
 
   @BeforeEach
   void beforeEach() throws Exception {
-    sendEmailUtils =
-        new SendEmailUtils(
-            new InternetAddress("outgoing@registry.example"),
-            "UnitTest Registry",
-            ImmutableList.of("notification@test.example", "notification2@test.example"),
-            emailService);
-
     createTld("xn--q9jyb4c");
     persistResource(
         Registry.get("xn--q9jyb4c")
@@ -109,17 +100,18 @@ public class PublishDnsUpdatesActionTest {
     clock.advanceOneMilli();
   }
 
-  private PublishDnsUpdatesAction createAction(String tld, Set<String> domains, Set<String> hosts) {
+  private PublishDnsUpdatesAction createAction(String tld, Set<String> domains, Set<String> hosts)
+      throws Exception {
     return createAction(tld, domains, hosts, 0, "correctWriter", 1, 1, lockHandler);
   }
 
   private PublishDnsUpdatesAction createAction(
-      String tld, Set<String> domains, Set<String> hosts, Integer retryCount) {
+      String tld, Set<String> domains, Set<String> hosts, Integer retryCount) throws Exception {
     return createAction(tld, domains, hosts, retryCount, "correctWriter", 1, 1, lockHandler);
   }
 
   private PublishDnsUpdatesAction createActionBadDnsWriter(
-      String tld, Set<String> domains, Set<String> hosts) {
+      String tld, Set<String> domains, Set<String> hosts) throws Exception {
     return createAction(tld, domains, hosts, 0, "wrongWriter", 1, 1, lockHandler);
   }
 
@@ -129,7 +121,8 @@ public class PublishDnsUpdatesActionTest {
       Set<String> hosts,
       int lockIndex,
       int numPublishLocks,
-      LockHandler lockHandler) {
+      LockHandler lockHandler)
+      throws Exception {
     return createAction(
         tld, domains, hosts, 0, "correctWriter", lockIndex, numPublishLocks, lockHandler);
   }
@@ -142,7 +135,10 @@ public class PublishDnsUpdatesActionTest {
       String dnsWriterString,
       int lockIndex,
       int numPublishLocks,
-      LockHandler lockHandler) {
+      LockHandler lockHandler)
+      throws AddressException {
+    InternetAddress outgoingRegistry = new InternetAddress("outgoing@registry.example");
+
     return new PublishDnsUpdatesAction(
         dnsWriterString,
         clock.nowUtc().minusHours(1),
@@ -155,8 +151,10 @@ public class PublishDnsUpdatesActionTest {
         Duration.standardSeconds(10),
         "Subj",
         "Body %1$s %2$s %3$s %4$s %5$s",
-        "registry@test.com",
         "awesomeRegistry",
+        "registry@test.com",
+        "registry-cc@test.com",
+        outgoingRegistry,
         Optional.ofNullable(retryCount),
         Optional.empty(),
         dnsQueue,
@@ -165,12 +163,12 @@ public class PublishDnsUpdatesActionTest {
         lockHandler,
         clock,
         cloudTasksHelper.getTestCloudTasksUtils(),
-        sendEmailUtils,
+        emailService,
         response);
   }
 
   @Test
-  void testHost_published() {
+  void testHost_published() throws Exception {
     action =
         createAction("xn--q9jyb4c", ImmutableSet.of(), ImmutableSet.of("ns1.example.xn--q9jyb4c"));
     action.run();
@@ -198,7 +196,7 @@ public class PublishDnsUpdatesActionTest {
   }
 
   @Test
-  void testDomain_published() {
+  void testDomain_published() throws Exception {
     action = createAction("xn--q9jyb4c", ImmutableSet.of("example.xn--q9jyb4c"), ImmutableSet.of());
     action.run();
 
@@ -225,7 +223,7 @@ public class PublishDnsUpdatesActionTest {
   }
 
   @Test
-  void testAction_acquiresCorrectLock() {
+  void testAction_acquiresCorrectLock() throws Exception {
     persistResource(Registry.get("xn--q9jyb4c").asBuilder().setNumDnsPublishLocks(4).build());
     LockHandler mockLockHandler = mock(LockHandler.class);
     when(mockLockHandler.executeWithLocks(any(), any(), any(), any())).thenReturn(true);
@@ -246,7 +244,7 @@ public class PublishDnsUpdatesActionTest {
   }
 
   @Test
-  void testPublish_commitFails() {
+  void testPublish_commitFails() throws Exception {
     ImmutableSet<String> hosts =
         ImmutableSet.of(
             "ns1.example.xn--q9jyb4c", "ns2.example.xn--q9jyb4c", "ns1.example2.xn--q9jyb4c");
@@ -277,7 +275,7 @@ public class PublishDnsUpdatesActionTest {
   }
 
   @Test
-  void testTaskFails_splitsBatch() {
+  void testTaskFails_splitsBatch() throws Exception {
     ImmutableSet<String> domains =
         ImmutableSet.of(
             "example1.xn--q9jyb4c",
@@ -315,7 +313,7 @@ public class PublishDnsUpdatesActionTest {
   }
 
   @Test
-  void testTaskFails_splitsBatch5Names() {
+  void testTaskFails_splitsBatch5Names() throws Exception {
     ImmutableSet<String> domains =
         ImmutableSet.of(
             "example1.xn--q9jyb4c",
@@ -354,7 +352,7 @@ public class PublishDnsUpdatesActionTest {
   }
 
   @Test
-  void testTaskFails_singleHostSingleDomain() {
+  void testTaskFails_singleHostSingleDomain() throws Exception {
     action =
         createAction(
             "xn--q9jyb4c",
@@ -391,7 +389,7 @@ public class PublishDnsUpdatesActionTest {
   }
 
   @Test
-  void testTaskFailsAfterTenRetries_doesNotRetry() {
+  void testTaskFailsAfterTenRetries_doesNotRetry() throws Exception {
     action =
         createAction(
             "xn--q9jyb4c", ImmutableSet.of(), ImmutableSet.of("ns1.example.xn--q9jyb4c"), 10);
@@ -402,7 +400,7 @@ public class PublishDnsUpdatesActionTest {
   }
 
   @Test
-  void testDomainDnsUpdateRetriesExhausted_emailIsSent() {
+  void testDomainDnsUpdateRetriesExhausted_emailIsSent() throws Exception {
     action =
         createAction("xn--q9jyb4c", ImmutableSet.of("example.xn--q9jyb4c"), ImmutableSet.of(), 10);
     doThrow(new RuntimeException()).when(dnsWriter).commit();
@@ -413,11 +411,13 @@ public class PublishDnsUpdatesActionTest {
     assertThat(emailMessage.subject()).isEqualTo("Subj");
     assertThat(emailMessage.body())
         .isEqualTo(
-            "Body The Registrar example.xn--q9jyb4c domain awesomeRegistry registry@test.com");
+            "Body The Registrar example.xn--q9jyb4c domain registry@test.com awesomeRegistry");
+    assertThat(emailMessage.bccs().stream().findFirst().get().toString())
+        .isEqualTo("registry-cc@test.com");
   }
 
   @Test
-  void testHostDnsUpdateRetriesExhausted_emailIsSent() {
+  void testHostDnsUpdateRetriesExhausted_emailIsSent() throws Exception {
     action =
         createAction(
             "xn--q9jyb4c", ImmutableSet.of(), ImmutableSet.of("ns1.example.xn--q9jyb4c"), 10);
@@ -429,7 +429,9 @@ public class PublishDnsUpdatesActionTest {
     assertThat(emailMessage.subject()).isEqualTo("Subj");
     assertThat(emailMessage.body())
         .isEqualTo(
-            "Body The Registrar ns1.example.xn--q9jyb4c host awesomeRegistry registry@test.com");
+            "Body The Registrar ns1.example.xn--q9jyb4c host registry@test.com awesomeRegistry");
+    assertThat(emailMessage.bccs().stream().findFirst().get().toString())
+        .isEqualTo("registry-cc@test.com");
   }
 
   @Test
@@ -447,7 +449,7 @@ public class PublishDnsUpdatesActionTest {
   }
 
   @Test
-  void testHostAndDomain_published() {
+  void testHostAndDomain_published() throws Exception {
     ImmutableSet<String> hosts =
         ImmutableSet.of(
             "ns1.example.xn--q9jyb4c", "ns2.example.xn--q9jyb4c", "ns1.example2.xn--q9jyb4c");
@@ -483,7 +485,7 @@ public class PublishDnsUpdatesActionTest {
   }
 
   @Test
-  void testWrongTld_notPublished() {
+  void testWrongTld_notPublished() throws Exception {
     action =
         createAction(
             "xn--q9jyb4c",
@@ -513,7 +515,7 @@ public class PublishDnsUpdatesActionTest {
   }
 
   @Test
-  void testLockIsntAvailable() {
+  void testLockIsntAvailable() throws Exception {
     action =
         createActionWithCustomLocks(
             "xn--q9jyb4c",
@@ -541,7 +543,7 @@ public class PublishDnsUpdatesActionTest {
   }
 
   @Test
-  void testParam_invalidLockIndex() {
+  void testParam_invalidLockIndex() throws Exception {
     persistResource(Registry.get("xn--q9jyb4c").asBuilder().setNumDnsPublishLocks(4).build());
     action =
         createActionWithCustomLocks(
@@ -569,7 +571,7 @@ public class PublishDnsUpdatesActionTest {
   }
 
   @Test
-  void testRegistryParam_mismatchedMaxLocks() {
+  void testRegistryParam_mismatchedMaxLocks() throws Exception {
     persistResource(Registry.get("xn--q9jyb4c").asBuilder().setNumDnsPublishLocks(4).build());
     action =
         createActionWithCustomLocks(
@@ -597,7 +599,7 @@ public class PublishDnsUpdatesActionTest {
   }
 
   @Test
-  void testWrongDnsWriter() {
+  void testWrongDnsWriter() throws Exception {
     action =
         createActionBadDnsWriter(
             "xn--q9jyb4c",

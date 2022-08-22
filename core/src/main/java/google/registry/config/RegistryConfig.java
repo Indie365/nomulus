@@ -1325,6 +1325,12 @@ public final class RegistryConfig {
     }
 
     @Provides
+    @Config("registryCcEmail")
+    public static String provideRegistryCcEmail(RegistryConfigSettings config) {
+      return config.dnsUpdate.registryCcEmail;
+    }
+
+    @Provides
     @Config("allowedEcdsaCurves")
     public static ImmutableSet<String> provideAllowedEcdsaCurves(RegistryConfigSettings config) {
       return ImmutableSet.copyOf(config.sslCertificateValidation.allowedEcdsaCurves);
