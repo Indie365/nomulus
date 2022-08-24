@@ -19,7 +19,7 @@ import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.JsonFactory;
-import com.google.api.client.json.jackson2.JacksonFactory;
+import com.google.api.client.json.gson.GsonFactory;
 import com.google.appengine.api.urlfetch.URLFetchService;
 import com.google.appengine.api.urlfetch.URLFetchServiceFactory;
 import com.google.appengine.api.users.UserService;
@@ -73,7 +73,7 @@ public final class Modules {
   public static final class Jackson2Module {
     @Provides
     static JsonFactory provideJsonFactory() {
-      return JacksonFactory.getDefaultInstance();
+      return GsonFactory.getDefaultInstance();
     }
   }
 
