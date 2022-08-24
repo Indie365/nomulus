@@ -17,6 +17,7 @@ package google.registry.flows.domain.token;
 import static com.google.common.base.Preconditions.checkArgument;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 
+import com.google.common.base.Enums;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -25,10 +26,12 @@ import com.google.common.net.InternetDomainName;
 import google.registry.flows.EppException;
 import google.registry.flows.EppException.AssociationProhibitsOperationException;
 import google.registry.flows.EppException.AuthorizationErrorException;
+import google.registry.flows.EppException.ParameterValueSyntaxErrorException;
 import google.registry.flows.EppException.StatusProhibitsOperationException;
 import google.registry.model.domain.Domain;
 import google.registry.model.domain.DomainCommand;
 import google.registry.model.domain.token.AllocationToken;
+import google.registry.model.domain.token.AllocationToken.StaticTokens;
 import google.registry.model.domain.token.AllocationToken.TokenStatus;
 import google.registry.model.domain.token.AllocationToken.TokenType;
 import google.registry.model.domain.token.AllocationTokenExtension;
@@ -109,6 +112,10 @@ public class AllocationTokenFlowUtils {
   private void validateToken(
       InternetDomainName domainName, AllocationToken token, String registrarId, DateTime now)
       throws EppException {
+    if (token.getTokenType().equals(TokenType.STATIC)
+        && !Enums.getIfPresent(StaticTokens.class, token.getToken()).isPresent()) {
+      throw new StaticTokenNotFoundException();
+    }
     if (!token.getAllowedRegistrarIds().isEmpty()
         && !token.getAllowedRegistrarIds().contains(registrarId)) {
       throw new AllocationTokenNotValidForRegistrarException();
@@ -136,6 +143,10 @@ public class AllocationTokenFlowUtils {
       // an InvalidAllocationTokenException before the database load attempt fails.
       // See https://tools.ietf.org/html/draft-ietf-regext-allocation-token-04#section-2.1
       throw new InvalidAllocationTokenException();
+    }
+    // Static tokens are not stored in DB
+    if (Enums.getIfPresent(StaticTokens.class, token).isPresent()) {
+      return new AllocationToken.Builder().setToken(token).setTokenType(TokenType.STATIC).build();
     }
     Optional<AllocationToken> maybeTokenEntity =
         tm().transact(() -> tm().loadByKeyIfPresent(VKey.create(AllocationToken.class, token)));
@@ -187,6 +198,14 @@ public class AllocationTokenFlowUtils {
         tokenCustomLogic.validateToken(existingDomain, tokenEntity, registry, registrarId, now));
   }
 
+  public static void verifyTokenAllowedOnDomain(
+      Domain domain, Optional<AllocationToken> allocationToken) throws EppException {
+    if (domain.getCurrentPackageToken().isPresent()
+        && (allocationToken.isPresent() && !allocationToken.get().isPackageRemove())) {
+      throw new MissingRemovePackageTokenOnPackageDomainException();
+    }
+  }
+
   // Note: exception messages should be <= 32 characters long for domain check results
 
   /** The allocation token is not currently valid. */
@@ -232,6 +251,20 @@ public class AllocationTokenFlowUtils {
   public static class InvalidAllocationTokenException extends AuthorizationErrorException {
     InvalidAllocationTokenException() {
       super("The allocation token is invalid");
+    }
+  }
+
+  public static class StaticTokenNotFoundException extends ParameterValueSyntaxErrorException {
+    StaticTokenNotFoundException() {
+      super("Static token doesn't exist");
+    }
+  }
+
+  /** The REMOVEPACKAGE token is missing on a renew package domain command */
+  public static class MissingRemovePackageTokenOnPackageDomainException
+      extends AssociationProhibitsOperationException {
+    MissingRemovePackageTokenOnPackageDomainException() {
+      super("Not allowed to renew package promo domain if REMOVEPACKAGE token is not present");
     }
   }
 }

@@ -155,26 +155,9 @@ public final class DomainRenewFlow implements TransactionalFlow {
   @Inject DomainPricingLogic pricingLogic;
   @Inject DomainRenewFlow() {}
 
-  @Override
-  public EppResponse run() throws EppException {
-    extensionManager.register(
-        FeeRenewCommandExtension.class, MetadataExtension.class, AllocationTokenExtension.class);
-    flowCustomLogic.beforeValidation();
-    validateRegistrarIsLoggedIn(registrarId);
-    verifyRegistrarIsActive(registrarId);
-    extensionManager.validate();
-    DateTime now = tm().getTransactionTime();
-    Renew command = (Renew) resourceCommand;
-    // Loads the target resource if it exists
-    Domain existingDomain = loadAndVerifyExistence(Domain.class, targetId, now);
-    Optional<AllocationToken> allocationToken =
-        allocationTokenFlowUtils.verifyAllocationTokenIfPresent(
-            existingDomain,
-            Registry.get(existingDomain.getTld()),
-            registrarId,
-            now,
-            eppInput.getSingleExtension(AllocationTokenExtension.class));
-    verifyRenewAllowed(authInfo, existingDomain, command);
+  private EppResponse process(
+      DateTime now, Renew command, Domain existingDomain, Optional<AllocationToken> allocationToken)
+      throws EppException {
     int years = command.getPeriod().getValue();
     DateTime newExpirationTime =
         leapSafeAddYears(existingDomain.getRegistrationExpirationTime(), years);  // Uncapped
@@ -277,6 +260,29 @@ public final class DomainRenewFlow implements TransactionalFlow {
         .build();
   }
 
+  @Override
+  public EppResponse run() throws EppException {
+    extensionManager.register(
+        FeeRenewCommandExtension.class, MetadataExtension.class, AllocationTokenExtension.class);
+    flowCustomLogic.beforeValidation();
+    validateRegistrarIsLoggedIn(registrarId);
+    verifyRegistrarIsActive(registrarId);
+    extensionManager.validate();
+    DateTime now = tm().getTransactionTime();
+    Renew command = (Renew) resourceCommand;
+    // Loads the target resource if it exists
+    Domain existingDomain = loadAndVerifyExistence(Domain.class, targetId, now);
+    Optional<AllocationToken> allocationToken =
+        allocationTokenFlowUtils.verifyAllocationTokenIfPresent(
+            existingDomain,
+            Registry.get(existingDomain.getTld()),
+            registrarId,
+            now,
+            eppInput.getSingleExtension(AllocationTokenExtension.class));
+    verifyRenewAllowed(authInfo, existingDomain, command, allocationToken);
+    return process(now, command, existingDomain, allocationToken);
+  }
+
   private DomainHistory buildDomainHistory(
       Domain newDomain, DateTime now, Period period, Duration renewGracePeriod) {
     Optional<MetadataExtension> metadataExtensionOpt =
@@ -302,10 +308,15 @@ public final class DomainRenewFlow implements TransactionalFlow {
         .build();
   }
 
-  private void verifyRenewAllowed(Optional<AuthInfo> authInfo, Domain existingDomain, Renew command)
+  private void verifyRenewAllowed(
+      Optional<AuthInfo> authInfo,
+      Domain existingDomain,
+      Renew command,
+      Optional<AllocationToken> allocationToken)
       throws EppException {
     verifyOptionalAuthInfo(authInfo, existingDomain);
     verifyNoDisallowedStatuses(existingDomain, RENEW_DISALLOWED_STATUSES);
+    AllocationTokenFlowUtils.verifyTokenAllowedOnDomain(existingDomain, allocationToken);
     if (!isSuperuser) {
       verifyResourceOwnership(registrarId, existingDomain);
       checkAllowedAccessToTld(registrarId, existingDomain.getTld());

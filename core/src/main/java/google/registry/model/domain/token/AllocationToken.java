@@ -25,6 +25,7 @@ import static google.registry.util.CollectionUtils.nullToEmptyImmutableCopy;
 import static google.registry.util.PreconditionsUtils.checkArgumentNotNull;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Enums;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
@@ -110,7 +111,8 @@ public class AllocationToken extends BackupGroupRoot implements Buildable {
   public enum TokenType {
     PACKAGE,
     SINGLE_USE,
-    UNLIMITED_USE
+    UNLIMITED_USE,
+    STATIC
   }
 
   /** The status of this token with regard to any potential promotion. */
@@ -123,6 +125,12 @@ public class AllocationToken extends BackupGroupRoot implements Buildable {
     ENDED,
     /** The promotion was manually invalidated. */
     CANCELLED
+  }
+
+  /** Static tokens are not stored in DB, but used as a signals */
+  public enum StaticTokens {
+    /** Special static token to trigger domain removal from package promotion */
+    REMOVEPACKAGE
   }
 
   /** The allocation token string. */
@@ -255,6 +263,11 @@ public class AllocationToken extends BackupGroupRoot implements Buildable {
     return registrationBehavior;
   }
 
+  public boolean isPackageRemove() {
+    return TokenType.STATIC.equals(tokenType)
+        && StaticTokens.REMOVEPACKAGE.toString().equals(token);
+  }
+
   @Override
   public VKey<AllocationToken> createVKey() {
     return VKey.create(AllocationToken.class, getToken(), Key.create(this));
@@ -276,6 +289,12 @@ public class AllocationToken extends BackupGroupRoot implements Buildable {
 
     @Override
     public AllocationToken build() {
+      checkArgument(
+          TokenType.STATIC.equals(getInstance().tokenType)
+              ? Enums.getIfPresent(StaticTokens.class, getInstance().token).isPresent()
+              : true,
+          "Static allocation tokens must have token name listed in static token enum");
+
       checkArgumentNotNull(getInstance().tokenType, "Token type must be specified");
       checkArgument(!Strings.isNullOrEmpty(getInstance().token), "Token must not be null or empty");
       checkArgument(
