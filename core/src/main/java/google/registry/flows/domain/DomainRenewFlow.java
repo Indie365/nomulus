@@ -119,6 +119,10 @@ import org.joda.time.Duration;
  * @error {@link DomainFlowUtils.UnsupportedFeeAttributeException}
  * @error {@link DomainRenewFlow.IncorrectCurrentExpirationDateException}
  * @error {@link
+ *     google.registry.flows.domain.token.AllocationTokenFlowUtils.MissingRemovePackageTokenOnPackageDomainException}
+ * @error {@link
+ *     google.registry.flows.domain.token.AllocationTokenFlowUtils.RemovePackageTokenOnNonPackageDomainException}
+ * @error {@link
  *     google.registry.flows.domain.token.AllocationTokenFlowUtils.AllocationTokenNotValidForDomainException}
  * @error {@link
  *     google.registry.flows.domain.token.AllocationTokenFlowUtils.InvalidAllocationTokenException}
@@ -174,7 +178,7 @@ public final class DomainRenewFlow implements TransactionalFlow {
             registrarId,
             now,
             eppInput.getSingleExtension(AllocationTokenExtension.class));
-    verifyRenewAllowed(authInfo, existingDomain, command);
+    verifyRenewAllowed(authInfo, existingDomain, command, allocationToken);
     int years = command.getPeriod().getValue();
     DateTime newExpirationTime =
         leapSafeAddYears(existingDomain.getRegistrationExpirationTime(), years);  // Uncapped
@@ -302,10 +306,15 @@ public final class DomainRenewFlow implements TransactionalFlow {
         .build();
   }
 
-  private void verifyRenewAllowed(Optional<AuthInfo> authInfo, Domain existingDomain, Renew command)
+  private void verifyRenewAllowed(
+      Optional<AuthInfo> authInfo,
+      Domain existingDomain,
+      Renew command,
+      Optional<AllocationToken> allocationToken)
       throws EppException {
     verifyOptionalAuthInfo(authInfo, existingDomain);
     verifyNoDisallowedStatuses(existingDomain, RENEW_DISALLOWED_STATUSES);
+    AllocationTokenFlowUtils.verifyTokenAllowedOnDomain(existingDomain, allocationToken);
     if (!isSuperuser) {
       verifyResourceOwnership(registrarId, existingDomain);
       checkAllowedAccessToTld(registrarId, existingDomain.getTld());

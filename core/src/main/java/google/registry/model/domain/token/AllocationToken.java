@@ -26,6 +26,7 @@ import static google.registry.util.PreconditionsUtils.checkArgumentNotNull;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
@@ -48,6 +49,7 @@ import google.registry.model.reporting.HistoryEntry;
 import google.registry.persistence.DomainHistoryVKey;
 import google.registry.persistence.VKey;
 import google.registry.persistence.WithStringVKey;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nullable;
@@ -57,6 +59,7 @@ import javax.persistence.Column;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.Table;
+import javax.persistence.Transient;
 import org.joda.time.DateTime;
 
 /** An entity representing an allocation token. */
@@ -87,6 +90,19 @@ public class AllocationToken extends BackupGroupRoot implements Buildable {
           .putAll(VALID, ENDED, CANCELLED)
           .build();
 
+  private static final Map<String, AllocationToken> BEHAVIORAL_TOKENS =
+      ImmutableMap.of(
+          "__REMOVEPACKAGE__",
+          new AllocationToken.Builder()
+              .setTokenBehavior(TokenBehavior.__REMOVEPACKAGE__)
+              .setTokenType(TokenType.UNLIMITED_USE)
+              .setToken(TokenBehavior.__REMOVEPACKAGE__.toString())
+              .build());
+
+  public static Optional<AllocationToken> maybeGetStaticTokenInstance(String name) {
+    return Optional.ofNullable(BEHAVIORAL_TOKENS.get(name));
+  }
+
   /** Any special behavior that should be used when registering domains using this token. */
   public enum RegistrationBehavior {
     /** No special behavior */
@@ -110,7 +126,12 @@ public class AllocationToken extends BackupGroupRoot implements Buildable {
   public enum TokenType {
     PACKAGE,
     SINGLE_USE,
-    UNLIMITED_USE
+    UNLIMITED_USE,
+  }
+
+  public enum TokenBehavior {
+    DEFAULT,
+    __REMOVEPACKAGE__
   }
 
   /** The status of this token with regard to any potential promotion. */
@@ -165,6 +186,9 @@ public class AllocationToken extends BackupGroupRoot implements Buildable {
 
   /** Up to how many years of initial creation receive the discount (if any). Defaults to 1. */
   int discountYears = 1;
+
+  /** To separate package tokens (default) from static tokens */
+  @Transient TokenBehavior tokenBehavior = TokenBehavior.DEFAULT;
 
   /** The type of the token, either single-use or unlimited-use. */
   @Enumerated(EnumType.STRING)
@@ -253,6 +277,10 @@ public class AllocationToken extends BackupGroupRoot implements Buildable {
 
   public RegistrationBehavior getRegistrationBehavior() {
     return registrationBehavior;
+  }
+
+  public TokenBehavior getTokenBehavior() {
+    return tokenBehavior;
   }
 
   @Override
@@ -375,6 +403,11 @@ public class AllocationToken extends BackupGroupRoot implements Buildable {
     public Builder setTokenType(TokenType tokenType) {
       checkState(getInstance().tokenType == null, "Token type can only be set once");
       getInstance().tokenType = tokenType;
+      return this;
+    }
+
+    public Builder setTokenBehavior(TokenBehavior tokenBehavior) {
+      getInstance().tokenBehavior = tokenBehavior;
       return this;
     }
 

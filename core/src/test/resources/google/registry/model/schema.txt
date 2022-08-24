@@ -222,6 +222,7 @@ class google.registry.model.domain.token.AllocationToken {
   double discountFraction;
   google.registry.model.common.TimedTransitionProperty<google.registry.model.domain.token.AllocationToken$TokenStatus> tokenStatusTransitions;
   google.registry.model.domain.token.AllocationToken$RegistrationBehavior registrationBehavior;
+  google.registry.model.domain.token.AllocationToken$TokenBehavior tokenBehavior;
   google.registry.model.domain.token.AllocationToken$TokenType tokenType;
   google.registry.persistence.DomainHistoryVKey redemptionHistoryEntry;
   int discountYears;
@@ -233,6 +234,10 @@ enum google.registry.model.domain.token.AllocationToken$RegistrationBehavior {
   ANCHOR_TENANT;
   BYPASS_TLD_STATE;
   DEFAULT;
+}
+enum google.registry.model.domain.token.AllocationToken$TokenBehavior {
+  DEFAULT;
+  __REMOVEPACKAGE__;
 }
 enum google.registry.model.domain.token.AllocationToken$TokenStatus {
   CANCELLED;
