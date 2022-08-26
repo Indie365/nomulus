@@ -28,7 +28,6 @@ import google.registry.model.index.ForeignKeyIndex.ForeignKeyContactIndex;
 import google.registry.model.index.ForeignKeyIndex.ForeignKeyDomainIndex;
 import google.registry.model.index.ForeignKeyIndex.ForeignKeyHostIndex;
 import google.registry.model.rde.RdeRevision;
-import google.registry.model.registrar.Registrar;
 import google.registry.model.reporting.HistoryEntry;
 import google.registry.model.server.Lock;
 import google.registry.model.server.ServerSecret;
@@ -53,7 +52,6 @@ public class ClassPathManagerTest {
     assertThat(ClassPathManager.getClass("AllocationToken")).isEqualTo(AllocationToken.class);
     assertThat(ClassPathManager.getClass("RdeRevision")).isEqualTo(RdeRevision.class);
     assertThat(ClassPathManager.getClass("Host")).isEqualTo(Host.class);
-    assertThat(ClassPathManager.getClass("Registrar")).isEqualTo(Registrar.class);
     assertThat(ClassPathManager.getClass("ContactResource")).isEqualTo(ContactResource.class);
     assertThat(ClassPathManager.getClass("GaeUserIdConverter")).isEqualTo(GaeUserIdConverter.class);
     assertThat(ClassPathManager.getClass("EppResourceIndexBucket"))
@@ -105,7 +103,6 @@ public class ClassPathManagerTest {
     assertThat(ClassPathManager.getClassName(AllocationToken.class)).isEqualTo("AllocationToken");
     assertThat(ClassPathManager.getClassName(RdeRevision.class)).isEqualTo("RdeRevision");
     assertThat(ClassPathManager.getClassName(Host.class)).isEqualTo("Host");
-    assertThat(ClassPathManager.getClassName(Registrar.class)).isEqualTo("Registrar");
     assertThat(ClassPathManager.getClassName(ContactResource.class)).isEqualTo("ContactResource");
     assertThat(ClassPathManager.getClassName(GaeUserIdConverter.class))
         .isEqualTo("GaeUserIdConverter");

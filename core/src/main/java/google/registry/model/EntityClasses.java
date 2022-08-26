@@ -58,7 +58,6 @@ public final class EntityClasses {
           HostHistory.class,
           Lock.class,
           RdeRevision.class,
-          Registrar.class,
           ServerSecret.class);
 
   private EntityClasses() {}
