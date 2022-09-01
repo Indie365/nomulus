@@ -15,6 +15,7 @@
 package google.registry.flows.domain.token;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 
 import com.google.common.base.Strings;
@@ -26,8 +27,11 @@ import google.registry.flows.EppException;
 import google.registry.flows.EppException.AssociationProhibitsOperationException;
 import google.registry.flows.EppException.AuthorizationErrorException;
 import google.registry.flows.EppException.StatusProhibitsOperationException;
+import google.registry.model.billing.BillingEvent.Recurring;
+import google.registry.model.billing.BillingEvent.RenewalPriceBehavior;
 import google.registry.model.domain.Domain;
 import google.registry.model.domain.DomainCommand;
+import google.registry.model.domain.DomainCommand.Renew;
 import google.registry.model.domain.token.AllocationToken;
 import google.registry.model.domain.token.AllocationToken.TokenBehavior;
 import google.registry.model.domain.token.AllocationToken.TokenStatus;
@@ -200,7 +204,7 @@ public class AllocationTokenFlowUtils {
   }
 
   public static void verifyTokenAllowedOnDomain(
-      Domain domain, Optional<AllocationToken> allocationToken) throws EppException {
+      Domain domain, Renew command, Optional<AllocationToken> allocationToken) throws EppException {
 
     boolean domainHasPackageToken = domain.getCurrentPackageToken().isPresent();
     boolean hasRemovePackageToken =
@@ -212,6 +216,41 @@ public class AllocationTokenFlowUtils {
     } else if (!hasRemovePackageToken && domainHasPackageToken) {
       throw new MissingRemovePackageTokenOnPackageDomainException();
     }
+
+    if (command.getPeriod().getValue() < 1) {
+      throw new RemovePackageTokenPeriodNotValidException();
+    }
+  }
+
+  public static Domain applyToken(Domain domain, Optional<AllocationToken> allocationToken) {
+    if (allocationToken.isPresent()
+        && TokenBehavior.REMOVE_PACKAGE.equals(allocationToken.get().getTokenBehavior())) {
+      // Reset renewal price behavior to Default and null out renewal price, to force next charge be
+      // solely on Domain/TLD...
+      Recurring newRecurringBillingEvent =
+          tm().loadByKey(domain.getAutorenewBillingEvent())
+              .asBuilder()
+              .setRenewalPriceBehavior(RenewalPriceBehavior.DEFAULT)
+              .setRenewalPrice(null)
+              .build();
+
+      // Save new recurring billing event and synchronize changes in order to allow any subsequent
+      // logic that relies on fetching the event from the store to succeed
+      tm().transact(
+              () -> {
+                tm().put(newRecurringBillingEvent);
+              });
+      jpaTm().getEntityManager().flush();
+      jpaTm().getEntityManager().clear();
+
+      // Remove current package token
+      return domain
+          .asBuilder()
+          .setCurrentPackageToken(null)
+          .setAutorenewBillingEvent(newRecurringBillingEvent.createVKey())
+          .build();
+    }
+    return domain;
   }
 
   // Note: exception messages should be <= 32 characters long for domain check results
@@ -275,6 +314,14 @@ public class AllocationTokenFlowUtils {
       extends AssociationProhibitsOperationException {
     RemovePackageTokenOnNonPackageDomainException() {
       super("__REMOVEPACKAGE__ token is not allowed on non package domains");
+    }
+  }
+
+  /** The __REMOVEPACKAGE__ token requires at least a year period of renewal */
+  public static class RemovePackageTokenPeriodNotValidException
+      extends AssociationProhibitsOperationException {
+    RemovePackageTokenPeriodNotValidException() {
+      super("At least a year period is required with __REMOVEPACKAGE__ token");
     }
   }
 }
