@@ -30,6 +30,7 @@ import static google.registry.flows.domain.DomainFlowUtils.validateFeeChallenge;
 import static google.registry.flows.domain.DomainFlowUtils.validateRegistrationPeriod;
 import static google.registry.flows.domain.DomainFlowUtils.verifyRegistrarIsActive;
 import static google.registry.flows.domain.DomainFlowUtils.verifyUnitIsYears;
+import static google.registry.flows.domain.token.AllocationTokenFlowUtils.adjustDomainBasedOnAllocationToken;
 import static google.registry.flows.domain.token.AllocationTokenFlowUtils.verifyTokenAllowedOnDomain;
 import static google.registry.model.reporting.HistoryEntry.Type.DOMAIN_RENEW;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
@@ -180,6 +181,10 @@ public final class DomainRenewFlow implements TransactionalFlow {
             now,
             eppInput.getSingleExtension(AllocationTokenExtension.class));
     verifyRenewAllowed(authInfo, existingDomain, command, allocationToken);
+
+    // If client passed an applicable static token this updates the domain
+    existingDomain = adjustDomainBasedOnAllocationToken(existingDomain, allocationToken);
+
     int years = command.getPeriod().getValue();
     DateTime newExpirationTime =
         leapSafeAddYears(existingDomain.getRegistrationExpirationTime(), years);  // Uncapped
@@ -315,14 +320,14 @@ public final class DomainRenewFlow implements TransactionalFlow {
       throws EppException {
     verifyOptionalAuthInfo(authInfo, existingDomain);
     verifyNoDisallowedStatuses(existingDomain, RENEW_DISALLOWED_STATUSES);
-    // We only allow __REMOVE_PACKAGE__ token on promo package domains for now
-    verifyTokenAllowedOnDomain(existingDomain, allocationToken);
     if (!isSuperuser) {
       verifyResourceOwnership(registrarId, existingDomain);
       checkAllowedAccessToTld(registrarId, existingDomain.getTld());
       checkHasBillingAccount(registrarId, existingDomain.getTld());
     }
     verifyUnitIsYears(command.getPeriod());
+    // We only allow __REMOVE_PACKAGE__ token on promo package domains for now
+    verifyTokenAllowedOnDomain(existingDomain, command, allocationToken);
     // If the date they specify doesn't match the expiration, fail. (This is an idempotence check).
     if (!command.getCurrentExpirationDate().equals(
         existingDomain.getRegistrationExpirationTime().toLocalDate())) {
@@ -344,7 +349,17 @@ public final class DomainRenewFlow implements TransactionalFlow {
         .setPeriodYears(years)
         .setCost(renewCost)
         .setEventTime(now)
-        .setAllocationToken(allocationToken.map(AllocationToken::createVKey).orElse(null))
+        .setAllocationToken(
+            allocationToken
+                .map(
+                    aT -> {
+                      try {
+                        return aT.createVKey();
+                      } catch (IllegalArgumentException e) {
+                        return null;
+                      }
+                    })
+                .orElse(null))
         .setBillingTime(now.plus(Registry.get(tld).getRenewGracePeriodLength()))
         .setDomainHistoryId(
             new DomainHistoryId(domainHistoryKey.getParent().getName(), domainHistoryKey.getId()))

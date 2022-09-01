@@ -49,9 +49,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
+import com.google.common.truth.Truth8;
 import com.googlecode.objectify.Key;
 import google.registry.flows.EppException;
 import google.registry.flows.EppRequestSource;
+import google.registry.flows.FlowUtils.GenericXmlSyntaxErrorException;
 import google.registry.flows.FlowUtils.NotLoggedInException;
 import google.registry.flows.FlowUtils.UnknownCurrencyEppException;
 import google.registry.flows.ResourceFlowTestCase;
@@ -1260,5 +1262,48 @@ class DomainRenewFlowTest extends ResourceFlowTestCase<DomainRenewFlow, Domain> 
     EppException thrown =
         assertThrows(RemovePackageTokenOnNonPackageDomainException.class, this::runFlow);
     assertAboutEppExceptions().that(thrown).marshalsToXml();
+  }
+
+  @Test
+  void testSuccesfullyAppliesRemovePackageToken() throws Exception {
+    AllocationToken token =
+        persistResource(
+            new AllocationToken.Builder()
+                .setToken("abc123")
+                .setTokenType(PACKAGE)
+                .setAllowedRegistrarIds(ImmutableSet.of("TheRegistrar"))
+                .setAllowedTlds(ImmutableSet.of("tld"))
+                .setRenewalPriceBehavior(SPECIFIED)
+                .build());
+    persistDomain(SPECIFIED, Money.of(USD, 2));
+    persistResource(
+        reloadResourceByForeignKey()
+            .asBuilder()
+            .setCurrentPackageToken(token.createVKey())
+            .build());
+    setEppInput(
+        "domain_renew_allocationtoken.xml",
+        ImmutableMap.of("DOMAIN", "example.tld", "YEARS", "2", "TOKEN", "__REMOVEPACKAGE__"));
+
+    doSuccessfulTest(
+        "domain_renew_response.xml",
+        2,
+        ImmutableMap.of("DOMAIN", "example.tld", "EXDATE", "2002-04-03T22:00:00Z"));
+
+    // We still need to verify that package token is removed as it's not being tested as a part of
+    // doSuccessfulTest
+    Domain domain = reloadResourceByForeignKey();
+    Truth8.assertThat(domain.getCurrentPackageToken()).isEmpty();
+  }
+
+  @Test
+  void testFailsToRenewForZeroYearsWithRemovePackageToken() throws Exception {
+    persistDomain();
+
+    setEppInput(
+        "domain_renew_allocationtoken.xml",
+        ImmutableMap.of("DOMAIN", "example.tld", "YEARS", "0", "TOKEN", "__REMOVEPACKAGE__"));
+
+    assertThrows(GenericXmlSyntaxErrorException.class, this::runFlow);
   }
 }
