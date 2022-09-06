@@ -22,7 +22,6 @@ import google.registry.model.contact.Contact;
 import google.registry.model.contact.ContactHistory;
 import google.registry.model.domain.Domain;
 import google.registry.model.domain.DomainHistory;
-import google.registry.model.domain.token.AllocationToken;
 import google.registry.model.host.Host;
 import google.registry.model.host.HostHistory;
 import google.registry.model.index.EppResourceIndex;
@@ -31,7 +30,6 @@ import google.registry.model.index.ForeignKeyIndex;
 import google.registry.model.rde.RdeRevision;
 import google.registry.model.registrar.Registrar;
 import google.registry.model.reporting.HistoryEntry;
-import google.registry.model.server.Lock;
 import google.registry.model.server.ServerSecret;
 
 /** Sets of classes of the Objectify-registered entities in use throughout the model. */
@@ -41,7 +39,6 @@ public final class EntityClasses {
   /** Set of entity classes. */
   public static final ImmutableSet<Class<? extends ImmutableObject>> ALL_CLASSES =
       ImmutableSet.of(
-          AllocationToken.class,
           Contact.class,
           ContactHistory.class,
           Domain.class,
@@ -56,7 +53,6 @@ public final class EntityClasses {
           HistoryEntry.class,
           Host.class,
           HostHistory.class,
-          Lock.class,
           RdeRevision.class,
           Registrar.class,
           ServerSecret.class);
