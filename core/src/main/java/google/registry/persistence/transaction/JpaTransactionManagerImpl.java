@@ -30,7 +30,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Streams;
 import com.google.common.flogger.FluentLogger;
 import google.registry.model.ImmutableObject;
-import google.registry.model.index.EppResourceIndex;
 import google.registry.model.index.ForeignKeyIndex.ForeignKeyContactIndex;
 import google.registry.model.index.ForeignKeyIndex.ForeignKeyDomainIndex;
 import google.registry.model.index.ForeignKeyIndex.ForeignKeyHostIndex;
@@ -84,7 +83,6 @@ public class JpaTransactionManagerImpl implements JpaTransactionManager {
   // TODO(b/176108270): Remove this property after database migration.
   private static final ImmutableSet<Class<? extends ImmutableObject>> IGNORED_ENTITY_CLASSES =
       ImmutableSet.of(
-          EppResourceIndex.class,
           ForeignKeyContactIndex.class,
           ForeignKeyDomainIndex.class,
           ForeignKeyHostIndex.class);
