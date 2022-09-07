@@ -25,7 +25,13 @@ import google.registry.model.annotations.InCrossTld;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.Transient;
 
-/** A singleton entity in Datastore. */
+/**
+ * A singleton entity in the database.
+ *
+ * <p>Note: this class does not need to be deleted after the migration, as we still want to be able
+ * to denote an entity as a singleton. We do want to remove the parent field after all of its
+ * subclasses are ofy-free.
+ */
 @DeleteAfterMigration
 @MappedSuperclass
 @InCrossTld
