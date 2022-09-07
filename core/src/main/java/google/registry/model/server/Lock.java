@@ -101,13 +101,14 @@ public class Lock extends ImmutableObject implements Serializable {
 
   /** The resource name used to create the lock. */
   @Column(nullable = false)
-  @Id
+  @javax.persistence.Id
   String resourceName;
 
   /** The tld used to create the lock, or GLOBAL if it's cross-TLD. */
-  @Column(nullable = false)
-  @Id
-  String scope;
+  // TODO(b/177567432): rename to "scope" post-Datastore
+  @Column(nullable = false, name = "scope")
+  @javax.persistence.Id
+  String tld;
 
   public DateTime getExpirationTime() {
     return expirationTime;
@@ -115,7 +116,7 @@ public class Lock extends ImmutableObject implements Serializable {
 
   @PostLoad
   void postLoad() {
-    lockId = makeLockId(resourceName, scope);
+    lockId = makeLockId(resourceName, tld);
   }
 
   /**
@@ -137,7 +138,7 @@ public class Lock extends ImmutableObject implements Serializable {
     instance.expirationTime = acquiredTime.plus(leaseLength);
     instance.acquiredTime = acquiredTime;
     instance.resourceName = resourceName;
-    instance.scope = scope;
+    instance.tld = scope;
     return instance;
   }
 
@@ -148,13 +149,8 @@ public class Lock extends ImmutableObject implements Serializable {
   @AutoValue
   abstract static class AcquireResult {
     public abstract DateTime transactionTime();
-
-    @Nullable
-    public abstract Lock existingLock();
-
-    @Nullable
-    public abstract Lock newLock();
-
+    public abstract @Nullable Lock existingLock();
+    public abstract @Nullable Lock newLock();
     public abstract LockState lockState();
 
     public static AcquireResult create(
@@ -209,18 +205,64 @@ public class Lock extends ImmutableObject implements Serializable {
       Duration leaseLength,
       RequestStatusChecker requestStatusChecker,
       boolean checkThreadRunning) {
-    String scope = tld != null ? tld : GLOBAL;
+    return acquireWithTransactionManager(
+        resourceName, tld, leaseLength, requestStatusChecker, checkThreadRunning, tm());
+  }
+
+  /**
+   * Try to acquire a lock in SQL. Returns absent if it can't be acquired.
+   *
+   * <p>This method exists so that Beam pipelines can acquire / load / release locks.
+   */
+  public static Optional<Lock> acquireSql(
+      String resourceName,
+      @Nullable String tld,
+      Duration leaseLength,
+      RequestStatusChecker requestStatusChecker,
+      boolean checkThreadRunning) {
+    return acquireWithTransactionManager(
+        resourceName, tld, leaseLength, requestStatusChecker, checkThreadRunning, jpaTm());
+  }
+
+  /** Release the lock. */
+  public void release() {
+    releaseWithTransactionManager(tm());
+  }
+
+  /**
+   * Release the lock from SQL.
+   *
+   * <p>This method exists so that Beam pipelines can acquire / load / release locks.
+   */
+  public void releaseSql() {
+    releaseWithTransactionManager(jpaTm());
+  }
+
+  /** Try to acquire a lock. Returns absent if it can't be acquired. */
+  private static Optional<Lock> acquireWithTransactionManager(
+      String resourceName,
+      @Nullable String tld,
+      Duration leaseLength,
+      RequestStatusChecker requestStatusChecker,
+      boolean checkThreadRunning,
+      TransactionManager transactionManager) {
+    String scope = (tld != null) ? tld : GLOBAL;
+    String lockId = makeLockId(resourceName, scope);
     // It's important to use transactNew rather than transact, because a Lock can be used to control
     // access to resources like GCS that can't be transactionally rolled back. Therefore, the lock
     // must be definitively acquired before it is used, even when called inside another transaction.
     Supplier<AcquireResult> lockAcquirer =
         () -> {
-          DateTime now = jpaTm().getTransactionTime();
+          DateTime now = transactionManager.getTransactionTime();
 
           // Checking if an unexpired lock still exists - if so, the lock can't be acquired.
           Lock lock =
-              jpaTm()
-                  .loadByKeyIfPresent(VKey.createSql(Lock.class, new LockId(resourceName, scope)))
+              transactionManager
+                  .loadByKeyIfPresent(
+                      VKey.create(
+                          Lock.class,
+                          new LockId(resourceName, scope),
+                          Key.create(Lock.class, lockId)))
                   .orElse(null);
           if (lock != null) {
             logger.atInfo().log(
@@ -240,13 +282,15 @@ public class Lock extends ImmutableObject implements Serializable {
 
           Lock newLock =
               create(resourceName, scope, requestStatusChecker.getLogId(), now, leaseLength);
-          // Locks are not parented under an EntityGroupRoot (so as to avoid write
-          // contention) and don't need to be backed up.
           jpaTm().put(newLock);
 
           return AcquireResult.create(now, lock, newLock, lockState);
         };
-    AcquireResult acquireResult = jpaTm().transactWithoutBackup(lockAcquirer);
+    // In ofy, backup is determined per-action, but in SQL it's determined per-transaction
+    AcquireResult acquireResult =
+        transactionManager.isOfy()
+            ? transactionManager.transactNew(lockAcquirer)
+            : ((JpaTransactionManager) transactionManager).transactWithoutBackup(lockAcquirer);
 
     logAcquireResult(acquireResult);
     lockMetrics.recordAcquire(resourceName, scope, acquireResult.lockState());
@@ -254,51 +298,62 @@ public class Lock extends ImmutableObject implements Serializable {
   }
 
   /** Release the lock. */
-  public void release() {
+  private void releaseWithTransactionManager(TransactionManager transactionManager) {
     // Just use the default clock because we aren't actually doing anything that will use the clock.
     Supplier<Void> lockReleaser =
         () -> {
           // To release a lock, check that no one else has already obtained it and if not
-          // delete it. If the lock in the database was different, then this lock is gone already;
+          // delete it. If the lock in Datastore was different then this lock is gone already;
           // this can happen if release() is called around the expiration time and the lock
           // expires underneath us.
-          VKey<Lock> key = VKey.createSql(Lock.class, new LockId(resourceName, scope));
-          Lock loadedLock = jpaTm().loadByKeyIfPresent(key).orElse(null);
-          if (equals(loadedLock)) {
+          VKey<Lock> key =
+              VKey.create(
+                  Lock.class, new LockId(resourceName, tld), Key.create(Lock.class, lockId));
+          Lock loadedLock = transactionManager.loadByKeyIfPresent(key).orElse(null);
+          if (Lock.this.equals(loadedLock)) {
             // Use deleteIgnoringReadOnly() so that we don't create a commit log entry for deleting
             // the lock.
             logger.atInfo().log("Deleting lock: %s", lockId);
-            jpaTm().delete(key);
+            transactionManager.delete(key);
 
             lockMetrics.recordRelease(
-                resourceName, scope, new Duration(acquiredTime, jpaTm().getTransactionTime()));
+                resourceName,
+                tld,
+                new Duration(acquiredTime, transactionManager.getTransactionTime()));
           } else {
             logger.atSevere().log(
                 "The lock we acquired was transferred to someone else before we"
                     + " released it! Did action take longer than lease length?"
                     + " Our lock: %s, current lock: %s",
-                this, loadedLock);
+                Lock.this, loadedLock);
             logger.atInfo().log(
                 "Not deleting lock: %s - someone else has it: %s", lockId, loadedLock);
           }
           return null;
         };
-    jpaTm().transactWithoutBackup(lockReleaser);
+
+    // In ofy, backup is determined per-action, but in SQL it's determined per-transaction
+    if (transactionManager.isOfy()) {
+      transactionManager.transact(lockReleaser);
+    } else {
+      ((JpaTransactionManager) transactionManager).transactWithoutBackup(lockReleaser);
+    }
   }
 
   static class LockId extends ImmutableObject implements Serializable {
 
     String resourceName;
 
-    String scope;
+    // TODO(b/177567432): rename to "scope" post-Datastore
+    @Column(name = "scope")
+    String tld;
 
     // Required for Hibernate
-    @SuppressWarnings("unused")
     private LockId() {}
 
-    LockId(String resourceName, String scope) {
+    LockId(String resourceName, String tld) {
       this.resourceName = checkArgumentNotNull(resourceName, "The resource name cannot be null");
-      this.scope = checkArgumentNotNull(scope, "Scope of a lock cannot be null");
+      this.tld = checkArgumentNotNull(tld, "Scope of a lock cannot be null");
     }
   }
 }
