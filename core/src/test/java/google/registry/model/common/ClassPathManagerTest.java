@@ -27,7 +27,6 @@ import google.registry.model.index.ForeignKeyIndex.ForeignKeyContactIndex;
 import google.registry.model.index.ForeignKeyIndex.ForeignKeyDomainIndex;
 import google.registry.model.index.ForeignKeyIndex.ForeignKeyHostIndex;
 import google.registry.model.reporting.HistoryEntry;
-import google.registry.model.server.ServerSecret;
 import google.registry.testing.TestObject;
 import org.junit.jupiter.api.Test;
 
@@ -56,7 +55,6 @@ public class ClassPathManagerTest {
     assertThat(ClassPathManager.getClass("HistoryEntry")).isEqualTo(HistoryEntry.class);
     assertThat(ClassPathManager.getClass("ForeignKeyHostIndex"))
         .isEqualTo(ForeignKeyHostIndex.class);
-    assertThat(ClassPathManager.getClass("ServerSecret")).isEqualTo(ServerSecret.class);
     assertThat(ClassPathManager.getClass("EppResourceIndex")).isEqualTo(EppResourceIndex.class);
     assertThat(ClassPathManager.getClass("ForeignKeyDomainIndex"))
         .isEqualTo(ForeignKeyDomainIndex.class);
@@ -101,6 +99,7 @@ public class ClassPathManagerTest {
     assertThat(ClassPathManager.getClassName(EppResourceIndexBucket.class))
         .isEqualTo("EppResourceIndexBucket");
     assertThat(ClassPathManager.getClassName(EntityGroupRoot.class)).isEqualTo("EntityGroupRoot");
+    assertThat(ClassPathManager.getClassName(Lock.class)).isEqualTo("Lock");
     assertThat(ClassPathManager.getClassName(Domain.class)).isEqualTo("Domain");
     assertThat(ClassPathManager.getClassName(HistoryEntry.class)).isEqualTo("HistoryEntry");
     assertThat(ClassPathManager.getClassName(ForeignKeyHostIndex.class))

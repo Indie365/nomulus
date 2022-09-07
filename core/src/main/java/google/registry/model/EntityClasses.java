@@ -28,7 +28,6 @@ import google.registry.model.index.EppResourceIndex;
 import google.registry.model.index.EppResourceIndexBucket;
 import google.registry.model.index.ForeignKeyIndex;
 import google.registry.model.reporting.HistoryEntry;
-import google.registry.model.server.ServerSecret;
 
 /** Sets of classes of the Objectify-registered entities in use throughout the model. */
 @DeleteAfterMigration
@@ -50,8 +49,7 @@ public final class EntityClasses {
           GaeUserIdConverter.class,
           HistoryEntry.class,
           Host.class,
-          HostHistory.class,
-          ServerSecret.class);
+          HostHistory.class);
 
   private EntityClasses() {}
 }
