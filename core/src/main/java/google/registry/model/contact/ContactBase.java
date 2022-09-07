@@ -159,7 +159,7 @@ public class ContactBase extends EppResource implements ResourceWithTransferData
   ContactAuthInfo authInfo;
 
   /** Data about any pending or past transfers on this contact. */
-  ContactTransferData transferData;
+  @Ignore ContactTransferData transferData;
 
   /**
    * The time that this resource was last transferred.
