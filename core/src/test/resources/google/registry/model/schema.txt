@@ -476,12 +476,6 @@ class google.registry.model.server.Lock {
   org.joda.time.DateTime acquiredTime;
   org.joda.time.DateTime expirationTime;
 }
-class google.registry.model.server.ServerSecret {
-  @Id long id;
-  @Parent com.googlecode.objectify.Key<google.registry.model.common.EntityGroupRoot> parent;
-  long leastSignificant;
-  long mostSignificant;
-}
 class google.registry.model.transfer.ContactTransferData {
   google.registry.model.eppcommon.Trid transferRequestTrid;
   google.registry.model.transfer.TransferStatus transferStatus;

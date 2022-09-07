@@ -31,7 +31,6 @@ import google.registry.model.index.ForeignKeyIndex;
 import google.registry.model.registrar.Registrar;
 import google.registry.model.reporting.HistoryEntry;
 import google.registry.model.server.Lock;
-import google.registry.model.server.ServerSecret;
 
 /** Sets of classes of the Objectify-registered entities in use throughout the model. */
 @DeleteAfterMigration
@@ -56,8 +55,7 @@ public final class EntityClasses {
           Host.class,
           HostHistory.class,
           Lock.class,
-          Registrar.class,
-          ServerSecret.class);
+          Registrar.class);
 
   private EntityClasses() {}
 }
