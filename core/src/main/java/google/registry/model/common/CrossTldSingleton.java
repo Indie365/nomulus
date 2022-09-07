@@ -20,7 +20,6 @@ import google.registry.model.annotations.DeleteAfterMigration;
 import javax.persistence.MappedSuperclass;
 
 /** A singleton entity in the database. */
-@DeleteAfterMigration
 @MappedSuperclass
 public abstract class CrossTldSingleton extends ImmutableObject {
 
