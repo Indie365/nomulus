@@ -25,8 +25,6 @@ import google.registry.model.domain.DomainHistory;
 import google.registry.model.domain.token.AllocationToken;
 import google.registry.model.host.Host;
 import google.registry.model.host.HostHistory;
-import google.registry.model.index.EppResourceIndex;
-import google.registry.model.index.EppResourceIndexBucket;
 import google.registry.model.index.ForeignKeyIndex;
 import google.registry.model.registrar.Registrar;
 import google.registry.model.reporting.HistoryEntry;
@@ -46,8 +44,6 @@ public final class EntityClasses {
           Domain.class,
           DomainHistory.class,
           EntityGroupRoot.class,
-          EppResourceIndex.class,
-          EppResourceIndexBucket.class,
           ForeignKeyIndex.ForeignKeyContactIndex.class,
           ForeignKeyIndex.ForeignKeyDomainIndex.class,
           ForeignKeyIndex.ForeignKeyHostIndex.class,
