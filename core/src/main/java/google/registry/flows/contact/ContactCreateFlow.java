@@ -23,7 +23,6 @@ import static google.registry.model.IdService.allocateId;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 
 import com.google.common.collect.ImmutableSet;
-import com.googlecode.objectify.Key;
 import google.registry.config.RegistryConfig.Config;
 import google.registry.flows.EppException;
 import google.registry.flows.ExtensionManager;
@@ -40,7 +39,6 @@ import google.registry.model.domain.metadata.MetadataExtension;
 import google.registry.model.eppinput.ResourceCommand;
 import google.registry.model.eppoutput.CreateData.ContactCreateData;
 import google.registry.model.eppoutput.EppResponse;
-import google.registry.model.index.EppResourceIndex;
 import google.registry.model.index.ForeignKeyIndex;
 import google.registry.model.reporting.HistoryEntry;
 import google.registry.model.reporting.IcannReportingTypes.ActivityReportField;
@@ -100,8 +98,7 @@ public final class ContactCreateFlow implements TransactionalFlow {
             ImmutableSet.of(
                 newContact,
                 historyBuilder.build(),
-                ForeignKeyIndex.create(newContact, newContact.getDeletionTime()),
-                EppResourceIndex.create(Key.create(newContact))));
+                ForeignKeyIndex.create(newContact, newContact.getDeletionTime())));
     return responseBuilder
         .setResData(ContactCreateData.create(newContact.getContactId(), now))
         .build();
