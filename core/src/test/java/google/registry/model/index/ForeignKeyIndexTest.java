@@ -77,7 +77,7 @@ class ForeignKeyIndexTest extends EntityTestCase {
     if (tm().isOfy()) {
       ForeignKeyHostIndex fki = new ForeignKeyHostIndex();
       fki.foreignKey = "ns1.example.com";
-      fki.topReference = host1.createVKey();
+      fki.reference = host1.createVKey();
       fki.deletionTime = fakeClock.nowUtc();
       persistResource(fki);
     } else {
