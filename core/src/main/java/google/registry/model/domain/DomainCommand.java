@@ -106,7 +106,7 @@ public class DomainCommand {
   @XmlRootElement
   @XmlType(
       propOrder = {
-        "fullyQualifiedDomainName",
+        "domainName",
         "period",
         "nameserverFullyQualifiedHostNames",
         "registrantContactId",
@@ -118,7 +118,7 @@ public class DomainCommand {
 
     /** Fully qualified domain name, which serves as a unique identifier for this domain. */
     @XmlElement(name = "name")
-    String fullyQualifiedDomainName;
+    String domainName;
 
     /** Fully qualified host names of the hosts that are the nameservers for the domain. */
     @XmlElementWrapper(name = "ns")
@@ -145,11 +145,11 @@ public class DomainCommand {
 
     @Override
     public String getTargetId() {
-      return fullyQualifiedDomainName;
+      return domainName;
     }
 
     public String getFullyQualifiedDomainName() {
-      return fullyQualifiedDomainName;
+      return domainName;
     }
 
     public ImmutableSet<String> getNameserverFullyQualifiedHostNames() {
@@ -206,7 +206,7 @@ public class DomainCommand {
 
     /** The name of the domain to look up, and an attribute specifying the host lookup type. */
     @XmlElement(name = "name")
-    NameWithHosts fullyQualifiedDomainName;
+    NameWithHosts domainName;
 
     DomainAuthInfo authInfo;
 
@@ -245,12 +245,12 @@ public class DomainCommand {
     /** Get the enum that specifies the requested hosts (applies only to info flows). */
     public HostsRequest getHostsRequest() {
       // Null "hosts" is implicitly ALL.
-      return MoreObjects.firstNonNull(fullyQualifiedDomainName.hosts, HostsRequest.ALL);
+      return MoreObjects.firstNonNull(domainName.hosts, HostsRequest.ALL);
     }
 
     @Override
     public String getTargetId() {
-      return fullyQualifiedDomainName.name;
+      return domainName.name;
     }
 
     @Override
@@ -413,13 +413,12 @@ public class DomainCommand {
     }
   }
 
-  private static Set<VKey<Host>> linkHosts(Set<String> fullyQualifiedHostNames, DateTime now)
+  private static Set<VKey<Host>> linkHosts(Set<String> hostNames, DateTime now)
       throws InvalidReferencesException {
-    if (fullyQualifiedHostNames == null) {
+    if (hostNames == null) {
       return null;
     }
-    return ImmutableSet.copyOf(
-        loadByForeignKeysCached(fullyQualifiedHostNames, Host.class, now).values());
+    return ImmutableSet.copyOf(loadByForeignKeysCached(hostNames, Host.class, now).values());
   }
 
   private static Set<DesignatedContact> linkContacts(
