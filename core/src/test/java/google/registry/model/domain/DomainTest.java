@@ -50,7 +50,7 @@ import google.registry.model.contact.Contact;
 import google.registry.model.domain.DesignatedContact.Type;
 import google.registry.model.domain.launch.LaunchNotice;
 import google.registry.model.domain.rgp.GracePeriodStatus;
-import google.registry.model.domain.secdns.DelegationSignerData;
+import google.registry.model.domain.secdns.DomainDsData;
 import google.registry.model.eppcommon.AuthInfo.PasswordAuth;
 import google.registry.model.eppcommon.StatusValue;
 import google.registry.model.eppcommon.Trid;
@@ -190,8 +190,7 @@ public class DomainTest {
                     .setPersistedCurrentSponsorRegistrarId("NewRegistrar")
                     .setRegistrationExpirationTime(fakeClock.nowUtc().plusYears(1))
                     .setAuthInfo(DomainAuthInfo.create(PasswordAuth.create("password")))
-                    .setDsData(
-                        ImmutableSet.of(DelegationSignerData.create(1, 2, 3, new byte[] {0, 1, 2})))
+                    .setDsData(ImmutableSet.of(DomainDsData.create(1, 2, 3, new byte[] {0, 1, 2})))
                     .setLaunchNotice(
                         LaunchNotice.create("tcnid", "validatorId", START_OF_TIME, START_OF_TIME))
                     .setTransferData(
@@ -293,7 +292,7 @@ public class DomainTest {
     assertThat(
             DatabaseHelper.newDomain("example.com")
                 .asBuilder()
-                .setDsData(ImmutableSet.of(DelegationSignerData.create(1, 1, 1, (byte[]) null)))
+                .setDsData(ImmutableSet.of(DomainDsData.create(1, 1, 1, (byte[]) null)))
                 .build()
                 .getDsData()
                 .asList()
@@ -303,7 +302,7 @@ public class DomainTest {
     assertThat(
             DatabaseHelper.newDomain("example.com")
                 .asBuilder()
-                .setDsData(ImmutableSet.of(DelegationSignerData.create(1, 1, 1, new byte[] {})))
+                .setDsData(ImmutableSet.of(DomainDsData.create(1, 1, 1, new byte[] {})))
                 .build()
                 .getDsData()
                 .asList()
@@ -313,7 +312,7 @@ public class DomainTest {
     assertThat(
             DatabaseHelper.newDomain("example.com")
                 .asBuilder()
-                .setDsData(ImmutableSet.of(DelegationSignerData.create(1, 1, 1, new byte[] {1})))
+                .setDsData(ImmutableSet.of(DomainDsData.create(1, 1, 1, new byte[] {1})))
                 .build()
                 .getDsData()
                 .asList()
