@@ -81,8 +81,8 @@ public abstract class ForeignKeyIndex<E extends EppResource> extends BackupGroup
       RESOURCE_CLASS_TO_FKI_PROPERTY =
           ImmutableMap.of(
               Contact.class, "contactId",
-              Domain.class, "fullyQualifiedDomainName",
-              Host.class, "fullyQualifiedHostName");
+              Domain.class, "domainName",
+              Host.class, "hostName");
 
   String foreignKey;
 

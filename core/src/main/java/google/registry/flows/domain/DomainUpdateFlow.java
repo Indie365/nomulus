@@ -74,7 +74,7 @@ import google.registry.model.domain.DomainCommand.Update.Change;
 import google.registry.model.domain.DomainHistory;
 import google.registry.model.domain.fee.FeeUpdateCommandExtension;
 import google.registry.model.domain.metadata.MetadataExtension;
-import google.registry.model.domain.secdns.DelegationSignerData;
+import google.registry.model.domain.secdns.DomainDsData;
 import google.registry.model.domain.secdns.SecDnsUpdateExtension;
 import google.registry.model.domain.superuser.DomainUpdateSuperuserExtension;
 import google.registry.model.eppcommon.AuthInfo;
@@ -229,8 +229,7 @@ public final class DomainUpdateFlow implements TransactionalFlow {
     validateContactsHaveTypes(add.getContacts());
     validateContactsHaveTypes(remove.getContacts());
     validateRegistrantAllowedOnTld(tld, command.getInnerChange().getRegistrantContactId());
-    validateNameserversAllowedOnTld(
-        tld, add.getNameserverFullyQualifiedHostNames());
+    validateNameserversAllowedOnTld(tld, add.getNameserverHostNames());
   }
 
   private Domain performUpdate(Update command, Domain domain, DateTime now) throws EppException {
@@ -260,7 +259,7 @@ public final class DomainUpdateFlow implements TransactionalFlow {
                 secDnsUpdate.isPresent()
                     ? updateDsData(
                         domain.getDsData().stream()
-                            .map(DelegationSignerData::cloneWithoutDomainRepoId)
+                            .map(DomainDsData::cloneWithoutDomainRepoId)
                             .collect(toImmutableSet()),
                         secDnsUpdate.get())
                     : domain.getDsData())
