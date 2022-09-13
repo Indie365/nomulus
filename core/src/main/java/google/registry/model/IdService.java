@@ -34,7 +34,7 @@ public final class IdService {
 
   /**
    * A placeholder String passed into DatastoreService.allocateIds that ensures that all ids are
-   * initialized from the same id pool.
+   * initialized from the same repoId pool.
    */
   private static final String APP_WIDE_ALLOCATION_KIND = "common";
 
@@ -52,7 +52,7 @@ public final class IdService {
         || "true".equals(System.getProperty(RegistryPipelineWorkerInitializer.PROPERTY, "false"));
   }
 
-  /** Allocates an id. */
+  /** Allocates an repoId. */
   // TODO(b/201547855): Find a way to allocate a unique ID without datastore.
   public static long allocateId() {
     return isSelfAllocated()
@@ -64,7 +64,7 @@ public final class IdService {
             .getId();
   }
 
-  /** Resets the global self-allocated id counter (i.e. sets the next id to 1). */
+  /** Resets the global self-allocated repoId counter (i.e. sets the next repoId to 1). */
   @VisibleForTesting
   public static void resetSelfAllocatedId() {
     checkState(

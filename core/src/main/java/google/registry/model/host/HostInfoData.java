@@ -28,17 +28,19 @@ import org.joda.time.DateTime;
 
 /** The {@link ResponseData} returned for an EPP info flow on a host. */
 @XmlRootElement(name = "infData")
-@XmlType(propOrder = {
-    "fullyQualifiedHostName",
-    "repoId",
-    "statusValues",
-    "inetAddresses",
-    "currentSponsorClientId",
-    "creationClientId",
-    "creationTime",
-    "lastEppUpdateClientId",
-    "lastEppUpdateTime",
-    "lastTransferTime" })
+@XmlType(
+    propOrder = {
+      "hostName",
+      "repoId",
+      "statusValues",
+      "inetAddresses",
+      "currentSponsorClientId",
+      "creationClientId",
+      "creationTime",
+      "lastEppUpdateClientId",
+      "lastEppUpdateTime",
+      "lastTransferTime"
+    })
 @AutoValue
 @CopyAnnotations
 public abstract class HostInfoData implements ResponseData {
@@ -79,7 +81,8 @@ public abstract class HostInfoData implements ResponseData {
   /** Builder for {@link HostInfoData}. */
   @AutoValue.Builder
   public abstract static class Builder {
-    public abstract Builder setFullyQualifiedHostName(String fullyQualifiedHostName);
+    public abstract Builder setFullyQualifiedHostName(String hostName);
+
     public abstract Builder setRepoId(String repoId);
     public abstract Builder setStatusValues(ImmutableSet<StatusValue> statusValues);
     public abstract Builder setInetAddresses(ImmutableSet<InetAddress> inetAddresses);

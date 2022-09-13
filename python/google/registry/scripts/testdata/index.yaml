@@ -74,18 +74,18 @@ indexes:
 - kind: DomainBase
   properties:
   - name: ^i
-  - name: fullyQualifiedDomainName
+  - name: domainName
 
 - kind: DomainBase
   properties:
   - name: ^i
   - name: tld
-  - name: fullyQualifiedDomainName
+  - name: domainName
 
 - kind: Host
   properties:
   - name: deletionTime
-  - name: fullyQualifiedHostName
+  - name: hostName
 
 - kind: ContactResource
   properties:

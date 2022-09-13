@@ -51,7 +51,7 @@ public final class ResourceTransferUtils {
       TransferStatus.PENDING, TransferStatus.CLIENT_APPROVED, TransferStatus.SERVER_APPROVED);
 
   /**
-   * Create a transfer response using the id and type of this resource and the specified {@link
+   * Create a transfer response using the repoId and type of this resource and the specified {@link
    * TransferData}.
    */
   public static TransferResponse createTransferResponse(
@@ -82,8 +82,8 @@ public final class ResourceTransferUtils {
   /**
    * Create a pending action notification response indicating the resolution of a transfer.
    *
-   * <p>The returned object will use the id and type of this resource, the trid of the resource's
-   * last transfer request, and the specified status and date.
+   * <p>The returned object will use the repoId and type of this resource, the trid of the
+   * resource's last transfer request, and the specified status and date.
    */
   public static PendingActionNotificationResponse createPendingTransferNotificationResponse(
       EppResource eppResource,
@@ -159,8 +159,8 @@ public final class ResourceTransferUtils {
    *
    * <p>This removes the {@link StatusValue#PENDING_TRANSFER} status, sets the {@link
    * TransferStatus}, clears all the server-approve fields on the {@link TransferData}, sets the new
-   * client id, and sets the last transfer time and the expiration time of the last pending transfer
-   * to now.
+   * client repoId, and sets the last transfer time and the expiration time of the last pending
+   * transfer to now.
    */
   public static <
           R extends EppResource & ResourceWithTransferData,
@@ -180,7 +180,7 @@ public final class ResourceTransferUtils {
    * <p>This removes the {@link StatusValue#PENDING_TRANSFER} status, sets the {@link
    * TransferStatus}, clears all the server-approve fields on the {@link TransferData}, sets the
    * expiration time of the last pending transfer to now, sets the last EPP update time to now, and
-   * sets the last EPP update client id to the given client id.
+   * sets the last EPP update client repoId to the given client repoId.
    */
   public static <R extends EppResource & ResourceWithTransferData> R denyPendingTransfer(
       R resource, TransferStatus transferStatus, DateTime now, String lastEppUpdateClientId) {

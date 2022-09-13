@@ -75,12 +75,14 @@ public final class EppResourceUtils {
           + "WHERE d.deletion_time > :now "
           + "AND dh.host_repo_id = :fkRepoId";
 
-  /** Returns the full domain repoId in the format HEX-TLD for the specified long id and tld. */
+  /** Returns the full domain repoId in the format HEX-TLD for the specified long repoId and tld. */
   public static String createDomainRepoId(long repoId, String tld) {
     return createRepoId(repoId, Registry.get(tld).getRoidSuffix());
   }
 
-  /** Returns the full repoId in the format HEX-TLD for the specified long id and ROID suffix. */
+  /**
+   * Returns the full repoId in the format HEX-TLD for the specified long repoId and ROID suffix.
+   */
   public static String createRepoId(long repoId, String roidSuffix) {
     // %X is uppercase hexadecimal.
     return String.format("%X-%s", repoId, roidSuffix);
@@ -108,7 +110,7 @@ public final class EppResourceUtils {
    * we're not projecting into the past.
    *
    * @param clazz the resource type to load
-   * @param foreignKey id to match
+   * @param foreignKey repoId to match
    * @param now the current logical time to project resources at
    */
   public static <T extends EppResource> Optional<T> loadByForeignKey(
@@ -136,7 +138,7 @@ public final class EppResourceUtils {
    * only be used when it's OK if the data is potentially being out of date, e.g. WHOIS.
    *
    * @param clazz the resource type to load
-   * @param foreignKey id to match
+   * @param foreignKey repoId to match
    * @param now the current logical time to project resources at
    */
   public static <T extends EppResource> Optional<T> loadByForeignKeyCached(
@@ -182,7 +184,7 @@ public final class EppResourceUtils {
    *
    * <p>There are currently no resources that support checks and do not use foreign keys. If we need
    * to support that case in the future, we can loosen the type to allow any {@link EppResource} and
-   * add code to do the lookup by id directly.
+   * add code to do the lookup by repoId directly.
    *
    * @param clazz the resource type to load
    * @param uniqueIds a list of ids to match

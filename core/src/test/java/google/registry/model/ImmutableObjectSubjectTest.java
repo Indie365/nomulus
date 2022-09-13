@@ -29,7 +29,7 @@ import org.junit.jupiter.api.Test;
 
 public class ImmutableObjectSubjectTest {
 
-  // Unique id to assign to the "ignored" field so that it always gets a unique value.
+  // Unique repoId to assign to the "ignored" field so that it always gets a unique value.
   private static int uniqueId = 0;
 
   @Test

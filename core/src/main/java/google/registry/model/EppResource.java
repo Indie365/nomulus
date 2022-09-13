@@ -152,9 +152,9 @@ public abstract class EppResource extends BackupGroupRoot implements Buildable {
   /**
    * Sets the repository ID.
    *
-   * <p>This should only be used for restoring the repo id of an object being loaded in a PostLoad
-   * method (effectively, when it is still under construction by Hibernate). In all other cases, the
-   * object should be regarded as immutable and changes should go through a Builder.
+   * <p>This should only be used for restoring the repo repoId of an object being loaded in a
+   * PostLoad method (effectively, when it is still under construction by Hibernate). In all other
+   * cases, the object should be regarded as immutable and changes should go through a Builder.
    *
    * <p>In addition to this special case use, this method must exist to satisfy Hibernate.
    */
@@ -181,8 +181,9 @@ public abstract class EppResource extends BackupGroupRoot implements Buildable {
   /**
    * Get the stored value of {@link #currentSponsorClientId}.
    *
-   * <p>For subordinate hosts, this value may not represent the actual current client id, which is
-   * the client id of the superordinate host. For all other resources this is the true client id.
+   * <p>For subordinate hosts, this value may not represent the actual current client repoId, which
+   * is the client repoId of the superordinate host. For all other resources this is the true client
+   * repoId.
    */
   public final String getPersistedCurrentSponsorRegistrarId() {
     return currentSponsorClientId;

@@ -29,7 +29,7 @@
   <datastore-index kind="Host" ancestor="false" source="manual">
     <property name="currentSponsorClientId" direction="asc"/>
     <property name="deletionTime" direction="asc"/>
-    <property name="fullyQualifiedHostName" direction="asc"/>
+    <property name="hostName" direction="asc"/>
   </datastore-index>
   <!-- For determining the active domains linked to a given contact. -->
   <datastore-index kind="Domain" ancestor="false" source="manual">
@@ -76,20 +76,20 @@
   <!-- For RDAP. -->
   <datastore-index kind="Domain" ancestor="false" source="manual">
     <property name="currentSponsorClientId" direction="asc"/>
-    <property name="fullyQualifiedDomainName" direction="asc"/>
+    <property name="domainName" direction="asc"/>
   </datastore-index>
   <datastore-index kind="Domain" ancestor="false" source="manual">
     <property name="currentSponsorClientId" direction="asc"/>
     <property name="tld" direction="asc"/>
-    <property name="fullyQualifiedDomainName" direction="asc"/>
+    <property name="domainName" direction="asc"/>
   </datastore-index>
   <datastore-index kind="Domain" ancestor="false" source="manual">
     <property name="tld" direction="asc"/>
-    <property name="fullyQualifiedDomainName" direction="asc"/>
+    <property name="domainName" direction="asc"/>
   </datastore-index>
   <datastore-index kind="Host" ancestor="false" source="manual">
     <property name="deletionTime" direction="asc"/>
-    <property name="fullyQualifiedHostName" direction="asc"/>
+    <property name="hostName" direction="asc"/>
   </datastore-index>
   <datastore-index kind="Contact" ancestor="false" source="manual">
     <property name="deletionTime" direction="asc"/>
