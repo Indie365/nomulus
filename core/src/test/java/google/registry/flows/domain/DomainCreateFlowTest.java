@@ -2289,7 +2289,7 @@ class DomainCreateFlowTest extends ResourceFlowTestCase<DomainCreateFlow, Domain
     persistResource(
         Registry.get("tld")
             .asBuilder()
-            .setAllowedFullyQualifiedHostNames(ImmutableSet.of("ns2.example.net"))
+            .setAllowedHostNames(ImmutableSet.of("ns2.example.net"))
             .build());
     NameserversNotAllowedForTldException thrown =
         assertThrows(NameserversNotAllowedForTldException.class, this::runFlow);
@@ -2302,7 +2302,7 @@ class DomainCreateFlowTest extends ResourceFlowTestCase<DomainCreateFlow, Domain
     persistResource(
         Registry.get("tld")
             .asBuilder()
-            .setAllowedFullyQualifiedHostNames(ImmutableSet.of("somethingelse.example.net"))
+            .setAllowedHostNames(ImmutableSet.of("somethingelse.example.net"))
             .build());
     persistContactsAndHosts();
     EppException thrown =
@@ -2317,8 +2317,7 @@ class DomainCreateFlowTest extends ResourceFlowTestCase<DomainCreateFlow, Domain
         Registry.get("tld")
             .asBuilder()
             .setAllowedRegistrantContactIds(ImmutableSet.of("jd1234"))
-            .setAllowedFullyQualifiedHostNames(
-                ImmutableSet.of("ns1.example.net", "ns2.example.net"))
+            .setAllowedHostNames(ImmutableSet.of("ns1.example.net", "ns2.example.net"))
             .build());
     persistContactsAndHosts();
     doSuccessfulTest();

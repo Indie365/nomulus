@@ -371,7 +371,7 @@ abstract class CreateOrUpdateTldCommand extends MutatingCommand {
 
       builder.setAllowedRegistrantContactIds(getAllowedRegistrants(oldRegistry));
 
-      builder.setAllowedFullyQualifiedHostNames(getAllowedNameservers(oldRegistry));
+      builder.setAllowedHostNames(getAllowedNameservers(oldRegistry));
 
       // Update the Registry object.
       setCommandSpecificProperties(builder);

@@ -1529,7 +1529,7 @@ class DomainUpdateFlowTest extends ResourceFlowTestCase<DomainUpdateFlow, Domain
     persistResource(
         Registry.get("tld")
             .asBuilder()
-            .setAllowedFullyQualifiedHostNames(ImmutableSet.of("ns1.example.foo"))
+            .setAllowedHostNames(ImmutableSet.of("ns1.example.foo"))
             .build());
     NameserversNotAllowedForTldException thrown =
         assertThrows(NameserversNotAllowedForTldException.class, this::runFlow);
@@ -1547,8 +1547,7 @@ class DomainUpdateFlowTest extends ResourceFlowTestCase<DomainUpdateFlow, Domain
         Registry.get("tld")
             .asBuilder()
             .setAllowedRegistrantContactIds(ImmutableSet.of("sh8013"))
-            .setAllowedFullyQualifiedHostNames(
-                ImmutableSet.of("ns1.example.foo", "ns2.example.foo"))
+            .setAllowedHostNames(ImmutableSet.of("ns1.example.foo", "ns2.example.foo"))
             .build());
     assertThat(reloadResourceByForeignKey().getNameservers())
         .doesNotContain(
@@ -1569,7 +1568,7 @@ class DomainUpdateFlowTest extends ResourceFlowTestCase<DomainUpdateFlow, Domain
         Registry.get("tld")
             .asBuilder()
             .setAllowedRegistrantContactIds(ImmutableSet.of("sh8013"))
-            .setAllowedFullyQualifiedHostNames(ImmutableSet.of("ns1.example.foo"))
+            .setAllowedHostNames(ImmutableSet.of("ns1.example.foo"))
             .build());
     runFlow();
     assertThat(loadByKey(reloadResourceByForeignKey().getRegistrant()).getContactId())
@@ -1609,7 +1608,7 @@ class DomainUpdateFlowTest extends ResourceFlowTestCase<DomainUpdateFlow, Domain
         Registry.get("tld")
             .asBuilder()
             .setAllowedRegistrantContactIds(ImmutableSet.of("sh8013"))
-            .setAllowedFullyQualifiedHostNames(ImmutableSet.of("ns2.example.foo"))
+            .setAllowedHostNames(ImmutableSet.of("ns2.example.foo"))
             .build());
     doSuccessfulTest();
   }
@@ -1628,8 +1627,7 @@ class DomainUpdateFlowTest extends ResourceFlowTestCase<DomainUpdateFlow, Domain
     persistResource(
         Registry.get("tld")
             .asBuilder()
-            .setAllowedFullyQualifiedHostNames(
-                ImmutableSet.of("ns1.example.foo", "ns2.example.foo"))
+            .setAllowedHostNames(ImmutableSet.of("ns1.example.foo", "ns2.example.foo"))
             .build());
     assertThat(reloadResourceByForeignKey().getNameservers())
         .contains(
@@ -1649,7 +1647,7 @@ class DomainUpdateFlowTest extends ResourceFlowTestCase<DomainUpdateFlow, Domain
     persistResource(
         Registry.get("tld")
             .asBuilder()
-            .setAllowedFullyQualifiedHostNames(ImmutableSet.of("ns1.example.foo"))
+            .setAllowedHostNames(ImmutableSet.of("ns1.example.foo"))
             .build());
     EppException thrown =
         assertThrows(

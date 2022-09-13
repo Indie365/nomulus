@@ -894,9 +894,8 @@ public class Registry extends ImmutableObject implements Buildable, UnsafeSerial
       return this;
     }
 
-    public Builder setAllowedFullyQualifiedHostNames(
-        ImmutableSet<String> allowedFullyQualifiedHostNames) {
-      getInstance().allowedFullyQualifiedHostNames = allowedFullyQualifiedHostNames;
+    public Builder setAllowedHostNames(ImmutableSet<String> allowedHostNames) {
+      getInstance().allowedFullyQualifiedHostNames = allowedHostNames;
       return this;
     }
 

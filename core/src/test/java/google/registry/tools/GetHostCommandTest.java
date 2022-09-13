@@ -41,7 +41,7 @@ class GetHostCommandTest extends CommandTestCase<GetHostCommand> {
   void testSuccess() throws Exception {
     persistActiveHost("ns1.example.tld");
     runCommand("ns1.example.tld");
-    assertInStdout("fullyQualifiedHostName=ns1.example.tld");
+    assertInStdout("hostName=ns1.example.tld");
     assertInStdout(
         "Websafe key: "
             + "kind:Host"
@@ -53,7 +53,7 @@ class GetHostCommandTest extends CommandTestCase<GetHostCommand> {
   void testSuccess_expand() throws Exception {
     persistActiveHost("ns1.example.tld");
     runCommand("ns1.example.tld", "--expand");
-    assertInStdout("fullyQualifiedHostName=ns1.example.tld");
+    assertInStdout("hostName=ns1.example.tld");
     assertInStdout(
         "Websafe key: "
             + "kind:Host"
@@ -67,8 +67,8 @@ class GetHostCommandTest extends CommandTestCase<GetHostCommand> {
     persistActiveHost("ns1.example.tld");
     persistActiveHost("ns2.example.tld");
     runCommand("ns1.example.tld", "ns2.example.tld");
-    assertInStdout("fullyQualifiedHostName=ns1.example.tld");
-    assertInStdout("fullyQualifiedHostName=ns2.example.tld");
+    assertInStdout("hostName=ns1.example.tld");
+    assertInStdout("hostName=ns2.example.tld");
     assertInStdout(
         "Websafe key: "
             + "kind:Host"
@@ -87,8 +87,8 @@ class GetHostCommandTest extends CommandTestCase<GetHostCommand> {
     createTld("tld2");
     persistActiveHost("ns1.example.tld2");
     runCommand("ns1.example.tld", "ns1.example.tld2");
-    assertInStdout("fullyQualifiedHostName=ns1.example.tld");
-    assertInStdout("fullyQualifiedHostName=ns1.example.tld2");
+    assertInStdout("hostName=ns1.example.tld");
+    assertInStdout("hostName=ns1.example.tld2");
   }
 
   @Test
@@ -116,7 +116,7 @@ class GetHostCommandTest extends CommandTestCase<GetHostCommand> {
   void testSuccess_externalHost() throws Exception {
     persistActiveHost("ns1.example.foo");
     runCommand("ns1.example.foo");
-    assertInStdout("fullyQualifiedHostName=ns1.example.foo");
+    assertInStdout("hostName=ns1.example.foo");
   }
 
   @Test
