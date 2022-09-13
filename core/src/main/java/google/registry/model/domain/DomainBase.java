@@ -112,17 +112,14 @@ public class DomainBase extends EppResource
    * Fully qualified domain name (puny-coded), which serves as the foreign key for this domain.
    *
    * <p>This is only unique in the sense that for any given lifetime specified as the time range
-   * from (creationTime, deletionTime) there can only be one domain in Datastore with this name.
+   * from (creationTime, deletionTime) there can only be one domain in the database with this name.
    * However, there can be many domains with the same name and non-overlapping lifetimes.
    *
-   * @invariant fullyQualifiedDomainName == fullyQualifiedDomainName.toLowerCase(Locale.ENGLISH)
+   * @invariant domainName == domainName.toLowerCase(Locale.ENGLISH)
    */
-  // TODO(b/177567432): Rename this to domainName when we are off Datastore
-  @Column(name = "domainName")
-  @Index
-  String fullyQualifiedDomainName;
+  @Index String domainName;
 
-  /** The top level domain this is under, dernormalized from {@link #fullyQualifiedDomainName}. */
+  /** The top level domain this is under, dernormalized from {@link #domainName}. */
   @Index String tld;
 
   /** References to hosts that are the nameservers for the domain. */
@@ -340,11 +337,11 @@ public class DomainBase extends EppResource
 
   @Override
   public String getForeignKey() {
-    return fullyQualifiedDomainName;
+    return domainName;
   }
 
   public String getDomainName() {
-    return fullyQualifiedDomainName;
+    return domainName;
   }
 
   public ImmutableSet<DelegationSignerData> getDsData() {
@@ -728,9 +725,9 @@ public class DomainBase extends EppResource
       // If there is no autorenew end time, set it to END_OF_TIME.
       instance.autorenewEndTime = firstNonNull(getInstance().autorenewEndTime, END_OF_TIME);
 
-      checkArgumentNotNull(emptyToNull(instance.fullyQualifiedDomainName), "Missing domainName");
+      checkArgumentNotNull(emptyToNull(instance.domainName), "Missing domainName");
       checkArgumentNotNull(instance.getRegistrant(), "Missing registrant");
-      instance.tld = getTldFromDomainName(instance.fullyQualifiedDomainName);
+      instance.tld = getTldFromDomainName(instance.domainName);
 
       T newDomain = super.build();
       // Hibernate throws exception if gracePeriods or dsData is null because we enabled all
@@ -751,7 +748,7 @@ public class DomainBase extends EppResource
           domainName.equals(canonicalizeHostname(domainName)),
           "Domain name %s not in puny-coded, lower-case form",
           domainName);
-      getInstance().fullyQualifiedDomainName = domainName;
+      getInstance().domainName = domainName;
       return thisCastToDerived();
     }
 
