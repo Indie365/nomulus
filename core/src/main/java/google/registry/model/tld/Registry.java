@@ -449,7 +449,7 @@ public class Registry extends ImmutableObject implements Buildable, UnsafeSerial
   @Nullable Set<String> allowedRegistrantContactIds;
 
   /** An allowlist of hosts allowed to be used on domains on this TLD (ignored if empty). */
-  @Nullable Set<String> allowedFullyQualifiedHostNames;
+  @Nullable Set<String> allowedHostNames;
 
   public String getTldStr() {
     return tldStr;
@@ -635,8 +635,8 @@ public class Registry extends ImmutableObject implements Buildable, UnsafeSerial
     return nullToEmptyImmutableCopy(allowedRegistrantContactIds);
   }
 
-  public ImmutableSet<String> getAllowedFullyQualifiedHostNames() {
-    return nullToEmptyImmutableCopy(allowedFullyQualifiedHostNames);
+  public ImmutableSet<String> getAllowedHostNames() {
+    return nullToEmptyImmutableCopy(allowedHostNames);
   }
 
   @Override
@@ -894,9 +894,8 @@ public class Registry extends ImmutableObject implements Buildable, UnsafeSerial
       return this;
     }
 
-    public Builder setAllowedFullyQualifiedHostNames(
-        ImmutableSet<String> allowedFullyQualifiedHostNames) {
-      getInstance().allowedFullyQualifiedHostNames = allowedFullyQualifiedHostNames;
+    public Builder setAllowedHostNames(ImmutableSet<String> allowedHostNames) {
+      getInstance().allowedHostNames = allowedHostNames;
       return this;
     }
 

@@ -101,7 +101,7 @@ public class UpdateTldCommand extends CreateOrUpdateTldCommand {
   ImmutableSet<String> getAllowedNameservers(Registry oldRegistry) {
     return formUpdatedList(
         "allowed nameservers",
-        oldRegistry.getAllowedFullyQualifiedHostNames(),
+        oldRegistry.getAllowedHostNames(),
         allowedNameservers,
         allowedNameserversAdd,
         allowedNameserversRemove);
