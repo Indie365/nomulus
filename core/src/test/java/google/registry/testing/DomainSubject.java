@@ -40,9 +40,8 @@ public final class DomainSubject extends AbstractEppResourceSubject<Domain, Doma
     this.actual = subject;
   }
 
-  public And<DomainSubject> hasFullyQualifiedDomainName(String fullyQualifiedDomainName) {
-    return hasValue(
-        fullyQualifiedDomainName, actual.getDomainName(), "has fullyQualifiedDomainName");
+  public And<DomainSubject> hasFullyQualifiedDomainName(String domainName) {
+    return hasValue(domainName, actual.getDomainName(), "has domainName");
   }
 
   public And<DomainSubject> hasExactlyDsData(DelegationSignerData... dsData) {

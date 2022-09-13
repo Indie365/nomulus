@@ -640,10 +640,7 @@ public final class DomainCreateFlow implements TransactionalFlow {
   }
 
   private static PollMessage.OneTime createNameCollisionOneTimePollMessage(
-      String fullyQualifiedDomainName,
-      HistoryEntry historyEntry,
-      String registrarId,
-      DateTime now) {
+      String domainName, HistoryEntry historyEntry, String registrarId, DateTime now) {
     return new PollMessage.OneTime.Builder()
         .setRegistrarId(registrarId)
         .setEventTime(now)
@@ -651,7 +648,7 @@ public final class DomainCreateFlow implements TransactionalFlow {
         .setResponseData(
             ImmutableList.of(
                 DomainPendingActionNotificationResponse.create(
-                    fullyQualifiedDomainName, true, historyEntry.getTrid(), now)))
+                    domainName, true, historyEntry.getTrid(), now)))
         .setHistoryEntry(historyEntry)
         .build();
   }
