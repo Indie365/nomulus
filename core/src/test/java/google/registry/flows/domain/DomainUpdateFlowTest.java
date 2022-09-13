@@ -1727,4 +1727,10 @@ class DomainUpdateFlowTest extends ResourceFlowTestCase<DomainUpdateFlow, Domain
     runFlowAsSuperuser();
     assertAboutDomains().that(reloadResourceByForeignKey()).hasNoAutorenewEndTime();
   }
+
+  @Test
+  void testDnsTaskIsNotTriggeredWhenNoDSChangeSubmitted() throws Exception {
+    setEppInput("domain_update_no_ds_change.xml");
+    assertDnsTasksEnqueued();
+  }
 }
