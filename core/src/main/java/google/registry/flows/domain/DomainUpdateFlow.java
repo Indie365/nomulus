@@ -229,8 +229,7 @@ public final class DomainUpdateFlow implements TransactionalFlow {
     validateContactsHaveTypes(add.getContacts());
     validateContactsHaveTypes(remove.getContacts());
     validateRegistrantAllowedOnTld(tld, command.getInnerChange().getRegistrantContactId());
-    validateNameserversAllowedOnTld(
-        tld, add.getNameserverFullyQualifiedHostNames());
+    validateNameserversAllowedOnTld(tld, add.getNameserverHostNames());
   }
 
   private Domain performUpdate(Update command, Domain domain, DateTime now) throws EppException {

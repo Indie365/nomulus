@@ -1001,9 +1001,9 @@ public class DomainFlowUtils {
     validateRegistrantAllowedOnTld(tld, command.getRegistrantContactId());
     validateNoDuplicateContacts(command.getContacts());
     validateRequiredContactsPresent(command.getRegistrant(), command.getContacts());
-    ImmutableSet<String> fullyQualifiedHostNames = command.getNameserverFullyQualifiedHostNames();
-    validateNameserversCountForTld(tld, domainName, fullyQualifiedHostNames.size());
-    validateNameserversAllowedOnTld(tld, fullyQualifiedHostNames);
+    ImmutableSet<String> hostNames = command.getNameserverHostNames();
+    validateNameserversCountForTld(tld, domainName, hostNames.size());
+    validateNameserversAllowedOnTld(tld, hostNames);
   }
 
   /** Validate the secDNS extension, if present. */
@@ -1542,11 +1542,11 @@ public class DomainFlowUtils {
   /** Nameservers are not allow-listed for this TLD. */
   public static class NameserversNotAllowedForTldException
       extends StatusProhibitsOperationException {
-    public NameserversNotAllowedForTldException(Set<String> fullyQualifiedHostNames) {
+    public NameserversNotAllowedForTldException(Set<String> hostNames) {
       super(
           String.format(
               "Nameservers '%s' are not allow-listed for this TLD",
-              Joiner.on(',').join(fullyQualifiedHostNames)));
+              Joiner.on(',').join(hostNames)));
     }
   }
 
