@@ -36,7 +36,6 @@ import google.registry.model.contact.Contact;
 import google.registry.model.domain.Domain;
 import google.registry.model.eppcommon.StatusValue;
 import google.registry.model.host.Host;
-import google.registry.model.index.ForeignKeyIndex;
 import google.registry.model.reporting.HistoryEntry;
 import google.registry.model.reporting.HistoryEntryDao;
 import google.registry.model.tld.Registry;
@@ -150,19 +149,18 @@ public final class EppResourceUtils {
     checkArgument(
         ForeignKeyedEppResource.class.isAssignableFrom(clazz),
         "loadByForeignKey may only be called for foreign keyed EPP resources");
-    ForeignKeyIndex<T> fki =
+    VKey<T> key =
         useCache
-            ? ForeignKeyIndex.loadCached(clazz, ImmutableList.of(foreignKey), now)
-                .getOrDefault(foreignKey, null)
-            : ForeignKeyIndex.load(clazz, foreignKey, now);
-    // The value of fki.getResourceKey() might be null for hard-deleted prober data.
-    if (fki == null || isAtOrAfter(now, fki.getDeletionTime()) || fki.getResourceKey() == null) {
+            ? ForeignKeyUtils.loadCached(clazz, ImmutableList.of(foreignKey), now).get(foreignKey)
+            : ForeignKeyUtils.load(clazz, foreignKey, now);
+    // The returned key is null if the resource is hard deleted or soft deleted by the given time.
+    if (key == null) {
       return Optional.empty();
     }
     T resource =
         useCache
-            ? EppResource.loadCached(fki.getResourceKey())
-            : tm().transact(() -> tm().loadByKeyIfPresent(fki.getResourceKey()).orElse(null));
+            ? EppResource.loadCached(key)
+            : tm().transact(() -> tm().loadByKeyIfPresent(key).orElse(null));
     if (resource == null || isAtOrAfter(now, resource.getDeletionTime())) {
       return Optional.empty();
     }
@@ -178,7 +176,7 @@ public final class EppResourceUtils {
   }
 
   /**
-   * Checks multiple {@link EppResource} objects from Datastore by unique ids.
+   * Checks multiple {@link EppResource} objects from the database by unique ids.
    *
    * <p>There are currently no resources that support checks and do not use foreign keys. If we need
    * to support that case in the future, we can loosen the type to allow any {@link EppResource} and
@@ -190,7 +188,7 @@ public final class EppResourceUtils {
    */
   public static <T extends EppResource> ImmutableSet<String> checkResourcesExist(
       Class<T> clazz, List<String> uniqueIds, final DateTime now) {
-    return ForeignKeyIndex.load(clazz, uniqueIds, now).keySet();
+    return ForeignKeyUtils.load(clazz, uniqueIds, now).keySet();
   }
 
   /**
