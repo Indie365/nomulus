@@ -15,6 +15,8 @@
 package google.registry.reporting.billing;
 
 import static com.google.common.truth.Truth.assertThat;
+import static google.registry.model.common.Cursor.CursorType.RECURRING_BILLING;
+import static google.registry.testing.DatabaseHelper.persistResource;
 import static javax.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
 import static javax.servlet.http.HttpServletResponse.SC_OK;
 import static org.mockito.Mockito.mock;
@@ -24,6 +26,7 @@ import static org.mockito.Mockito.when;
 import com.google.cloud.tasks.v2.HttpMethod;
 import com.google.common.net.MediaType;
 import google.registry.beam.BeamActionTestBase;
+import google.registry.model.common.Cursor;
 import google.registry.reporting.ReportingModule;
 import google.registry.testing.AppEngineExtension;
 import google.registry.testing.CloudTasksHelper;
@@ -31,6 +34,7 @@ import google.registry.testing.CloudTasksHelper.TaskMatcher;
 import google.registry.testing.FakeClock;
 import google.registry.util.CloudTasksUtils;
 import java.io.IOException;
+import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.YearMonth;
 import org.junit.jupiter.api.Test;
@@ -51,6 +55,7 @@ class GenerateInvoicesActionTest extends BeamActionTestBase {
 
   @Test
   void testLaunchTemplateJob_withPublish() throws Exception {
+    persistResource(Cursor.createGlobal(RECURRING_BILLING, DateTime.parse("2017-11-30TZ")));
     action =
         new GenerateInvoicesAction(
             "test-project",
@@ -85,6 +90,7 @@ class GenerateInvoicesActionTest extends BeamActionTestBase {
 
   @Test
   void testLaunchTemplateJob_withoutPublish() throws Exception {
+    persistResource(Cursor.createGlobal(RECURRING_BILLING, DateTime.parse("2017-11-30TZ")));
     action =
         new GenerateInvoicesAction(
             "test-project",
@@ -108,6 +114,7 @@ class GenerateInvoicesActionTest extends BeamActionTestBase {
 
   @Test
   void testCaughtIOException() throws IOException {
+    persistResource(Cursor.createGlobal(RECURRING_BILLING, DateTime.parse("2017-11-30TZ")));
     when(launch.execute()).thenThrow(new IOException("Pipeline error"));
     action =
         new GenerateInvoicesAction(
@@ -127,6 +134,33 @@ class GenerateInvoicesActionTest extends BeamActionTestBase {
     assertThat(response.getStatus()).isEqualTo(SC_INTERNAL_SERVER_ERROR);
     assertThat(response.getPayload()).isEqualTo("Pipeline launch failed: Pipeline error");
     verify(emailUtils).sendAlertEmail("Pipeline Launch failed due to Pipeline error");
+    cloudTasksHelper.assertNoTasksEnqueued("beam-reporting");
+  }
+
+  @Test
+  void testFailsToGenerateInvoicesNotExpandedBillingEvents() throws Exception {
+    persistResource(Cursor.createGlobal(RECURRING_BILLING, DateTime.parse("2017-10-30TZ")));
+    action =
+        new GenerateInvoicesAction(
+            "test-project",
+            "test-region",
+            "staging_bucket",
+            "billing_bucket",
+            "REG-INV",
+            false,
+            new YearMonth(2017, 10),
+            emailUtils,
+            cloudTasksUtils,
+            clock,
+            response,
+            dataflow);
+    action.run();
+    assertThat(response.getContentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+    assertThat(response.getStatus()).isEqualTo(SC_INTERNAL_SERVER_ERROR);
+    assertThat(response.getPayload())
+        .isEqualTo(
+            "Pipeline launch failed: Latest billing events expansion cycle hasn't finished yet,"
+                + " terminating invoicing pipeline");
     cloudTasksHelper.assertNoTasksEnqueued("beam-reporting");
   }
 }
