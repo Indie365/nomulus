@@ -16,6 +16,7 @@ package google.registry.beam.invoicing;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.truth.Truth.assertThat;
+import static google.registry.model.common.Cursor.CursorType.RECURRING_BILLING;
 import static google.registry.model.tld.Registry.TldState.GENERAL_AVAILABILITY;
 import static google.registry.testing.DatabaseHelper.createTld;
 import static google.registry.testing.DatabaseHelper.newRegistry;
@@ -29,6 +30,7 @@ import static java.util.logging.Level.SEVERE;
 import static org.joda.money.CurrencyUnit.CAD;
 import static org.joda.money.CurrencyUnit.JPY;
 import static org.joda.money.CurrencyUnit.USD;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -41,6 +43,7 @@ import google.registry.model.billing.BillingEvent.Flag;
 import google.registry.model.billing.BillingEvent.OneTime;
 import google.registry.model.billing.BillingEvent.Reason;
 import google.registry.model.billing.BillingEvent.Recurring;
+import google.registry.model.common.Cursor;
 import google.registry.model.domain.Domain;
 import google.registry.model.domain.DomainHistory;
 import google.registry.model.registrar.Registrar;
@@ -76,6 +79,9 @@ import org.junit.jupiter.api.io.TempDir;
 
 /** Unit tests for {@link InvoicingPipeline}. */
 class InvoicingPipelineTest {
+
+  private DateTime currentTestTime = DateTime.parse("2006-06-08TZ");
+  private final FakeClock clock = new FakeClock(currentTestTime);
 
   @RegisterExtension
   @Order(Order.DEFAULT - 1)
@@ -344,6 +350,21 @@ class InvoicingPipelineTest {
       assertThat(detailReport.subList(1, detailReport.size()))
           .containsExactlyElementsIn(entry.getValue());
     }
+  }
+
+  @Test
+  void testFailsToGenerateInvoicesNotExpandedBillingEvents() {
+    persistResource(Cursor.createGlobal(RECURRING_BILLING, DateTime.parse("2006-06-06TZ")));
+    InvoicingPipeline invoicingPipeline = new InvoicingPipeline(options);
+    invoicingPipeline.clock = clock;
+    RuntimeException thrown =
+        assertThrows(RuntimeException.class, () -> invoicingPipeline.run().waitUntilFinish());
+    assertThat(thrown)
+        .hasMessageThat()
+        .contains(
+            "Latest billing events expansion cycle hasn't finished yet, terminating invoicing"
+                + " pipeline");
+    pipeline.run().waitUntilFinish();
   }
 
   @Test

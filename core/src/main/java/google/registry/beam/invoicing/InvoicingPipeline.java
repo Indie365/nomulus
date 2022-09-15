@@ -16,6 +16,9 @@ package google.registry.beam.invoicing;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static google.registry.beam.BeamUtils.getQueryFromFile;
+import static google.registry.model.common.Cursor.CursorType.RECURRING_BILLING;
+import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
+import static google.registry.util.DateTimeUtils.START_OF_TIME;
 import static org.apache.beam.sdk.values.TypeDescriptors.strings;
 
 import com.google.common.flogger.FluentLogger;
@@ -25,9 +28,11 @@ import google.registry.beam.invoicing.BillingEvent.InvoiceGroupingKey;
 import google.registry.beam.invoicing.BillingEvent.InvoiceGroupingKey.InvoiceGroupingKeyCoder;
 import google.registry.model.billing.BillingEvent.Flag;
 import google.registry.model.billing.BillingEvent.OneTime;
+import google.registry.model.common.Cursor;
 import google.registry.model.registrar.Registrar;
 import google.registry.persistence.PersistenceModule.TransactionIsolationLevel;
 import google.registry.reporting.billing.BillingModule;
+import google.registry.util.Clock;
 import google.registry.util.DomainNameUtils;
 import google.registry.util.SqlTemplate;
 import java.io.Serializable;
@@ -35,6 +40,7 @@ import java.time.YearMonth;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineResult;
 import org.apache.beam.sdk.coders.StringUtf8Coder;
@@ -50,6 +56,7 @@ import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.TypeDescriptor;
 import org.joda.money.CurrencyUnit;
+import org.joda.time.DateTime;
 
 /**
  * Definition of a Dataflow Flex pipeline template, which generates a given month's invoices.
@@ -63,6 +70,8 @@ import org.joda.money.CurrencyUnit;
  *     Flex Templates</a>
  */
 public class InvoicingPipeline implements Serializable {
+
+  @Inject Clock clock;
 
   private static final long serialVersionUID = 5386330443625580081L;
 
@@ -78,6 +87,18 @@ public class InvoicingPipeline implements Serializable {
   }
 
   PipelineResult run() {
+    DateTime currentCursorTime =
+        tm().transact(
+                () ->
+                    tm().loadByKeyIfPresent(Cursor.createGlobalVKey(RECURRING_BILLING))
+                        .orElse(Cursor.createGlobal(RECURRING_BILLING, START_OF_TIME))
+                        .getCursorTime());
+
+    if (currentCursorTime.isBefore(clock.nowUtc().minusDays(1))) {
+      throw new RuntimeException(
+          "Latest billing events expansion cycle hasn't finished yet, terminating invoicing"
+              + " pipeline");
+    }
     Pipeline pipeline = Pipeline.create(options);
     setupPipeline(pipeline);
     return pipeline.run();
