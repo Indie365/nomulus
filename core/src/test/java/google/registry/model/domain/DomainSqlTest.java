@@ -416,11 +416,10 @@ public class DomainSqlTest {
     createTld("com");
     historyEntry =
         new DomainHistory.Builder()
-            .setId(100L)
+            .setRevisionId(100L)
             .setType(HistoryEntry.Type.DOMAIN_CREATE)
             .setPeriod(Period.create(1, Period.Unit.YEARS))
             .setModificationTime(DateTime.now(UTC))
-            .setDomainRepoId("4-COM")
             .setRegistrarId("registrar1")
             // These are non-null, but I don't think some tests set them.
             .setReason("felt like it")
@@ -455,7 +454,7 @@ public class DomainSqlTest {
     BillingEvent.OneTime oneTimeBillingEvent =
         new BillingEvent.OneTime.Builder()
             .setId(500L)
-            // Use SERVER_STATUS so we don't have to add a period.
+            // Use SERVER_STATUS, so we don't have to add a period.
             .setReason(Reason.SERVER_STATUS)
             .setTargetId("example.com")
             .setRegistrarId("registrar1")
@@ -484,7 +483,6 @@ public class DomainSqlTest {
                 END_OF_TIME,
                 "registrar1",
                 billEvent.createVKey()));
-
     domain =
         domain
             .asBuilder()
@@ -494,7 +492,7 @@ public class DomainSqlTest {
             .setTransferData(transferData)
             .setGracePeriods(gracePeriods)
             .build();
-    historyEntry = historyEntry.asBuilder().setDomain(domain).build();
+    historyEntry = historyEntry.asBuilder().setResource(domain).build();
     insertInDb(
         contact,
         contact2,
@@ -548,7 +546,7 @@ public class DomainSqlTest {
             .build();
     // Note that the equality comparison forces a lazy load of all fields.
     assertAboutImmutableObjects().that(thatDomain).isEqualExceptFields(domain, moreExcepts);
-    // Transfer data cannot be directly compared due to serverApproveEtities inequalities
+    // Transfer data cannot be directly compared due to serverApproveEntities inequalities
     assertAboutImmutableObjects()
         .that(domain.getTransferData())
         .isEqualExceptFields(thatDomain.getTransferData(), "serverApproveEntities");

@@ -332,7 +332,7 @@ public final class DatabaseHelper {
                 .setRegistrarId(domain.getCreationRegistrarId())
                 .setType(HistoryEntry.Type.DOMAIN_CREATE)
                 .setModificationTime(domain.getCreationTime())
-                .setDomain(domain)
+                .setResource(domain)
                 .build());
     Recurring recurring =
         persistResource(
@@ -550,15 +550,14 @@ public final class DatabaseHelper {
 
   public static Contact persistContactWithPendingTransfer(
       Contact contact, DateTime requestTime, DateTime expirationTime, DateTime now) {
-    HistoryEntry historyEntryContactTransfer =
+    ContactHistory historyEntryContactTransfer =
         persistResource(
             new ContactHistory.Builder()
                 .setType(HistoryEntry.Type.CONTACT_TRANSFER_REQUEST)
-                .setContact(persistResource(contact))
+                .setResource(persistResource(contact))
                 .setModificationTime(now)
                 .setRegistrarId(contact.getCurrentSponsorRegistrarId())
-                .build()
-                .toChildHistoryEntity());
+                .build());
     return persistResource(
         contact
             .asBuilder()
@@ -568,8 +567,8 @@ public final class DatabaseHelper {
                 createContactTransferDataBuilder(requestTime, expirationTime)
                     .setPendingTransferExpirationTime(now.plus(getContactAutomaticTransferLength()))
                     .setServerApproveEntities(
-                        ((ContactHistory) historyEntryContactTransfer).getContactRepoId(),
-                        historyEntryContactTransfer.getId(),
+                        historyEntryContactTransfer.getRepoId(),
+                        historyEntryContactTransfer.getRevisionId(),
                         ImmutableSet.of(
                             // Pretend it's 3 days since the request
                             persistResource(
@@ -629,7 +628,7 @@ public final class DatabaseHelper {
             new DomainHistory.Builder()
                 .setType(HistoryEntry.Type.DOMAIN_CREATE)
                 .setModificationTime(now)
-                .setDomain(domain)
+                .setResource(domain)
                 .setRegistrarId(domain.getCreationRegistrarId())
                 .build());
     BillingEvent.Recurring autorenewEvent =
@@ -671,7 +670,7 @@ public final class DatabaseHelper {
             new DomainHistory.Builder()
                 .setType(HistoryEntry.Type.DOMAIN_TRANSFER_REQUEST)
                 .setModificationTime(tm().transact(() -> tm().getTransactionTime()))
-                .setDomain(domain)
+                .setResource(domain)
                 .setRegistrarId("TheRegistrar")
                 .build());
     BillingEvent.OneTime transferBillingEvent =
@@ -732,8 +731,8 @@ public final class DatabaseHelper {
                     .setServerApproveAutorenewPollMessage(
                         gainingClientAutorenewPollMessage.createVKey())
                     .setServerApproveEntities(
-                        historyEntryDomainTransfer.getDomainRepoId(),
-                        historyEntryDomainTransfer.getId(),
+                        historyEntryDomainTransfer.getRepoId(),
+                        historyEntryDomainTransfer.getRevisionId(),
                         ImmutableSet.of(
                             transferBillingEvent.createVKey(),
                             gainingClientAutorenewEvent.createVKey(),
@@ -1106,15 +1105,13 @@ public final class DatabaseHelper {
                     tm().loadAllOf(PollMessage.class).stream()
                         .filter(
                             pollMessage ->
-                                pollMessage
-                                        .getResourceName()
-                                        .equals(historyEntry.getParent().getName())
-                                    && pollMessage.getHistoryRevisionId() == historyEntry.getId()
+                                pollMessage.getResourceId().equals(historyEntry.getRepoId())
+                                    && pollMessage.getHistoryRevisionId()
+                                        == historyEntry.getRevisionId()
                                     && pollMessage
                                         .getType()
                                         .getResourceClass()
-                                        .getName()
-                                        .equals(historyEntry.getParent().getKind()))
+                                        .equals(historyEntry.getResourceClass()))
                         .collect(toImmutableList())));
   }
 

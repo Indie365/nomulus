@@ -274,7 +274,7 @@ public class ExpandRecurringBillingEventsAction implements Runnable {
               .setBySuperuser(false)
               .setRegistrarId(recurring.getRegistrarId())
               .setModificationTime(tm().getTransactionTime())
-              .setDomain(tm().loadByKey(domainKey))
+              .setResource(tm().loadByKey(domainKey))
               .setPeriod(Period.create(1, YEARS))
               .setReason("Domain autorenewal by ExpandRecurringBillingEventsAction")
               .setRequestedByRegistrar(false)

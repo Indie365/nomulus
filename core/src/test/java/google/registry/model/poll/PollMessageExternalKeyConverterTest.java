@@ -54,7 +54,7 @@ public class PollMessageExternalKeyConverterTest {
     historyEntry =
         persistResource(
             new DomainHistory.Builder()
-                .setDomain(persistActiveDomain("foo.foobar"))
+                .setResource(persistActiveDomain("foo.foobar"))
                 .setType(HistoryEntry.Type.DOMAIN_CREATE)
                 .setPeriod(Period.create(1, Period.Unit.YEARS))
                 .setXmlBytes("<xml></xml>".getBytes(UTF_8))

@@ -116,7 +116,7 @@ class DomainRestoreRequestFlowTest extends ResourceFlowTestCase<DomainRestoreReq
                 .setType(HistoryEntry.Type.DOMAIN_DELETE)
                 .setModificationTime(clock.nowUtc())
                 .setRegistrarId(domain.getCurrentSponsorRegistrarId())
-                .setDomain(domain)
+                .setResource(domain)
                 .build());
     persistResource(
         domain
@@ -773,8 +773,8 @@ class DomainRestoreRequestFlowTest extends ResourceFlowTestCase<DomainRestoreReq
     persistPendingDeleteDomain();
     runFlow();
     Domain domain = reloadResourceByForeignKey();
-    HistoryEntry historyEntryDomainRestore =
-        getOnlyHistoryEntryOfType(domain, HistoryEntry.Type.DOMAIN_RESTORE);
+    DomainHistory historyEntryDomainRestore =
+        (DomainHistory) getOnlyHistoryEntryOfType(domain, HistoryEntry.Type.DOMAIN_RESTORE);
     assertThat(historyEntryDomainRestore.getDomainTransactionRecords())
         .containsExactly(
             DomainTransactionRecord.create(

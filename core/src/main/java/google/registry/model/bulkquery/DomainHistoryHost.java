@@ -15,8 +15,8 @@
 package google.registry.model.bulkquery;
 
 import com.google.common.base.Objects;
-import google.registry.model.domain.DomainHistory.DomainHistoryId;
 import google.registry.model.host.Host;
+import google.registry.model.reporting.HistoryEntry.HistoryEntryId;
 import google.registry.persistence.VKey;
 import java.io.Serializable;
 import javax.persistence.Access;
@@ -40,8 +40,8 @@ public class DomainHistoryHost implements Serializable {
 
   private DomainHistoryHost() {}
 
-  public DomainHistoryId getDomainHistoryId() {
-    return new DomainHistoryId(domainHistoryDomainRepoId, domainHistoryHistoryRevisionId);
+  public HistoryEntryId getHistoryEntryId() {
+    return new HistoryEntryId(domainHistoryDomainRepoId, domainHistoryHistoryRevisionId);
   }
 
   public VKey<Host> getHostVKey() {

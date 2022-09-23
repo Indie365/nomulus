@@ -92,7 +92,7 @@ public final class ContactCreateFlow implements TransactionalFlow {
     historyBuilder
         .setType(HistoryEntry.Type.CONTACT_CREATE)
         .setXmlBytes(null) // We don't want to store contact details in the history entry.
-        .setContact(newContact);
+        .setResource(newContact);
     tm().insertAll(ImmutableSet.of(newContact, historyBuilder.build()));
     return responseBuilder
         .setResData(ContactCreateData.create(newContact.getContactId(), now))

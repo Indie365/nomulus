@@ -21,19 +21,18 @@ import static google.registry.persistence.transaction.TransactionManagerFactory.
 
 import google.registry.model.domain.Domain;
 import google.registry.model.domain.DomainHistory;
-import google.registry.model.domain.DomainHistory.DomainHistoryId;
 import google.registry.model.domain.GracePeriod;
 import google.registry.model.domain.GracePeriod.GracePeriodHistory;
 import google.registry.model.domain.secdns.DomainDsData;
 import google.registry.model.domain.secdns.DomainDsDataHistory;
 import google.registry.model.reporting.DomainTransactionRecord;
+import google.registry.model.reporting.HistoryEntry.HistoryEntryId;
 import google.registry.persistence.VKey;
 
-/**
- * Helpers for bulk-loading {@link Domain} and {@link google.registry.model.domain.DomainHistory}
- * entities in <em>tests</em>.
- */
-public class BulkQueryHelper {
+/** Helpers for bulk-loading {@link Domain} and {@link DomainHistory} entities in <em>tests</em>. */
+public final class BulkQueryHelper {
+
+  private BulkQueryHelper() {}
 
   static Domain loadAndAssembleDomain(String domainRepoId) {
     return jpaTm()
@@ -56,7 +55,7 @@ public class BulkQueryHelper {
                         .collect(toImmutableSet())));
   }
 
-  static DomainHistory loadAndAssembleDomainHistory(DomainHistoryId domainHistoryId) {
+  static DomainHistory loadAndAssembleDomainHistory(HistoryEntryId domainHistoryId) {
     return jpaTm()
         .transact(
             () ->
@@ -66,24 +65,23 @@ public class BulkQueryHelper {
                         .loadAllOfStream(DomainDsDataHistory.class)
                         .filter(
                             domainDsDataHistory ->
-                                domainDsDataHistory.getDomainHistoryId().equals(domainHistoryId))
+                                domainDsDataHistory.getHistoryEntryId().equals(domainHistoryId))
                         .collect(toImmutableSet()),
                     jpaTm()
                         .loadAllOfStream(DomainHistoryHost.class)
                         .filter(
                             domainHistoryHost ->
-                                domainHistoryHost.getDomainHistoryId().equals(domainHistoryId))
+                                domainHistoryHost.getHistoryEntryId().equals(domainHistoryId))
                         .map(DomainHistoryHost::getHostVKey)
                         .collect(toImmutableSet()),
                     jpaTm()
                         .loadAllOfStream(GracePeriodHistory.class)
                         .filter(
                             gracePeriodHistory ->
-                                gracePeriodHistory.getDomainHistoryId().equals(domainHistoryId))
+                                gracePeriodHistory.getHistoryEntryId().equals(domainHistoryId))
                         .collect(toImmutableSet()),
                     jpaTm()
                         .loadAllOfStream(DomainTransactionRecord.class)
-                        .filter(x -> true)
                         .collect(toImmutableSet())));
   }
 }

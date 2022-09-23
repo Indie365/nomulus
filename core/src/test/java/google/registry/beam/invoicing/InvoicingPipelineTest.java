@@ -553,7 +553,7 @@ class InvoicingPipelineTest {
         new DomainHistory.Builder()
             .setType(HistoryEntry.Type.DOMAIN_RENEW)
             .setModificationTime(DateTime.parse("2017-10-04T00:00:00.0Z"))
-            .setDomain(domain)
+            .setResource(domain)
             .setRegistrarId(registrar.getRegistrarId())
             .build();
     return persistResource(domainHistory);

@@ -15,15 +15,12 @@
 package google.registry.model.domain;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static google.registry.util.CollectionUtils.nullToEmpty;
 import static google.registry.util.CollectionUtils.nullToEmptyImmutableCopy;
 
 import com.google.common.collect.ImmutableSet;
-import com.googlecode.objectify.Key;
-import com.googlecode.objectify.annotation.EntitySubclass;
 import com.googlecode.objectify.annotation.Ignore;
 import google.registry.model.EppResource;
-import google.registry.model.ImmutableObject;
-import google.registry.model.domain.DomainHistory.DomainHistoryId;
 import google.registry.model.domain.GracePeriod.GracePeriodHistory;
 import google.registry.model.domain.secdns.DomainDsData;
 import google.registry.model.domain.secdns.DomainDsDataHistory;
@@ -31,7 +28,6 @@ import google.registry.model.host.Host;
 import google.registry.model.reporting.DomainTransactionRecord;
 import google.registry.model.reporting.HistoryEntry;
 import google.registry.persistence.VKey;
-import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
@@ -45,8 +41,6 @@ import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
-import javax.persistence.Id;
-import javax.persistence.IdClass;
 import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinColumns;
@@ -54,7 +48,9 @@ import javax.persistence.JoinTable;
 import javax.persistence.OneToMany;
 import javax.persistence.PostLoad;
 import javax.persistence.Table;
+import javax.persistence.Transient;
 import org.hibernate.Hibernate;
+import org.hibernate.collection.internal.PersistentSet;
 
 /**
  * A persisted history entry representing an EPP modification to a domain.
@@ -62,11 +58,6 @@ import org.hibernate.Hibernate;
  * <p>In addition to the general history fields (e.g. action time, registrar ID) we also persist a
  * copy of the domain entity at this point in time. We persist a raw {@link DomainBase} so that the
  * foreign-keyed fields in that class can refer to this object.
- *
- * <p>This class is only marked as a Datastore entity subclass and registered with Objectify so that
- * when building it its ID can be auto-populated by Objectify. It is converted to its superclass
- * {@link HistoryEntry} when persisted to Datastore using {@link
- * google.registry.persistence.transaction.TransactionManager}.
  */
 @Entity
 @Table(
@@ -76,27 +67,20 @@ import org.hibernate.Hibernate;
       @Index(columnList = "historyType"),
       @Index(columnList = "historyModificationTime")
     })
-@EntitySubclass
 @Access(AccessType.FIELD)
-@IdClass(DomainHistoryId.class)
+@AttributeOverride(name = "repoId", column = @Column(name = "domainRepoId"))
 public class DomainHistory extends HistoryEntry {
 
-  // Store DomainBase instead of Domain so we don't pick up its @Id
-  // Nullable for the sake of pre-Registry-3.0 history objects
-  @Nullable DomainBase domainBase;
-
-  @Id
+  // Store DomainBase instead of Domain, so we don't pick up its @Id
+  // @Nullable for the sake of pre-Registry-3.0 history objects
+  @Nullable
   @Access(AccessType.PROPERTY)
-  public String getDomainRepoId() {
-    // We need to handle null case here because Hibernate sometimes accesses this method before
-    // parent gets initialized
-    return parent == null ? null : parent.getName();
+  public DomainBase getRawDomainBase() {
+    return (DomainBase) eppResource;
   }
 
-  /** This method is private because it is only used by Hibernate. */
-  @SuppressWarnings("unused")
-  private void setDomainRepoId(String domainRepoId) {
-    parent = Key.create(Domain.class, domainRepoId);
+  protected void setRawDomainBase(DomainBase domainBase) {
+    eppResource = domainBase;
   }
 
   // We could have reused domainBase.nsHosts here, but Hibernate throws a weird exception after
@@ -105,20 +89,16 @@ public class DomainHistory extends HistoryEntry {
   @ElementCollection
   @JoinTable(
       name = "DomainHistoryHost",
-      indexes = {
-        @Index(
-            columnList =
-                "domain_history_history_revision_id,domain_history_domain_repo_id,host_repo_id",
-            unique = true),
-      })
-  @ImmutableObject.EmptySetToNull
+      indexes =
+          @Index(
+              columnList =
+                  "domain_history_history_revision_id,domain_history_domain_repo_id,host_repo_id",
+              unique = true))
+  @EmptySetToNull
   @Column(name = "host_repo_id")
   Set<VKey<Host>> nsHosts;
 
-  @OneToMany(
-      cascade = {CascadeType.ALL},
-      fetch = FetchType.EAGER,
-      orphanRemoval = true)
+  @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
   @JoinColumns({
     @JoinColumn(
         name = "domainHistoryRevisionId",
@@ -135,10 +115,7 @@ public class DomainHistory extends HistoryEntry {
   @Ignore
   Set<DomainDsDataHistory> dsDataHistories = new HashSet<>();
 
-  @OneToMany(
-      cascade = {CascadeType.ALL},
-      fetch = FetchType.EAGER,
-      orphanRemoval = true)
+  @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
   @JoinColumns({
     @JoinColumn(
         name = "domainHistoryRevisionId",
@@ -152,19 +129,14 @@ public class DomainHistory extends HistoryEntry {
         updatable = false)
   })
   // HashSet rather than ImmutableSet so that Hibernate can fill them out lazily on request
-  @Ignore
   Set<GracePeriodHistory> gracePeriodHistories = new HashSet<>();
 
-  @Override
-  @Nullable
-  @Access(AccessType.PROPERTY)
+  /** The length of time that a create, allocate, renewal, or transfer request was issued for. */
   @AttributeOverrides({
     @AttributeOverride(name = "unit", column = @Column(name = "historyPeriodUnit")),
     @AttributeOverride(name = "value", column = @Column(name = "historyPeriodValue"))
   })
-  public Period getPeriod() {
-    return super.getPeriod();
-  }
+  Period period;
 
   /**
    * For transfers, the id of the other registrar.
@@ -174,11 +146,40 @@ public class DomainHistory extends HistoryEntry {
    * registrar is the gaining party.
    */
   @Nullable
-  @Access(AccessType.PROPERTY)
   @Column(name = "historyOtherRegistrarId")
-  @Override
-  public String getOtherRegistrarId() {
-    return super.getOtherRegistrarId();
+  String otherRegistrarId;
+
+  /**
+   * Logging field for transaction reporting.
+   *
+   * <p>This will be empty for any {@link HistoryEntry} generated before this field was added. This
+   * will also be empty if the {@link HistoryEntry} refers to an EPP mutation that does not affect
+   * domain transaction counts (such as contact or host mutations).
+   */
+  @Transient @EmptySetToNull Set<DomainTransactionRecord> domainTransactionRecords;
+
+  public Set<DomainTransactionRecord> getDomainTransactionRecords() {
+    return nullToEmptyImmutableCopy(domainTransactionRecords);
+  }
+
+  /** Do not use this method directly. Use the {@link HistoryEntry.Builder} instead. */
+  protected void setDomainTransactionRecords(
+      Set<DomainTransactionRecord> domainTransactionRecords) {
+    // Note: how we wish to treat this Hibernate setter depends on the current state of the object
+    // and what's passed in. The key principle is that we wish to maintain the link between parent
+    // and child objects, meaning that we should keep around whichever of the two sets (the
+    // parameter vs the class variable) and clear/populate that as appropriate.
+    //
+    // If the class variable is a PersistentSet, and we overwrite it here, Hibernate will throw
+    // an exception "A collection with cascade=”all-delete-orphan” was no longer referenced by the
+    // owning entity instance". See https://stackoverflow.com/questions/5587482 for more details.
+    if (this.domainTransactionRecords instanceof PersistentSet) {
+      Set<DomainTransactionRecord> nonNullRecords = nullToEmpty(domainTransactionRecords);
+      this.domainTransactionRecords.retainAll(nonNullRecords);
+      this.domainTransactionRecords.addAll(nonNullRecords);
+    } else {
+      this.domainTransactionRecords = ImmutableSet.copyOf(domainTransactionRecords);
+    }
   }
 
   /**
@@ -191,10 +192,7 @@ public class DomainHistory extends HistoryEntry {
    * #getDomainTransactionRecords()}.
    */
   @Access(AccessType.PROPERTY)
-  @OneToMany(
-      cascade = {CascadeType.ALL},
-      fetch = FetchType.EAGER,
-      orphanRemoval = true)
+  @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
   @JoinColumn(name = "historyRevisionId", referencedColumnName = "historyRevisionId")
   @JoinColumn(name = "domainRepoId", referencedColumnName = "domainRepoId")
   @SuppressWarnings("unused")
@@ -206,24 +204,12 @@ public class DomainHistory extends HistoryEntry {
   @SuppressWarnings("unused")
   private void setInternalDomainTransactionRecords(
       Set<DomainTransactionRecord> domainTransactionRecords) {
-    super.setDomainTransactionRecords(domainTransactionRecords);
-  }
-
-  @Id
-  @Column(name = "historyRevisionId")
-  @Access(AccessType.PROPERTY)
-  @Override
-  public long getId() {
-    return super.getId();
-  }
-
-  public DomainHistoryId getDomainHistoryId() {
-    return new DomainHistoryId(getDomainRepoId(), getId());
+    setDomainTransactionRecords(domainTransactionRecords);
   }
 
   /** Returns keys to the {@link Host} that are the nameservers for the domain. */
   public Set<VKey<Host>> getNsHosts() {
-    return nsHosts;
+    return ImmutableSet.copyOf(nsHosts);
   }
 
   /** Returns the collection of {@link DomainDsDataHistory} instances. */
@@ -238,12 +224,7 @@ public class DomainHistory extends HistoryEntry {
    * <p>Will be absent for objects created prior to the Registry 3.0 SQL migration.
    */
   public Optional<DomainBase> getDomainBase() {
-    return Optional.ofNullable(domainBase);
-  }
-
-  /** The key to the {@link Domain} this is based off of. */
-  public VKey<Domain> getParentVKey() {
-    return VKey.create(Domain.class, getDomainRepoId());
+    return Optional.ofNullable(getRawDomainBase());
   }
 
   public Set<GracePeriodHistory> getGracePeriodHistories() {
@@ -251,15 +232,22 @@ public class DomainHistory extends HistoryEntry {
   }
 
   /** Creates a {@link VKey} instance for this entity. */
-  @SuppressWarnings("unchecked")
   @Override
   public VKey<DomainHistory> createVKey() {
-    return (VKey<DomainHistory>) createVKey(Key.create(this));
+    return VKey.createSql(DomainHistory.class, getHistoryEntryId());
   }
 
   @Override
   public Optional<? extends EppResource> getResourceAtPointInTime() {
     return getDomainBase().map(domainBase -> new Domain.Builder().copyFrom(domainBase).build());
+  }
+
+  public String getOtherRegistrarId() {
+    return otherRegistrarId;
+  }
+
+  public Period getPeriod() {
+    return period;
   }
 
   @PostLoad
@@ -270,6 +258,7 @@ public class DomainHistory extends HistoryEntry {
     Hibernate.initialize(dsDataHistories);
     Hibernate.initialize(gracePeriodHistories);
 
+    DomainBase domainBase = getRawDomainBase();
     if (domainBase != null) {
       domainBase.nsHosts = nullToEmptyImmutableCopy(nsHosts);
       domainBase.gracePeriods =
@@ -281,80 +270,28 @@ public class DomainHistory extends HistoryEntry {
       // Normally Hibernate would see that the domain fields are all null and would fill
       // domainBase with a null object. Unfortunately, the updateTimestamp is never null in SQL.
       if (domainBase.getDomainName() == null) {
-        domainBase = null;
-      } else {
-        if (domainBase.getRepoId() == null) {
-          // domainBase still hasn't been fully constructed yet, so it's ok to go in and mutate
-          // it.  In fact, we have to because going through the builder causes the hash codes of
-          // contained objects to be calculated prematurely.
-          domainBase.setRepoId(parent.getName());
-        }
+        setRawDomainBase(null);
       }
     }
   }
 
   private static void fillAuxiliaryFieldsFromDomain(DomainHistory domainHistory) {
-    if (domainHistory.domainBase != null) {
-      domainHistory.nsHosts = nullToEmptyImmutableCopy(domainHistory.domainBase.nsHosts);
+    DomainBase domainBase = domainHistory.getRawDomainBase();
+    if (domainBase != null) {
+      domainHistory.nsHosts = nullToEmptyImmutableCopy(domainBase.nsHosts);
       domainHistory.dsDataHistories =
-          nullToEmptyImmutableCopy(domainHistory.domainBase.getDsData()).stream()
+          nullToEmptyImmutableCopy(domainBase.getDsData()).stream()
               .filter(dsData -> dsData.getDigest() != null && dsData.getDigest().length > 0)
-              .map(dsData -> DomainDsDataHistory.createFrom(domainHistory.id, dsData))
+              .map(dsData -> DomainDsDataHistory.createFrom(domainHistory.getRevisionId(), dsData))
               .collect(toImmutableSet());
       domainHistory.gracePeriodHistories =
-          nullToEmptyImmutableCopy(domainHistory.domainBase.getGracePeriods()).stream()
-              .map(gracePeriod -> GracePeriodHistory.createFrom(domainHistory.id, gracePeriod))
+          nullToEmptyImmutableCopy(domainBase.getGracePeriods()).stream()
+              .map(
+                  gracePeriod ->
+                      GracePeriodHistory.createFrom(domainHistory.getRevisionId(), gracePeriod))
               .collect(toImmutableSet());
     } else {
       domainHistory.nsHosts = ImmutableSet.of();
-    }
-  }
-
-  /** Class to represent the composite primary key of {@link DomainHistory} entity. */
-  public static class DomainHistoryId extends ImmutableObject implements Serializable {
-
-    private String domainRepoId;
-
-    private Long id;
-
-    /** Hibernate requires this default constructor. */
-    private DomainHistoryId() {}
-
-    public DomainHistoryId(String domainRepoId, long id) {
-      this.domainRepoId = domainRepoId;
-      this.id = id;
-    }
-
-    /** Returns the domain repository id. */
-    public String getDomainRepoId() {
-      return domainRepoId;
-    }
-
-    /** Returns the history revision id. */
-    public long getId() {
-      return id;
-    }
-
-    /**
-     * Sets the domain repository id.
-     *
-     * <p>This method is private because it is only used by Hibernate and should not be used
-     * externally to keep immutability.
-     */
-    @SuppressWarnings("unused")
-    private void setDomainRepoId(String domainRepoId) {
-      this.domainRepoId = domainRepoId;
-    }
-
-    /**
-     * Sets the history revision id.
-     *
-     * <p>This method is private because it is only used by Hibernate and should not be used
-     * externally to keep immutability.
-     */
-    @SuppressWarnings("unused")
-    private void setId(long id) {
-      this.id = id;
     }
   }
 
@@ -371,25 +308,30 @@ public class DomainHistory extends HistoryEntry {
       super(instance);
     }
 
-    public Builder setDomain(@Nullable DomainBase domainBase) {
-      // Nullable for the sake of pre-Registry-3.0 history objects
-      if (domainBase == null) {
-        return this;
-      }
-      // TODO(b/203609982): if actual type of domainBase is Domain, convert to DomainBase
-      // Note: a DomainHistory fetched by JPA has DomainBase in this field. Allowing Domain
-      // in the setter makes equality checks messy.
-      getInstance().domainBase = domainBase;
-      if (domainBase instanceof Domain) {
-        super.setParent(domainBase);
-      } else {
-        super.setParent(Key.create(Domain.class, domainBase.getRepoId()));
-      }
+    public Builder setPeriod(Period period) {
+      getInstance().period = period;
       return this;
     }
 
-    public Builder setDomainRepoId(String domainRepoId) {
-      getInstance().parent = Key.create(Domain.class, domainRepoId);
+    public Builder setOtherRegistrarId(String otherRegistrarId) {
+      getInstance().otherRegistrarId = otherRegistrarId;
+      return this;
+    }
+
+    public Builder setDomainTransactionRecords(
+        ImmutableSet<DomainTransactionRecord> domainTransactionRecords) {
+      getInstance().setDomainTransactionRecords(domainTransactionRecords);
+      return this;
+    }
+
+    public Builder copyFrom(DomainHistory historyEntry) {
+      copy(historyEntry, getInstance());
+      getInstance().period = historyEntry.period;
+      getInstance().otherRegistrarId = historyEntry.otherRegistrarId;
+      getInstance().domainTransactionRecords =
+          historyEntry.domainTransactionRecords == null
+              ? null
+              : ImmutableSet.copyOf(historyEntry.domainTransactionRecords);
       return this;
     }
 

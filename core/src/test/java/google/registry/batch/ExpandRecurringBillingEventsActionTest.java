@@ -37,7 +37,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
-import com.googlecode.objectify.Key;
 import google.registry.flows.custom.DomainPricingCustomLogic;
 import google.registry.flows.domain.DomainPricingLogic;
 import google.registry.model.billing.BillingEvent;
@@ -101,7 +100,7 @@ public class ExpandRecurringBillingEventsActionTest {
                 .setRegistrarId(domain.getCreationRegistrarId())
                 .setType(HistoryEntry.Type.DOMAIN_CREATE)
                 .setModificationTime(DateTime.parse("1999-01-05T00:00:00Z"))
-                .setDomain(domain)
+                .setResource(domain)
                 .build());
     recurring =
         new BillingEvent.Recurring.Builder()
@@ -126,7 +125,7 @@ public class ExpandRecurringBillingEventsActionTest {
     action.response = new FakeResponse();
     action.run();
     // Need to save the current test time before running the action, which increments the clock.
-    // The execution time (e. g. transaction time) is captured when the action starts running so
+    // The execution time (e.g. transaction time) is captured when the action starts running so
     // the passage of time afterward does not affect the timestamp stored in the billing events.
     currentTestTime = clock.nowUtc();
   }
@@ -139,13 +138,13 @@ public class ExpandRecurringBillingEventsActionTest {
 
   private void assertHistoryEntryMatches(
       Domain domain,
-      HistoryEntry actual,
+      DomainHistory actual,
       String registrarId,
       DateTime billingTime,
       boolean shouldHaveTxRecord) {
     assertThat(actual.getBySuperuser()).isFalse();
     assertThat(actual.getRegistrarId()).isEqualTo(registrarId);
-    assertThat(actual.getParent()).isEqualTo(Key.create(domain));
+    assertThat(actual.getRepoId()).isEqualTo(domain.getRepoId());
     assertThat(actual.getPeriod()).isEqualTo(Period.create(1, YEARS));
     assertThat(actual.getReason())
         .isEqualTo("Domain autorenewal by ExpandRecurringBillingEventsAction");
@@ -197,7 +196,7 @@ public class ExpandRecurringBillingEventsActionTest {
     historyEntry =
         persistResource(
             new DomainHistory.Builder()
-                .setDomain(deletedDomain)
+                .setResource(deletedDomain)
                 .setRegistrarId(deletedDomain.getCreationRegistrarId())
                 .setModificationTime(deletedDomain.getCreationTime())
                 .setType(DOMAIN_CREATE)
@@ -298,7 +297,7 @@ public class ExpandRecurringBillingEventsActionTest {
     runAction();
     List<DomainHistory> persistedEntries =
         getHistoryEntriesOfType(domain, DOMAIN_AUTORENEW, DomainHistory.class);
-    for (HistoryEntry persistedEntry : persistedEntries) {
+    for (DomainHistory persistedEntry : persistedEntries) {
       assertHistoryEntryMatches(
           domain, persistedEntry, "TheRegistrar", DateTime.parse("2000-02-19T00:00:00Z"), true);
     }
@@ -653,7 +652,7 @@ public class ExpandRecurringBillingEventsActionTest {
                 .setRegistrarId(domain2.getCreationRegistrarId())
                 .setType(HistoryEntry.Type.DOMAIN_CREATE)
                 .setModificationTime(DateTime.parse("1999-04-05T00:00:00Z"))
-                .setDomain(domain2)
+                .setResource(domain2)
                 .build());
     BillingEvent.Recurring recurring2 =
         persistResource(
@@ -678,7 +677,7 @@ public class ExpandRecurringBillingEventsActionTest {
                 .setRegistrarId(domain3.getCreationRegistrarId())
                 .setType(HistoryEntry.Type.DOMAIN_CREATE)
                 .setModificationTime(DateTime.parse("1999-06-05T00:00:00Z"))
-                .setDomain(domain3)
+                .setResource(domain3)
                 .build());
     BillingEvent.Recurring recurring3 =
         persistResource(

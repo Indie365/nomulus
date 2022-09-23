@@ -165,7 +165,7 @@ class DeleteExpiredDomainsActionTest {
         persistResource(
             new DomainHistory.Builder()
                 .setType(DOMAIN_CREATE)
-                .setDomain(pendingExpirationDomain)
+                .setResource(pendingExpirationDomain)
                 .setModificationTime(clock.nowUtc().minusMonths(9))
                 .setRegistrarId(pendingExpirationDomain.getCreationRegistrarId())
                 .build());

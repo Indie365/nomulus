@@ -197,7 +197,7 @@ public final class HostUpdateFlow implements TransactionalFlow {
       updateSuperordinateDomains(existingHost, newHost);
     }
     enqueueTasks(existingHost, newHost);
-    entitiesToInsert.add(historyBuilder.setType(HOST_UPDATE).setHost(newHost).build());
+    entitiesToInsert.add(historyBuilder.setType(HOST_UPDATE).setResource(newHost).build());
     tm().updateAll(entitiesToUpdate.build());
     tm().insertAll(entitiesToInsert.build());
     return responseBuilder.build();

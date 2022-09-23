@@ -87,11 +87,11 @@ public class BulkQueryEntities {
       ImmutableSet<DomainTransactionRecord> transactionRecords) {
     DomainHistory.Builder builder = new DomainHistory.Builder();
     builder.copyFrom(domainHistoryLite);
-    DomainBase rawDomainBase = domainHistoryLite.domainBase;
+    DomainBase rawDomainBase = domainHistoryLite.getRawDomainBase();
     if (rawDomainBase != null) {
       DomainBase newDomainBase =
           domainHistoryLite
-              .domainBase
+              .getRawDomainBase()
               .asBuilder()
               .setNameservers(domainHistoryHosts)
               .setGracePeriods(
@@ -102,9 +102,9 @@ public class BulkQueryEntities {
                   dsDataHistories.stream().map(DomainDsData::create).collect(toImmutableSet()))
               // Restore the original update timestamp (this gets cleared when we set nameservers or
               // DS data).
-              .setUpdateTimestamp(domainHistoryLite.domainBase.getUpdateTimestamp())
+              .setUpdateTimestamp(domainHistoryLite.getRawDomainBase().getUpdateTimestamp())
               .build();
-      builder.setDomain(newDomainBase);
+      builder.setResource(newDomainBase);
     }
     return builder.buildAndAssemble(
         dsDataHistories, domainHistoryHosts, gracePeriodHistories, transactionRecords);

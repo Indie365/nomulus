@@ -281,7 +281,7 @@ class DeleteProberDataActionTest {
     DomainHistory historyEntry =
         persistSimpleResource(
             new DomainHistory.Builder()
-                .setDomain(domain)
+                .setResource(domain)
                 .setType(HistoryEntry.Type.DOMAIN_CREATE)
                 .setRegistrarId("TheRegistrar")
                 .setModificationTime(DELETION_TIME.minusYears(3))

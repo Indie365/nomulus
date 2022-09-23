@@ -14,14 +14,12 @@
 
 package google.registry.model.bulkquery;
 
-import com.googlecode.objectify.Key;
-import google.registry.model.domain.Domain;
+import google.registry.model.EppResource;
 import google.registry.model.domain.DomainBase;
 import google.registry.model.domain.DomainHistory;
-import google.registry.model.domain.DomainHistory.DomainHistoryId;
 import google.registry.model.domain.Period;
 import google.registry.model.reporting.HistoryEntry;
-import google.registry.persistence.VKey;
+import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.persistence.Access;
 import javax.persistence.AccessType;
@@ -29,14 +27,12 @@ import javax.persistence.AttributeOverride;
 import javax.persistence.AttributeOverrides;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.IdClass;
 import javax.persistence.PostLoad;
 
 /**
  * A 'light' version of {@link DomainHistory} with only base table ("DomainHistory") attributes,
  * which allows fast bulk loading. They are used in in-memory assembly of {@code DomainHistory}
- * instances along with bulk-loaded child entities ({@code GracePeriodHistory} etc). The in-memory
+ * instances along with bulk-loaded child entities ({@code GracePeriodHistory}, etc). The in-memory
  * assembly achieves much higher performance than loading {@code DomainHistory} directly.
  *
  * <p>Please refer to {@link BulkQueryEntities} for more information.
@@ -46,37 +42,28 @@ import javax.persistence.PostLoad;
  */
 @Entity(name = "DomainHistory")
 @Access(AccessType.FIELD)
-@IdClass(DomainHistoryId.class)
+@AttributeOverride(name = "repoId", column = @Column(name = "domainRepoId"))
 public class DomainHistoryLite extends HistoryEntry {
 
-  // Store DomainBase instead of Domain so we don't pick up its @Id
-  // Nullable for the sake of pre-Registry-3.0 history objects
-  @Nullable DomainBase domainBase;
-
-  @Id
-  @Access(AccessType.PROPERTY)
-  public String getDomainRepoId() {
-    // We need to handle null case here because Hibernate sometimes accesses this method before
-    // parent gets initialized
-    return parent == null ? null : parent.getName();
-  }
-
-  /** This method is private because it is only used by Hibernate. */
-  @SuppressWarnings("unused")
-  private void setDomainRepoId(String domainRepoId) {
-    parent = Key.create(Domain.class, domainRepoId);
-  }
-
-  @Override
+  // Store DomainBase instead of Domain, so we don't pick up its @Id
+  // @Nullable for the sake of pre-Registry-3.0 history objects
   @Nullable
   @Access(AccessType.PROPERTY)
+  public DomainBase getRawDomainBase() {
+    return (DomainBase) eppResource;
+  }
+
+  protected void setRawDomainBase(DomainBase domainBase) {
+    eppResource = domainBase;
+  }
+
+  /** The length of time that a create, allocate, renewal, or transfer request was issued for. */
   @AttributeOverrides({
     @AttributeOverride(name = "unit", column = @Column(name = "historyPeriodUnit")),
     @AttributeOverride(name = "value", column = @Column(name = "historyPeriodValue"))
   })
-  public Period getPeriod() {
-    return super.getPeriod();
-  }
+  @SuppressWarnings("unused")
+  Period period;
 
   /**
    * For transfers, the id of the other registrar.
@@ -86,40 +73,28 @@ public class DomainHistoryLite extends HistoryEntry {
    * registrar is the gaining party.
    */
   @Nullable
-  @Access(AccessType.PROPERTY)
   @Column(name = "historyOtherRegistrarId")
+  @SuppressWarnings("unused")
+  String otherRegistrarId;
+
   @Override
-  public String getOtherRegistrarId() {
-    return super.getOtherRegistrarId();
+  public Optional<? extends EppResource> getResourceAtPointInTime() {
+    throw new UnsupportedOperationException("Cannot get Domain from DomainHistoryLite");
   }
 
-  @Id
-  @Column(name = "historyRevisionId")
-  @Access(AccessType.PROPERTY)
   @Override
-  public long getId() {
-    return super.getId();
-  }
-
-  /** The key to the {@link Domain} this is based off of. */
-  public VKey<Domain> getParentVKey() {
-    return VKey.create(Domain.class, getDomainRepoId());
-  }
-
-  public DomainHistoryId getDomainHistoryId() {
-    return new DomainHistoryId(getDomainRepoId(), getId());
+  public Builder<? extends HistoryEntry, ?> asBuilder() {
+    throw new UnsupportedOperationException("DomainHistoryLite cannot be converted to a Builder");
   }
 
   @PostLoad
   void postLoad() {
-    if (domainBase == null) {
+    if (getRawDomainBase() == null) {
       return;
     }
     // See inline comments in DomainHistory.postLoad for reasons for the following lines.
-    if (domainBase.getDomainName() == null) {
-      domainBase = null;
-    } else if (domainBase.getRepoId() == null) {
-      domainBase.setRepoId(parent.getName());
+    if (getRawDomainBase().getDomainName() == null) {
+      setRawDomainBase(null);
     }
   }
 }

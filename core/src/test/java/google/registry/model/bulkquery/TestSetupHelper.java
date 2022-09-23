@@ -89,7 +89,7 @@ public final class TestSetupHelper {
     registrar = saveRegistrar(REGISTRAR_ID);
     contact = putInDb(createContact(DOMAIN_REPO_ID, REGISTRAR_ID));
     domain = putInDb(createSimpleDomain(contact));
-    domainHistory = putInDb(createHistoryWithoutContent(domain, fakeClock));
+    domainHistory = putInDb(createHistoryWithoutContent(fakeClock));
     host = putInDb(createHost());
   }
 
@@ -107,7 +107,7 @@ public final class TestSetupHelper {
                 .orElseThrow(
                     () -> new IllegalStateException("Expecting JpaIntegrationTestExtension.")),
             fakeClock);
-    originalJpaTm = TransactionManagerFactory.jpaTm();
+    originalJpaTm = jpaTm();
     TransactionManagerFactory.setJpaTm(() -> bulkQueryJpaTm);
   }
 
@@ -187,7 +187,7 @@ public final class TestSetupHelper {
         .build();
   }
 
-  static DomainHistory createHistoryWithoutContent(Domain domain, FakeClock fakeClock) {
+  static DomainHistory createHistoryWithoutContent(FakeClock fakeClock) {
     return new DomainHistory.Builder()
         .setType(HistoryEntry.Type.DOMAIN_CREATE)
         .setXmlBytes("<xml></xml>".getBytes(UTF_8))
@@ -197,17 +197,16 @@ public final class TestSetupHelper {
         .setBySuperuser(false)
         .setReason("reason")
         .setRequestedByRegistrar(true)
-        .setDomainRepoId(domain.getRepoId())
         .setOtherRegistrarId("otherClient")
         .setPeriod(Period.create(1, Period.Unit.YEARS))
         .build();
   }
 
   static DomainHistory createFullHistory(Domain domain, FakeClock fakeClock) {
-    return createHistoryWithoutContent(domain, fakeClock)
+    return createHistoryWithoutContent(fakeClock)
         .asBuilder()
         .setType(HistoryEntry.Type.DOMAIN_TRANSFER_APPROVE)
-        .setDomain(domain)
+        .setResource(domain)
         .setDomainTransactionRecords(ImmutableSet.of(createDomainTransactionRecord(fakeClock)))
         .build();
   }

@@ -55,7 +55,7 @@ class HistoryEntryTest extends EntityTestCase {
     // Set up a new persisted HistoryEntry entity.
     domainHistory =
         new DomainHistory.Builder()
-            .setDomain(domain)
+            .setResource(domain)
             .setType(HistoryEntry.Type.DOMAIN_CREATE)
             .setPeriod(Period.create(1, Period.Unit.YEARS))
             .setXmlBytes("<xml></xml>".getBytes(UTF_8))
@@ -89,7 +89,7 @@ class HistoryEntryTest extends EntityTestCase {
             IllegalArgumentException.class,
             () ->
                 new ContactHistory.Builder()
-                    .setId(5L)
+                    .setRevisionId(5L)
                     .setModificationTime(DateTime.parse("1985-07-12T22:30:00Z"))
                     .setRegistrarId("TheRegistrar")
                     .setReason("Reason")
@@ -104,7 +104,7 @@ class HistoryEntryTest extends EntityTestCase {
             IllegalArgumentException.class,
             () ->
                 new ContactHistory.Builder()
-                    .setId(5L)
+                    .setRevisionId(5L)
                     .setType(HistoryEntry.Type.CONTACT_CREATE)
                     .setRegistrarId("TheRegistrar")
                     .setReason("Reason")
@@ -119,7 +119,7 @@ class HistoryEntryTest extends EntityTestCase {
             IllegalArgumentException.class,
             () ->
                 new ContactHistory.Builder()
-                    .setId(5L)
+                    .setRevisionId(5L)
                     .setType(HistoryEntry.Type.CONTACT_CREATE)
                     .setModificationTime(DateTime.parse("1985-07-12T22:30:00Z"))
                     .setReason("Reason")
@@ -134,7 +134,7 @@ class HistoryEntryTest extends EntityTestCase {
             IllegalArgumentException.class,
             () ->
                 new ContactHistory.Builder()
-                    .setId(5L)
+                    .setRevisionId(5L)
                     .setType(HistoryEntry.Type.SYNTHETIC)
                     .setModificationTime(DateTime.parse("1985-07-12T22:30:00Z"))
                     .setRegistrarId("TheRegistrar")

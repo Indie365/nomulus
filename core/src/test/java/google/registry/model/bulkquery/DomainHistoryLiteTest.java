@@ -109,7 +109,7 @@ public class DomainHistoryLiteTest {
     setupHelper.setupBulkQueryJpaTm(appEngine);
     assertThat(
             BulkQueryHelper.loadAndAssembleDomainHistory(
-                setupHelper.domainHistory.getDomainHistoryId()))
+                setupHelper.domainHistory.getHistoryEntryId()))
         .isEqualTo(setupHelper.domainHistory);
   }
 
@@ -119,7 +119,7 @@ public class DomainHistoryLiteTest {
     setupHelper.setupBulkQueryJpaTm(appEngine);
     assertThat(
             BulkQueryHelper.loadAndAssembleDomainHistory(
-                setupHelper.domainHistory.getDomainHistoryId()))
+                setupHelper.domainHistory.getHistoryEntryId()))
         .isEqualTo(setupHelper.domainHistory);
   }
 }

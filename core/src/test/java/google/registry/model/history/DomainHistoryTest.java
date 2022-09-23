@@ -69,7 +69,6 @@ public class DomainHistoryTest extends EntityTestCase {
             () -> {
               DomainHistory fromDatabase = jpaTm().loadByKey(domainHistory.createVKey());
               assertDomainHistoriesEqual(fromDatabase, domainHistory);
-              assertThat(fromDatabase.getParentVKey()).isEqualTo(domainHistory.getParentVKey());
             });
   }
 
@@ -86,7 +85,7 @@ public class DomainHistoryTest extends EntityTestCase {
   @Test
   void testLegacyPersistence_nullResource() {
     Domain domain = addGracePeriodForSql(createDomainWithContactsAndHosts());
-    DomainHistory domainHistory = createDomainHistory(domain).asBuilder().setDomain(null).build();
+    DomainHistory domainHistory = createDomainHistory(domain).asBuilder().setResource(null).build();
     insertInDb(domainHistory);
 
     jpaTm()
@@ -94,7 +93,6 @@ public class DomainHistoryTest extends EntityTestCase {
             () -> {
               DomainHistory fromDatabase = jpaTm().loadByKey(domainHistory.createVKey());
               assertDomainHistoriesEqual(fromDatabase, domainHistory);
-              assertThat(fromDatabase.getParentVKey()).isEqualTo(domainHistory.getParentVKey());
               assertThat(fromDatabase.getNsHosts())
                   .containsExactlyElementsIn(domainHistory.getNsHosts());
             });
@@ -158,8 +156,7 @@ public class DomainHistoryTest extends EntityTestCase {
         .setBySuperuser(false)
         .setReason("reason")
         .setRequestedByRegistrar(true)
-        .setDomain(domain)
-        .setDomainRepoId(domain.getRepoId())
+        .setResource(domain)
         .setDomainTransactionRecords(ImmutableSet.of(transactionRecord))
         .setOtherRegistrarId("otherClient")
         .setPeriod(Period.create(1, Period.Unit.YEARS))
