@@ -26,7 +26,6 @@ import static google.registry.model.reporting.HistoryEntry.Type.CONTACT_TRANSFER
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 
 import com.google.common.collect.ImmutableSet;
-import com.googlecode.objectify.Key;
 import google.registry.flows.EppException;
 import google.registry.flows.ExtensionManager;
 import google.registry.flows.FlowModule.RegistrarId;
@@ -73,7 +72,7 @@ public final class ContactTransferCancelFlow implements TransactionalFlow {
   @Inject ContactTransferCancelFlow() {}
 
   @Override
-  public final EppResponse run() throws EppException {
+  public EppResponse run() throws EppException {
     extensionManager.register(MetadataExtension.class);
     validateRegistrarIsLoggedIn(registrarId);
     extensionManager.validate();
@@ -85,11 +84,11 @@ public final class ContactTransferCancelFlow implements TransactionalFlow {
     Contact newContact =
         denyPendingTransfer(existingContact, TransferStatus.CLIENT_CANCELLED, now, registrarId);
     ContactHistory contactHistory =
-        historyBuilder.setType(CONTACT_TRANSFER_CANCEL).setContact(newContact).build();
+        historyBuilder.setType(CONTACT_TRANSFER_CANCEL).setResource(newContact).build();
     // Create a poll message for the losing client.
     PollMessage losingPollMessage =
         createLosingTransferPollMessage(
-            targetId, newContact.getTransferData(), Key.create(contactHistory));
+            targetId, newContact.getTransferData(), contactHistory.getHistoryEntryId());
     tm().insertAll(ImmutableSet.of(contactHistory, losingPollMessage));
     tm().update(newContact);
     // Delete the billing event and poll messages that were written in case the transfer would have

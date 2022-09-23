@@ -26,7 +26,6 @@ import static google.registry.model.reporting.HistoryEntry.Type.CONTACT_TRANSFER
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 
 import com.google.common.collect.ImmutableSet;
-import com.googlecode.objectify.Key;
 import google.registry.flows.EppException;
 import google.registry.flows.ExtensionManager;
 import google.registry.flows.FlowModule.RegistrarId;
@@ -83,10 +82,10 @@ public final class ContactTransferRejectFlow implements TransactionalFlow {
     Contact newContact =
         denyPendingTransfer(existingContact, TransferStatus.CLIENT_REJECTED, now, registrarId);
     ContactHistory contactHistory =
-        historyBuilder.setType(CONTACT_TRANSFER_REJECT).setContact(newContact).build();
+        historyBuilder.setType(CONTACT_TRANSFER_REJECT).setResource(newContact).build();
     PollMessage gainingPollMessage =
         createGainingTransferPollMessage(
-            targetId, newContact.getTransferData(), now, Key.create(contactHistory));
+            targetId, newContact.getTransferData(), now, contactHistory.getHistoryEntryId());
     tm().insertAll(ImmutableSet.of(contactHistory, gainingPollMessage));
     tm().update(newContact);
     // Delete the billing event and poll messages that were written in case the transfer would have

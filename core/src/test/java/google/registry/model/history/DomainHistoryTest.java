@@ -69,7 +69,6 @@ public class DomainHistoryTest extends EntityTestCase {
             () -> {
               DomainHistory fromDatabase = jpaTm().loadByKey(domainHistory.createVKey());
               assertDomainHistoriesEqual(fromDatabase, domainHistory);
-              assertThat(fromDatabase.getParentVKey()).isEqualTo(domainHistory.getParentVKey());
             });
   }
 
@@ -81,23 +80,6 @@ public class DomainHistoryTest extends EntityTestCase {
     DomainHistory fromDatabase =
         jpaTm().transact(() -> jpaTm().loadByKey(domainHistory.createVKey()));
     assertThat(SerializeUtils.serializeDeserialize(fromDatabase)).isEqualTo(fromDatabase);
-  }
-
-  @Test
-  void testLegacyPersistence_nullResource() {
-    Domain domain = addGracePeriodForSql(createDomainWithContactsAndHosts());
-    DomainHistory domainHistory = createDomainHistory(domain).asBuilder().setDomain(null).build();
-    insertInDb(domainHistory);
-
-    jpaTm()
-        .transact(
-            () -> {
-              DomainHistory fromDatabase = jpaTm().loadByKey(domainHistory.createVKey());
-              assertDomainHistoriesEqual(fromDatabase, domainHistory);
-              assertThat(fromDatabase.getParentVKey()).isEqualTo(domainHistory.getParentVKey());
-              assertThat(fromDatabase.getNsHosts())
-                  .containsExactlyElementsIn(domainHistory.getNsHosts());
-            });
   }
 
   static Domain createDomainWithContactsAndHosts() {
@@ -134,7 +116,7 @@ public class DomainHistoryTest extends EntityTestCase {
   }
 
   static void assertDomainHistoriesEqual(DomainHistory one, DomainHistory two) {
-    assertAboutImmutableObjects().that(one).isEqualExceptFields(two, "domainBase");
+    assertAboutImmutableObjects().that(one).isEqualExceptFields(two, "eppResource");
     assertAboutImmutableObjects()
         .that(one.getDomainBase().get())
         .isEqualExceptFields(two.getDomainBase().get(), "updateTimestamp");
@@ -158,8 +140,7 @@ public class DomainHistoryTest extends EntityTestCase {
         .setBySuperuser(false)
         .setReason("reason")
         .setRequestedByRegistrar(true)
-        .setDomain(domain)
-        .setDomainRepoId(domain.getRepoId())
+        .setResource(domain)
         .setDomainTransactionRecords(ImmutableSet.of(transactionRecord))
         .setOtherRegistrarId("otherClient")
         .setPeriod(Period.create(1, Period.Unit.YEARS))

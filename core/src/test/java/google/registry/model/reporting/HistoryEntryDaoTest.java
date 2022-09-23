@@ -57,7 +57,7 @@ class HistoryEntryDaoTest extends EntityTestCase {
     // Set up a new persisted DomainHistory entity.
     domainHistory =
         new DomainHistory.Builder()
-            .setDomain(domain)
+            .setResource(domain)
             .setType(HistoryEntry.Type.DOMAIN_CREATE)
             .setPeriod(Period.create(1, Period.Unit.YEARS))
             .setXmlBytes("<xml></xml>".getBytes(UTF_8))
@@ -76,7 +76,7 @@ class HistoryEntryDaoTest extends EntityTestCase {
   @Test
   void testSimpleLoadAll() {
     assertThat(HistoryEntryDao.loadAllHistoryObjects(START_OF_TIME, END_OF_TIME))
-        .comparingElementsUsing(immutableObjectCorrespondence("nsHosts", "domainBase"))
+        .comparingElementsUsing(immutableObjectCorrespondence("nsHosts", "eppResource"))
         .containsExactly(domainHistory);
   }
 
@@ -98,7 +98,7 @@ class HistoryEntryDaoTest extends EntityTestCase {
     tm().transact(
             () ->
                 assertThat(HistoryEntryDao.loadHistoryObjectsForResource(domain.createVKey()))
-                    .comparingElementsUsing(immutableObjectCorrespondence("nsHosts", "domainBase"))
+                    .comparingElementsUsing(immutableObjectCorrespondence("nsHosts", "eppResource"))
                     .containsExactly(domainHistory));
   }
 

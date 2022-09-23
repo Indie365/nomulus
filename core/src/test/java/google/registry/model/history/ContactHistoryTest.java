@@ -54,7 +54,6 @@ public class ContactHistoryTest extends EntityTestCase {
             () -> {
               ContactHistory fromDatabase = jpaTm().loadByKey(contactHistory.createVKey());
               assertContactHistoriesEqual(fromDatabase, contactHistory);
-              assertThat(fromDatabase.getParentVKey()).isEqualTo(contactHistory.getParentVKey());
             });
   }
 
@@ -68,24 +67,6 @@ public class ContactHistoryTest extends EntityTestCase {
     ContactHistory fromDatabase =
         jpaTm().transact(() -> jpaTm().loadByKey(contactHistory.createVKey()));
     assertThat(SerializeUtils.serializeDeserialize(fromDatabase)).isEqualTo(fromDatabase);
-  }
-
-  @Test
-  void testLegacyPersistence_nullContactBase() {
-    Contact contact = newContactWithRoid("contactId", "contact1");
-    insertInDb(contact);
-    Contact contactFromDb = loadByEntity(contact);
-    ContactHistory contactHistory =
-        createContactHistory(contactFromDb).asBuilder().setContact(null).build();
-    insertInDb(contactHistory);
-
-    jpaTm()
-        .transact(
-            () -> {
-              ContactHistory fromDatabase = jpaTm().loadByKey(contactHistory.createVKey());
-              assertContactHistoriesEqual(fromDatabase, contactHistory);
-              assertThat(fromDatabase.getParentVKey()).isEqualTo(contactHistory.getParentVKey());
-            });
   }
 
   @Test
@@ -152,17 +133,14 @@ public class ContactHistoryTest extends EntityTestCase {
         .setBySuperuser(false)
         .setReason("reason")
         .setRequestedByRegistrar(true)
-        .setContact(contact)
-        .setContactRepoId(contact.getRepoId())
+        .setResource(contact)
         .build();
   }
 
   static void assertContactHistoriesEqual(ContactHistory one, ContactHistory two) {
+    assertAboutImmutableObjects().that(one).isEqualExceptFields(two, "eppResource");
     assertAboutImmutableObjects()
-        .that(one)
-        .isEqualExceptFields(two, "contactBase", "contactRepoId");
-    assertAboutImmutableObjects()
-        .that(one.getContactBase().orElse(null))
-        .isEqualExceptFields(two.getContactBase().orElse(null), "repoId");
+        .that(one.getContactBase().get())
+        .isEqualExceptFields(two.getContactBase().get());
   }
 }

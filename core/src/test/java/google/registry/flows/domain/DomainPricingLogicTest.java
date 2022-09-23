@@ -107,7 +107,7 @@ public class DomainPricingLogicTest {
                 .setRegistrarId(domain.getCreationRegistrarId())
                 .setType(DOMAIN_CREATE)
                 .setModificationTime(DateTime.parse("1999-01-05T00:00:00Z"))
-                .setDomain(domain)
+                .setResource(domain)
                 .build());
     Recurring recurring =
         persistResource(
@@ -119,7 +119,7 @@ public class DomainPricingLogicTest {
                 .setId(2L)
                 .setReason(Reason.RENEW)
                 .setRenewalPriceBehavior(renewalPriceBehavior)
-                .setRenewalPrice(renewalPrice.isPresent() ? renewalPrice.get() : null)
+                .setRenewalPrice(renewalPrice.orElse(null))
                 .setRecurrenceEndTime(END_OF_TIME)
                 .setTargetId(domain.getDomainName())
                 .build());

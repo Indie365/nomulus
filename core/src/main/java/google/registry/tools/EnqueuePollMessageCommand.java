@@ -104,7 +104,7 @@ class EnqueuePollMessageCommand extends MutatingCommand {
               }
               HistoryEntry historyEntry =
                   new DomainHistory.Builder()
-                      .setDomain(domain)
+                      .setResource(domain)
                       .setType(SYNTHETIC)
                       .setBySuperuser(true)
                       .setReason("Manual enqueueing of poll message: " + message)

@@ -376,7 +376,7 @@ class DomainInfoFlowTest extends ResourceFlowTestCase<DomainInfoFlow, Domain> {
     DomainHistory historyEntry =
         persistResource(
             new DomainHistory.Builder()
-                .setDomain(domain)
+                .setResource(domain)
                 .setType(HistoryEntry.Type.DOMAIN_CREATE)
                 .setModificationTime(clock.nowUtc())
                 .setRegistrarId(domain.getCreationRegistrarId())
