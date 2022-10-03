@@ -15,7 +15,7 @@
 package google.registry.tools;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static org.joda.time.DateTimeZone.UTC;
+import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
@@ -27,12 +27,10 @@ import org.joda.time.DateTime;
 @Parameters(separators = " =")
 abstract class GetEppResourceCommand implements CommandWithRemoteApi {
 
-  private final DateTime now = DateTime.now(UTC);
-
   @Parameter(
       names = "--read_timestamp",
       description = "Timestamp to use when reading. May not be in the past.")
-  protected DateTime readTimestamp = now;
+  protected DateTime readTimestamp;
 
   @Parameter(
       names = "--expand",
@@ -59,6 +57,10 @@ abstract class GetEppResourceCommand implements CommandWithRemoteApi {
 
   @Override
   public void run() {
+    DateTime now = tm().transact(() -> tm().getTransactionTime());
+    if (readTimestamp == null) {
+      readTimestamp = now;
+    }
     checkArgument(!readTimestamp.isBefore(now), "--read_timestamp may not be in the past");
     runAndPrint();
   }

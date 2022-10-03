@@ -21,7 +21,6 @@ import static google.registry.model.EppResourceUtils.checkResourcesExist;
 import static google.registry.model.EppResourceUtils.loadByForeignKey;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 import static google.registry.util.PreconditionsUtils.checkArgumentPresent;
-import static org.joda.time.DateTimeZone.UTC;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
@@ -122,7 +121,8 @@ final class UniformRapidSuspensionCommand extends MutatingEppToolCommand {
   @Override
   protected void initMutatingEppToolCommand() {
     superuser = true;
-    DateTime now = DateTime.now(UTC);
+    // Transaction time doesn't need to be exact since this is run manually
+    DateTime now = tm().transact(() -> tm().getTransactionTime());
     ImmutableList<String> newCanonicalHosts =
         newHosts.stream().map(DomainNameUtils::canonicalizeHostname).collect(toImmutableList());
     ImmutableSet<String> newHostsSet = ImmutableSet.copyOf(newCanonicalHosts);
