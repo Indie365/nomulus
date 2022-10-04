@@ -16,6 +16,8 @@ package google.registry.util;
 
 import static com.google.common.collect.Iterables.toArray;
 
+import com.google.common.base.Ascii;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.net.MediaType;
 import google.registry.util.EmailMessage.Attachment;
 import java.io.IOException;
@@ -43,6 +45,8 @@ public class SendEmailService {
 
   private final Retrier retrier;
   private final TransportEmailSender transportEmailSender;
+  private static final ImmutableSet<String> ALLOWED_ENVS =
+      ImmutableSet.of("PRODUCTION", "UNITTEST");
 
   @Inject
   SendEmailService(Retrier retrier, TransportEmailSender transportEmailSender) {
@@ -55,37 +59,41 @@ public class SendEmailService {
    * on transient failures.
    */
   public void sendEmail(EmailMessage emailMessage) {
-    retrier.callWithRetry(
-        () -> {
-          Message msg =
-              new MimeMessage(
-                  Session.getDefaultInstance(new Properties(), /* authenticator= */ null));
-          msg.setFrom(emailMessage.from());
-          msg.addRecipients(
-              RecipientType.TO, toArray(emailMessage.recipients(), InternetAddress.class));
-          msg.setSubject(emailMessage.subject());
+    if (ALLOWED_ENVS.contains(
+        Ascii.toUpperCase(System.getProperty("google.registry.environment", "UNITTEST")))) {
 
-          Multipart multipart = new MimeMultipart();
-          BodyPart bodyPart = new MimeBodyPart();
-          bodyPart.setContent(
-              emailMessage.body(),
-              emailMessage.contentType().orElse(MediaType.PLAIN_TEXT_UTF_8).toString());
-          multipart.addBodyPart(bodyPart);
+      retrier.callWithRetry(
+          () -> {
+            Message msg =
+                new MimeMessage(
+                    Session.getDefaultInstance(new Properties(), /* authenticator= */ null));
+            msg.setFrom(emailMessage.from());
+            msg.addRecipients(
+                RecipientType.TO, toArray(emailMessage.recipients(), InternetAddress.class));
+            msg.setSubject(emailMessage.subject());
 
-          if (emailMessage.attachment().isPresent()) {
-            Attachment attachment = emailMessage.attachment().get();
-            BodyPart attachmentPart = new MimeBodyPart();
-            attachmentPart.setContent(attachment.content(), attachment.contentType().toString());
-            attachmentPart.setFileName(attachment.filename());
-            multipart.addBodyPart(attachmentPart);
-          }
-          msg.addRecipients(RecipientType.BCC, toArray(emailMessage.bccs(), Address.class));
-          msg.addRecipients(RecipientType.CC, toArray(emailMessage.ccs(), Address.class));
-          msg.setContent(multipart);
-          msg.saveChanges();
-          transportEmailSender.sendMessage(msg);
-        },
-        IOException.class,
-        MessagingException.class);
+            Multipart multipart = new MimeMultipart();
+            BodyPart bodyPart = new MimeBodyPart();
+            bodyPart.setContent(
+                emailMessage.body(),
+                emailMessage.contentType().orElse(MediaType.PLAIN_TEXT_UTF_8).toString());
+            multipart.addBodyPart(bodyPart);
+
+            if (emailMessage.attachment().isPresent()) {
+              Attachment attachment = emailMessage.attachment().get();
+              BodyPart attachmentPart = new MimeBodyPart();
+              attachmentPart.setContent(attachment.content(), attachment.contentType().toString());
+              attachmentPart.setFileName(attachment.filename());
+              multipart.addBodyPart(attachmentPart);
+            }
+            msg.addRecipients(RecipientType.BCC, toArray(emailMessage.bccs(), Address.class));
+            msg.addRecipients(RecipientType.CC, toArray(emailMessage.ccs(), Address.class));
+            msg.setContent(multipart);
+            msg.saveChanges();
+            transportEmailSender.sendMessage(msg);
+          },
+          IOException.class,
+          MessagingException.class);
+    }
   }
 }
