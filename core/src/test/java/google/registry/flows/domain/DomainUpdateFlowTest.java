@@ -47,7 +47,6 @@ import static google.registry.testing.DomainSubject.assertAboutDomains;
 import static google.registry.testing.EppExceptionSubject.assertAboutEppExceptions;
 import static google.registry.testing.HistoryEntrySubject.assertAboutHistoryEntries;
 import static google.registry.testing.TaskQueueHelper.assertDnsTasksEnqueued;
-import static google.registry.testing.TaskQueueHelper.assertNoDnsTasksEnqueued;
 import static google.registry.util.DateTimeUtils.START_OF_TIME;
 import static org.joda.money.CurrencyUnit.USD;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -1746,9 +1745,4 @@ class DomainUpdateFlowTest extends ResourceFlowTestCase<DomainUpdateFlow, Domain
     assertAboutDomains().that(reloadResourceByForeignKey()).hasNoAutorenewEndTime();
   }
 
-  @Test
-  void testDnsTaskIsNotTriggeredWhenNoDSChangeSubmitted() {
-    setEppInput("domain_update_no_ds_change.xml");
-    assertNoDnsTasksEnqueued();
-  }
 }

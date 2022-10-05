@@ -182,10 +182,7 @@ public final class DomainUpdateFlow implements TransactionalFlow {
     DomainHistory domainHistory =
         historyBuilder.setType(DOMAIN_UPDATE).setDomain(newDomain).build();
     validateNewState(newDomain);
-    if (!Objects.equals(newDomain.getDsData(), existingDomain.getDsData())
-        || !Objects.equals(newDomain.getNsHosts(), existingDomain.getNsHosts())) {
-      dnsQueue.addDomainRefreshTask(targetId);
-    }
+    dnsQueue.addDomainRefreshTask(targetId);
     ImmutableSet.Builder<ImmutableObject> entitiesToSave = new ImmutableSet.Builder<>();
     entitiesToSave.add(newDomain, domainHistory);
     Optional<BillingEvent.OneTime> statusUpdateBillingEvent =
@@ -271,18 +268,12 @@ public final class DomainUpdateFlow implements TransactionalFlow {
             .setLastEppUpdateRegistrarId(registrarId)
             .addStatusValues(add.getStatusValues())
             .removeStatusValues(remove.getStatusValues())
+            .addNameservers(add.getNameservers().stream().collect(toImmutableSet()))
+            .removeNameservers(remove.getNameservers().stream().collect(toImmutableSet()))
             .removeContacts(remove.getContacts())
             .addContacts(add.getContacts())
             .setRegistrant(firstNonNull(change.getRegistrant(), domain.getRegistrant()))
             .setAuthInfo(firstNonNull(change.getAuthInfo(), domain.getAuthInfo()));
-
-    if (!add.getNameservers().isEmpty()) {
-      domainBuilder.addNameservers(add.getNameservers().stream().collect(toImmutableSet()));
-    }
-    if (!remove.getNameservers().isEmpty()) {
-      domainBuilder.removeNameservers(remove.getNameservers().stream().collect(toImmutableSet()));
-    }
-
     Optional<DomainUpdateSuperuserExtension> superuserExt =
         eppInput.getSingleExtension(DomainUpdateSuperuserExtension.class);
     if (superuserExt.isPresent()) {
