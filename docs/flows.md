@@ -782,8 +782,6 @@ statuses are updated at once.
     *   Registrar is not logged in.
 *   2003
     *   At least one of 'add' or 'rem' is required on a secDNS update.
-    *   Fees must be explicitly acknowledged when performing an operation which
-        is not free.
     *   Admin contact is required.
     *   Technical contact is required.
     *   Registrant is required.

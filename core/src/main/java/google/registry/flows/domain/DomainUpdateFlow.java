@@ -17,6 +17,7 @@ package google.registry.flows.domain;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.ImmutableSortedSet.toImmutableSortedSet;
+import static com.google.common.collect.Sets.difference;
 import static com.google.common.collect.Sets.symmetricDifference;
 import static com.google.common.collect.Sets.union;
 import static google.registry.flows.FlowUtils.persistEntityChanges;
@@ -87,6 +88,7 @@ import google.registry.model.poll.PendingActionNotificationResponse.DomainPendin
 import google.registry.model.poll.PollMessage;
 import google.registry.model.reporting.IcannReportingTypes.ActivityReportField;
 import google.registry.model.tld.Registry;
+import java.util.Objects;
 import java.util.Optional;
 import javax.inject.Inject;
 import org.joda.time.DateTime;
@@ -113,7 +115,6 @@ import org.joda.time.DateTime;
  * @error {@link DomainFlowUtils.DuplicateContactForRoleException}
  * @error {@link DomainFlowUtils.EmptySecDnsUpdateException}
  * @error {@link DomainFlowUtils.FeesMismatchException}
- * @error {@link DomainFlowUtils.FeesRequiredForNonFreeOperationException}
  * @error {@link DomainFlowUtils.InvalidDsRecordException}
  * @error {@link DomainFlowUtils.LinkedResourcesDoNotExistException}
  * @error {@link DomainFlowUtils.LinkedResourceInPendingDeleteProhibitsOperationException}
@@ -181,7 +182,9 @@ public final class DomainUpdateFlow implements TransactionalFlow {
     DomainHistory domainHistory =
         historyBuilder.setType(DOMAIN_UPDATE).setDomain(newDomain).build();
     validateNewState(newDomain);
-    dnsQueue.addDomainRefreshTask(targetId);
+    if (requiresDnsUpdate(existingDomain, newDomain)) {
+      dnsQueue.addDomainRefreshTask(targetId);
+    }
     ImmutableSet.Builder<ImmutableObject> entitiesToSave = new ImmutableSet.Builder<>();
     entitiesToSave.add(newDomain, domainHistory);
     Optional<BillingEvent.OneTime> statusUpdateBillingEvent =
@@ -201,6 +204,19 @@ public final class DomainUpdateFlow implements TransactionalFlow {
                 .build());
     persistEntityChanges(entityChanges);
     return responseBuilder.build();
+  }
+
+  /** Determines if any of the changes to new domain should trigger DNS update. */
+  private boolean requiresDnsUpdate(Domain existingDomain, Domain newDomain) {
+    if (difference(newDomain.getStatusValues(), existingDomain.getStatusValues()).stream()
+            .anyMatch(sv -> StatusValue.affectsDns(sv))
+        || difference(existingDomain.getStatusValues(), newDomain.getStatusValues()).stream()
+            .anyMatch(sv -> StatusValue.affectsDns(sv))
+        || !Objects.equals(newDomain.getDsData(), existingDomain.getDsData())
+        || !Objects.equals(newDomain.getNsHosts(), existingDomain.getNsHosts())) {
+      return true;
+    }
+    return false;
   }
 
   /** Fail if the object doesn't exist or was deleted. */
@@ -267,12 +283,18 @@ public final class DomainUpdateFlow implements TransactionalFlow {
             .setLastEppUpdateRegistrarId(registrarId)
             .addStatusValues(add.getStatusValues())
             .removeStatusValues(remove.getStatusValues())
-            .addNameservers(add.getNameservers().stream().collect(toImmutableSet()))
-            .removeNameservers(remove.getNameservers().stream().collect(toImmutableSet()))
             .removeContacts(remove.getContacts())
             .addContacts(add.getContacts())
             .setRegistrant(firstNonNull(change.getRegistrant(), domain.getRegistrant()))
             .setAuthInfo(firstNonNull(change.getAuthInfo(), domain.getAuthInfo()));
+
+    if (!add.getNameservers().isEmpty()) {
+      domainBuilder.addNameservers(add.getNameservers().stream().collect(toImmutableSet()));
+    }
+    if (!remove.getNameservers().isEmpty()) {
+      domainBuilder.removeNameservers(remove.getNameservers().stream().collect(toImmutableSet()));
+    }
+
     Optional<DomainUpdateSuperuserExtension> superuserExt =
         eppInput.getSingleExtension(DomainUpdateSuperuserExtension.class);
     if (superuserExt.isPresent()) {

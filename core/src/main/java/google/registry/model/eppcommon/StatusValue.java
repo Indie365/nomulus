@@ -151,6 +151,7 @@ public enum StatusValue implements EppEnum {
     this.allowedOn = allowedOn;
   }
 
+
   @Override
   public String getXmlName() {
     return xmlName;
@@ -177,4 +178,7 @@ public enum StatusValue implements EppEnum {
     return StatusValue.valueOf(LOWER_CAMEL.to(UPPER_UNDERSCORE, nullToEmpty(xmlName)));
   }
 
+  public static boolean affectsDns(StatusValue sv) {
+    return CLIENT_HOLD.equals(sv) || SERVER_HOLD.equals(sv);
+  }
 }
