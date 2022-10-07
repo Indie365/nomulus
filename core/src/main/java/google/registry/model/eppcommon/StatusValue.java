@@ -48,14 +48,14 @@ import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
  */
 @XmlJavaTypeAdapter(StatusValueAdapter.class)
 public enum StatusValue implements EppEnum {
-  CLIENT_DELETE_PROHIBITED(AllowedOn.ALL),
-  CLIENT_HOLD(AllowedOn.ALL),
-  CLIENT_RENEW_PROHIBITED(AllowedOn.ALL),
-  CLIENT_TRANSFER_PROHIBITED(AllowedOn.ALL),
-  CLIENT_UPDATE_PROHIBITED(AllowedOn.ALL),
+  CLIENT_DELETE_PROHIBITED(AllowedOn.ALL, false),
+  CLIENT_HOLD(AllowedOn.ALL, true),
+  CLIENT_RENEW_PROHIBITED(AllowedOn.ALL, false),
+  CLIENT_TRANSFER_PROHIBITED(AllowedOn.ALL, false),
+  CLIENT_UPDATE_PROHIBITED(AllowedOn.ALL, false),
 
   /** A status for a domain with no nameservers. */
-  INACTIVE(AllowedOn.DOMAINS),
+  INACTIVE(AllowedOn.DOMAINS, false),
 
   /**
    * A status for a resource has an incoming reference from an active domain.
@@ -64,7 +64,7 @@ public enum StatusValue implements EppEnum {
    * resource. It must be computed on the fly when we need it, as the set of domains using a
    * resource can change at any time.
    */
-  LINKED(AllowedOn.NONE),
+  LINKED(AllowedOn.NONE, false),
 
   /**
    * A status for a resource that has no other statuses.
@@ -74,14 +74,14 @@ public enum StatusValue implements EppEnum {
    * implement LINKED as a virtual status that gets appended to outputs (such as info commands) on
    * the fly, so we can ignore LINKED when dealing with persisted resources.
    */
-  OK(AllowedOn.ALL),
+  OK(AllowedOn.ALL, false),
 
   /**
    * A status for a resource undergoing asynchronous creation.
    *
    * <p>This status is here for completeness, but it is not used by our system.
    */
-  PENDING_CREATE(AllowedOn.NONE),
+  PENDING_CREATE(AllowedOn.NONE, false),
 
   /**
    * A status for a resource indicating that deletion has been requested but has not yet happened.
@@ -95,7 +95,7 @@ public enum StatusValue implements EppEnum {
    * grace period followed by a 5-day "pending delete" period before they are actually 100% deleted.
    * These domains have the PENDING_DELETE status throughout that 35-day window.
    */
-  PENDING_DELETE(AllowedOn.ALL),
+  PENDING_DELETE(AllowedOn.ALL, false),
 
   /**
    * A status for a resource with an unresolved transfer request.
@@ -103,29 +103,30 @@ public enum StatusValue implements EppEnum {
    * <p>Hosts transfer indirectly via superordinate domain.
    */
   // TODO(b/34844887): Remove PENDING_TRANSFER from all host resources and forbid it here.
-  PENDING_TRANSFER(AllowedOn.ALL),
+  PENDING_TRANSFER(AllowedOn.ALL, false),
 
   /**
    * A status for a resource undergoing an asynchronous update.
    *
    * <p>This status is here for completeness, but it is not used by our system.
    */
-  PENDING_UPDATE(AllowedOn.NONE),
+  PENDING_UPDATE(AllowedOn.NONE, false),
 
   /** A non-client-settable status that prevents deletes of EPP resources. */
-  SERVER_DELETE_PROHIBITED(AllowedOn.ALL),
+  SERVER_DELETE_PROHIBITED(AllowedOn.ALL, false),
 
-  SERVER_HOLD(AllowedOn.ALL),
-  SERVER_RENEW_PROHIBITED(AllowedOn.ALL),
+  SERVER_HOLD(AllowedOn.ALL, true),
+  SERVER_RENEW_PROHIBITED(AllowedOn.ALL, false),
 
   /** A non-client-settable status that prevents transfers of EPP resources. */
-  SERVER_TRANSFER_PROHIBITED(AllowedOn.ALL),
+  SERVER_TRANSFER_PROHIBITED(AllowedOn.ALL, false),
 
   /** A non-client-settable status that prevents updates of EPP resources, except by superusers. */
-  SERVER_UPDATE_PROHIBITED(AllowedOn.ALL);
+  SERVER_UPDATE_PROHIBITED(AllowedOn.ALL, false);
 
   private final String xmlName = UPPER_UNDERSCORE.to(LOWER_CAMEL, name());
   private final AllowedOn allowedOn;
+  public final boolean affectsDns;
 
   /** Enum to help clearly list which resource types a status value is allowed to be present on. */
   private enum AllowedOn {
@@ -147,9 +148,11 @@ public enum StatusValue implements EppEnum {
     }
   }
 
-  StatusValue(AllowedOn allowedOn) {
+  StatusValue(AllowedOn allowedOn, boolean affectsDns) {
     this.allowedOn = allowedOn;
+    this.affectsDns = affectsDns;
   }
+
 
   @Override
   public String getXmlName() {
