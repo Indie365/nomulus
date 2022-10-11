@@ -157,9 +157,10 @@ public class Spec11Pipeline implements Serializable {
   static void saveToSql(
       PCollection<KV<DomainNameInfo, ThreatMatch>> threatMatches, Spec11PipelineOptions options) {
     LocalDate date = LocalDate.parse(options.getDate(), ISODateTimeFormat.date());
+    String transformId = "Spec11 Threat Matches";
 
-    PCollection<Spec11ThreatMatch> spec11ThreatMatches =
-        threatMatches.apply(
+    threatMatches
+        .apply(
             "Construct objects",
             ParDo.of(
                 new DoFn<KV<DomainNameInfo, ThreatMatch>, Spec11ThreatMatch>() {
@@ -179,17 +180,14 @@ public class Spec11Pipeline implements Serializable {
                             .build();
                     output.output(spec11ThreatMatch);
                   }
-                }));
-
-    spec11ThreatMatches.apply("Prevent Fusing", Reshuffle.viaRandomKey());
-    String transformId = "Spec11 Threat Matches";
-
-    spec11ThreatMatches.apply(
-        "Write to Sql: " + transformId,
-        RegistryJpaIO.<Spec11ThreatMatch>write()
-            .withName(transformId)
-            .withBatchSize(options.getSqlWriteBatchSize())
-            .withShards(options.getSqlWriteShards()));
+                }))
+        .apply("Prevent Fusing", Reshuffle.viaRandomKey())
+        .apply(
+            "Write to Sql: " + transformId,
+            RegistryJpaIO.<Spec11ThreatMatch>write()
+                .withName(transformId)
+                .withBatchSize(options.getSqlWriteBatchSize())
+                .withShards(options.getSqlWriteShards()));
   }
 
   static void saveToGcs(

@@ -288,10 +288,10 @@ class Spec11PipelineTest {
     jpaTm()
         .transact(
             () -> {
-              ImmutableList<Spec11ThreatMatch> sqlThreatMatches =
+              ImmutableList<Spec11ThreatMatch> spec11ThreatMatches =
                   Spec11ThreatMatchDao.loadEntriesByDate(jpaTm(), new LocalDate(2020, 1, 27));
-              assertThat(sqlThreatMatches)
-                  .comparingElementsUsing(immutableObjectCorrespondence())
+              assertThat(spec11ThreatMatches)
+                  .comparingElementsUsing(immutableObjectCorrespondence("id"))
                   .containsExactlyElementsIn(sqlThreatMatches);
             });
   }
