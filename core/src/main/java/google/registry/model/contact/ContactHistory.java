@@ -15,11 +15,9 @@
 package google.registry.model.contact;
 
 import google.registry.model.EppResource;
-import google.registry.model.ImmutableObject;
 import google.registry.model.contact.ContactHistory.ContactHistoryId;
 import google.registry.model.reporting.HistoryEntry;
 import google.registry.persistence.VKey;
-import java.io.Serializable;
 import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.persistence.Access;
@@ -56,8 +54,6 @@ public class ContactHistory extends HistoryEntry {
 
   @Id
   @Access(AccessType.PROPERTY)
-  @SuppressWarnings("unused")
-  // This method is private because it is only used by Hibernate.
   public String getContactRepoId() {
     return contactBase == null ? null : contactBase.getRepoId();
   }
@@ -71,7 +67,6 @@ public class ContactHistory extends HistoryEntry {
   @Column(name = "historyRevisionId")
   @Access(AccessType.PROPERTY)
   @Override
-  @SuppressWarnings("unused")
   // This method is protected because it is only used by Hibernate.
   protected long getId() {
     return super.getId();
@@ -99,11 +94,9 @@ public class ContactHistory extends HistoryEntry {
   }
 
   /** Class to represent the composite primary key of {@link ContactHistory} entity. */
-  public static class ContactHistoryId extends ImmutableObject implements Serializable {
+  public static class ContactHistoryId extends HistoryEntryId {
 
     private String contactRepoId;
-
-    private Long id;
 
     /** Hibernate requires this default constructor. */
     @SuppressWarnings("unused")
@@ -111,25 +104,12 @@ public class ContactHistory extends HistoryEntry {
 
     public ContactHistoryId(String contactRepoId, long id) {
       this.contactRepoId = contactRepoId;
-      this.id = id;
+      setId(id);
     }
 
-    /**
-     * Returns the contact repository id.
-     *
-     * <p>This method is private because it is only used by Hibernate.
-     */
+    /** Returns the contact repository id. */
     public String getContactRepoId() {
       return contactRepoId;
-    }
-
-    /**
-     * Returns the history revision id.
-     *
-     * <p>This method is private because it is only used by Hibernate.
-     */
-    public long getId() {
-      return id;
     }
 
     /**
@@ -141,17 +121,6 @@ public class ContactHistory extends HistoryEntry {
     @SuppressWarnings("unused")
     private void setContactRepoId(String contactRepoId) {
       this.contactRepoId = contactRepoId;
-    }
-
-    /**
-     * Sets the history revision id.
-     *
-     * <p>This method is private because it is only used by Hibernate and should not be used
-     * externally to keep immutability.
-     */
-    @SuppressWarnings("unused")
-    private void setId(long id) {
-      this.id = id;
     }
   }
 

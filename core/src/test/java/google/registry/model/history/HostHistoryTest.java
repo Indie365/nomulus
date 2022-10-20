@@ -50,7 +50,6 @@ public class HostHistoryTest extends EntityTestCase {
             () -> {
               HostHistory fromDatabase = jpaTm().loadByKey(hostHistory.createVKey());
               assertHostHistoriesEqual(fromDatabase, hostHistory);
-              assertThat(fromDatabase.getParentVKey()).isEqualTo(hostHistory.getParentVKey());
             });
   }
 
@@ -83,7 +82,7 @@ public class HostHistoryTest extends EntityTestCase {
             });
   }
 
-  private void assertHostHistoriesEqual(HostHistory one, HostHistory two) {
+  private static void assertHostHistoriesEqual(HostHistory one, HostHistory two) {
     assertAboutImmutableObjects().that(one).isEqualExceptFields(two, "hostBase");
     assertAboutImmutableObjects()
         .that(one.getHostBase().orElse(null))
@@ -101,7 +100,6 @@ public class HostHistoryTest extends EntityTestCase {
         .setReason("reason")
         .setRequestedByRegistrar(true)
         .setHost(hostBase)
-        .setHostRepoId(hostBase.getRepoId())
         .build();
   }
 }

@@ -50,6 +50,7 @@ import javax.persistence.JoinTable;
 import javax.persistence.OneToMany;
 import javax.persistence.PostLoad;
 import javax.persistence.Table;
+import javax.persistence.Transient;
 import org.hibernate.Hibernate;
 
 /**
@@ -189,7 +190,7 @@ public class DomainHistory extends HistoryEntry {
   @Column(name = "historyRevisionId")
   @Access(AccessType.PROPERTY)
   @Override
-  protected long getId() {
+  public long getId() {
     return super.getId();
   }
 

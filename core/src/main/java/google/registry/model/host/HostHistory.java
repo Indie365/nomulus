@@ -15,12 +15,9 @@
 package google.registry.model.host;
 
 import google.registry.model.EppResource;
-import google.registry.model.ImmutableObject;
-import google.registry.model.UnsafeSerializable;
 import google.registry.model.host.HostHistory.HostHistoryId;
 import google.registry.model.reporting.HistoryEntry;
 import google.registry.persistence.VKey;
-import java.io.Serializable;
 import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.persistence.Access;
@@ -50,7 +47,7 @@ import javax.persistence.Table;
     })
 @Access(AccessType.FIELD)
 @IdClass(HostHistoryId.class)
-public class HostHistory extends HistoryEntry implements UnsafeSerializable {
+public class HostHistory extends HistoryEntry {
 
   // Store HostBase instead of Host, so we don't pick up its @Id
   // Nullable for the sake of pre-Registry-3.0 history objects
@@ -97,11 +94,9 @@ public class HostHistory extends HistoryEntry implements UnsafeSerializable {
   }
 
   /** Class to represent the composite primary key of {@link HostHistory} entity. */
-  public static class HostHistoryId extends ImmutableObject implements Serializable {
+  public static class HostHistoryId extends HistoryEntryId {
 
     private String hostRepoId;
-
-    private Long id;
 
     /** Hibernate requires this default constructor. */
     @SuppressWarnings("unused")
@@ -109,7 +104,7 @@ public class HostHistory extends HistoryEntry implements UnsafeSerializable {
 
     public HostHistoryId(String hostRepoId, long id) {
       this.hostRepoId = hostRepoId;
-      this.id = id;
+      setId(id);
     }
 
     /**
@@ -122,15 +117,6 @@ public class HostHistory extends HistoryEntry implements UnsafeSerializable {
     }
 
     /**
-     * Returns the history revision id.
-     *
-     * <p>This method is private because it is only used by Hibernate.
-     */
-    public long getId() {
-      return id;
-    }
-
-    /**
      * Sets the host repository id.
      *
      * <p>This method is private because it is only used by Hibernate and should not be used
@@ -139,17 +125,6 @@ public class HostHistory extends HistoryEntry implements UnsafeSerializable {
     @SuppressWarnings("unused")
     private void setHostRepoId(String hostRepoId) {
       this.hostRepoId = hostRepoId;
-    }
-
-    /**
-     * Sets the history revision id.
-     *
-     * <p>This method is private because it is only used by Hibernate and should not be used
-     * externally to keep immutability.
-     */
-    @SuppressWarnings("unused")
-    private void setId(long id) {
-      this.id = id;
     }
   }
 
