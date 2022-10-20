@@ -15,6 +15,7 @@
 package google.registry.model.bulkquery;
 
 import com.googlecode.objectify.Key;
+import google.registry.model.EppResource;
 import google.registry.model.domain.Domain;
 import google.registry.model.domain.DomainBase;
 import google.registry.model.domain.DomainHistory;
@@ -22,6 +23,7 @@ import google.registry.model.domain.DomainHistory.DomainHistoryId;
 import google.registry.model.domain.Period;
 import google.registry.model.reporting.HistoryEntry;
 import google.registry.persistence.VKey;
+import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.persistence.Access;
 import javax.persistence.AccessType;
@@ -36,7 +38,7 @@ import javax.persistence.PostLoad;
 /**
  * A 'light' version of {@link DomainHistory} with only base table ("DomainHistory") attributes,
  * which allows fast bulk loading. They are used in in-memory assembly of {@code DomainHistory}
- * instances along with bulk-loaded child entities ({@code GracePeriodHistory} etc). The in-memory
+ * instances along with bulk-loaded child entities ({@code GracePeriodHistory}, etc). The in-memory
  * assembly achieves much higher performance than loading {@code DomainHistory} directly.
  *
  * <p>Please refer to {@link BulkQueryEntities} for more information.
@@ -56,9 +58,7 @@ public class DomainHistoryLite extends HistoryEntry {
   @Id
   @Access(AccessType.PROPERTY)
   public String getDomainRepoId() {
-    // We need to handle null case here because Hibernate sometimes accesses this method before
-    // parent gets initialized
-    return parent == null ? null : parent.getName();
+    return domainBase == null ? null : domainBase.getRepoId();
   }
 
   /** This method is private because it is only used by Hibernate. */
@@ -91,6 +91,16 @@ public class DomainHistoryLite extends HistoryEntry {
   @Override
   public String getOtherRegistrarId() {
     return super.getOtherRegistrarId();
+  }
+
+  @Override
+  public Optional<? extends EppResource> getResourceAtPointInTime() {
+    throw new UnsupportedOperationException("Canot get Domain from DomainHistoryLite");
+  }
+
+  @Override
+  public Builder<? extends HistoryEntry, ?> asBuilder() {
+    throw new UnsupportedOperationException("DomainHistoryLite cannot be converted to a Builder");
   }
 
   @Id

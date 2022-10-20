@@ -50,7 +50,6 @@ import javax.persistence.JoinTable;
 import javax.persistence.OneToMany;
 import javax.persistence.PostLoad;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 import org.hibernate.Hibernate;
 
 /**
@@ -92,10 +91,13 @@ public class DomainHistory extends HistoryEntry {
   // TODO(b/166776754): Investigate if we can reuse domainBase.nsHosts for storing host keys.
   @DoNotCompare
   @ElementCollection
-  @JoinTable(name = "DomainHistoryHost", indexes = @Index(
-      columnList =
-          "domain_history_history_revision_id,domain_history_domain_repo_id,host_repo_id",
-      unique = true))
+  @JoinTable(
+      name = "DomainHistoryHost",
+      indexes =
+          @Index(
+              columnList =
+                  "domain_history_history_revision_id,domain_history_domain_repo_id,host_repo_id",
+              unique = true))
   @EmptySetToNull
   @Column(name = "host_repo_id")
   Set<VKey<Host>> nsHosts;
@@ -196,7 +198,7 @@ public class DomainHistory extends HistoryEntry {
 
   /** Returns keys to the {@link Host} that are the nameservers for the domain. */
   public Set<VKey<Host>> getNsHosts() {
-    return nsHosts;
+    return ImmutableSet.copyOf(nsHosts);
   }
 
   /** Returns the collection of {@link DomainDsDataHistory} instances. */

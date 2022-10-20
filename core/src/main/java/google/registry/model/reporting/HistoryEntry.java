@@ -282,7 +282,7 @@ public abstract class HistoryEntry extends ImmutableObject
       this.domainTransactionRecords.retainAll(nonNullRecords);
       this.domainTransactionRecords.addAll(nonNullRecords);
     } else {
-      this.domainTransactionRecords = domainTransactionRecords;
+      this.domainTransactionRecords = ImmutableSet.copyOf(domainTransactionRecords);
     }
   }
 
@@ -356,7 +356,7 @@ public abstract class HistoryEntry extends ImmutableObject
     }
 
     public B setXmlBytes(byte[] xmlBytes) {
-      getInstance().xmlBytes = xmlBytes;
+      getInstance().xmlBytes = xmlBytes.clone();
       return thisCastToDerived();
     }
 
