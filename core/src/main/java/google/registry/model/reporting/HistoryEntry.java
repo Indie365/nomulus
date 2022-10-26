@@ -353,7 +353,7 @@ public abstract class HistoryEntry extends ImmutableObject
 
   /** Class to represent the composite primary key of a {@link HistoryEntry}. */
   @Embeddable
-  @Access(AccessType.FIELD)
+  @Access(AccessType.PROPERTY)
   public static class HistoryEntryId extends ImmutableObject implements UnsafeSerializable {
 
     private String repoId;
@@ -372,9 +372,19 @@ public abstract class HistoryEntry extends ImmutableObject
       return revisionId;
     }
 
+    @SuppressWarnings("unused")
+    private void setRevisionId(long revisionId) {
+      this.revisionId = revisionId;
+    }
+
     /** Returns the {@code [domain|contact|host]_repo_id} of the {@link HistoryEntry}. */
     public String getRepoId() {
       return repoId;
+    }
+
+    @SuppressWarnings("unused")
+    private void setRepoId(String repoId) {
+      this.repoId = repoId;
     }
   }
 }
