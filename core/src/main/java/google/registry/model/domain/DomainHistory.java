@@ -15,7 +15,6 @@
 package google.registry.model.domain;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static google.registry.util.CollectionUtils.nullToEmpty;
 import static google.registry.util.CollectionUtils.nullToEmptyImmutableCopy;
 
 import com.google.common.collect.ImmutableSet;
@@ -48,9 +47,7 @@ import javax.persistence.JoinTable;
 import javax.persistence.OneToMany;
 import javax.persistence.PostLoad;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 import org.hibernate.Hibernate;
-import org.hibernate.collection.internal.PersistentSet;
 
 /**
  * A persisted history entry representing an EPP modification to a domain.
@@ -152,59 +149,18 @@ public class DomainHistory extends HistoryEntry {
   /**
    * Logging field for transaction reporting.
    *
-   * <p>This will be empty for any {@link HistoryEntry} generated before this field was added. This
-   * will also be empty if the {@link HistoryEntry} refers to an EPP mutation that does not affect
-   * domain transaction counts (such as contact or host mutations).
+   * <p>This will be empty for any DomainHistory/HistoryEntry generated before this field was added
+   * (mid-2017), as well as any action that does not generate billable events (e.g. contact/host
+   * updates). *
    */
-  @Transient @EmptySetToNull Set<DomainTransactionRecord> domainTransactionRecords;
-
-  public Set<DomainTransactionRecord> getDomainTransactionRecords() {
-    return nullToEmptyImmutableCopy(domainTransactionRecords);
-  }
-
-  /** Do not use this method directly. Use the {@link HistoryEntry.Builder} instead. */
-  protected void setDomainTransactionRecords(
-      Set<DomainTransactionRecord> domainTransactionRecords) {
-    // Note: how we wish to treat this Hibernate setter depends on the current state of the object
-    // and what's passed in. The key principle is that we wish to maintain the link between parent
-    // and child objects, meaning that we should keep around whichever of the two sets (the
-    // parameter vs the class variable) and clear/populate that as appropriate.
-    //
-    // If the class variable is a PersistentSet, and we overwrite it here, Hibernate will throw
-    // an exception "A collection with cascade=”all-delete-orphan” was no longer referenced by the
-    // owning entity instance". See https://stackoverflow.com/questions/5587482 for more details.
-    if (this.domainTransactionRecords instanceof PersistentSet) {
-      Set<DomainTransactionRecord> nonNullRecords = nullToEmpty(domainTransactionRecords);
-      this.domainTransactionRecords.retainAll(nonNullRecords);
-      this.domainTransactionRecords.addAll(nonNullRecords);
-    } else {
-      this.domainTransactionRecords = ImmutableSet.copyOf(domainTransactionRecords);
-    }
-  }
-
-  /**
-   * Logging field for transaction reporting.
-   *
-   * <p>This will be empty for any DomainHistory/HistoryEntry generated before this field was added,
-   * mid-2017, as well as any action that does not generate billable events (e.g. updates).
-   *
-   * <p>This method is dedicated for Hibernate, external caller should use {@link
-   * #getDomainTransactionRecords()}.
-   */
-  @Access(AccessType.PROPERTY)
   @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
   @JoinColumn(name = "historyRevisionId", referencedColumnName = "historyRevisionId")
   @JoinColumn(name = "domainRepoId", referencedColumnName = "domainRepoId")
-  @SuppressWarnings("unused")
-  private Set<DomainTransactionRecord> getInternalDomainTransactionRecords() {
-    return domainTransactionRecords;
-  }
+  @EmptySetToNull
+  Set<DomainTransactionRecord> domainTransactionRecords;
 
-  /** Sets the domain transaction records. This method is dedicated for Hibernate. */
-  @SuppressWarnings("unused")
-  private void setInternalDomainTransactionRecords(
-      Set<DomainTransactionRecord> domainTransactionRecords) {
-    setDomainTransactionRecords(domainTransactionRecords);
+  public Set<DomainTransactionRecord> getDomainTransactionRecords() {
+    return nullToEmptyImmutableCopy(domainTransactionRecords);
   }
 
   /** Returns keys to the {@link Host} that are the nameservers for the domain. */
@@ -320,7 +276,7 @@ public class DomainHistory extends HistoryEntry {
 
     public Builder setDomainTransactionRecords(
         ImmutableSet<DomainTransactionRecord> domainTransactionRecords) {
-      getInstance().setDomainTransactionRecords(domainTransactionRecords);
+      getInstance().domainTransactionRecords = domainTransactionRecords;
       return this;
     }
 
