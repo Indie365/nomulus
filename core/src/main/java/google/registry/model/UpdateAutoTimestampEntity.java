@@ -18,21 +18,16 @@ import com.googlecode.objectify.annotation.Ignore;
 import google.registry.util.PreconditionsUtils;
 import javax.persistence.Access;
 import javax.persistence.AccessType;
-import javax.persistence.AttributeOverride;
-import javax.persistence.Column;
 import javax.persistence.MappedSuperclass;
 import javax.xml.bind.annotation.XmlTransient;
 
 /**
- * Base class for entities that are the root of a Registry 2.0 entity group that gets enrolled in
- * commit logs for backup purposes.
- *
- * <p>The commit log system needs to preserve the ordering of closely timed mutations to entities in
- * a single entity group. We require an {@link UpdateAutoTimestamp} field on the root of a group so
- * that we can enforce strictly increasing timestamps.
+ * Base class for entities that contains an {@link UpdateAutoTimestamp} which is updated every time
+ * the entity is persisted.
  */
 @MappedSuperclass
-public abstract class BackupGroupRoot extends ImmutableObject implements UnsafeSerializable {
+public abstract class UpdateAutoTimestampEntity extends ImmutableObject
+    implements UnsafeSerializable {
 
   /**
    * An automatically managed timestamp of when this object was last written to Datastore.
@@ -44,43 +39,42 @@ public abstract class BackupGroupRoot extends ImmutableObject implements UnsafeS
   // Prevents subclasses from unexpectedly accessing as property (e.g., Host), which would
   // require an unnecessary non-private setter method.
   @Access(AccessType.FIELD)
-  @AttributeOverride(name = "lastUpdateTime", column = @Column(name = "updateTimestamp"))
   @Ignore
-  UpdateAutoTimestamp updateTimestamp = UpdateAutoTimestamp.create(null);
+  UpdateAutoTimestamp UpdateTimestamp = UpdateAutoTimestamp.create(null);
 
   /** Get the {@link UpdateAutoTimestamp} for this entity. */
   public UpdateAutoTimestamp getUpdateTimestamp() {
-    return updateTimestamp;
+    return UpdateTimestamp;
   }
 
   /**
-   * Copies {@link #updateTimestamp} from another entity.
+   * Copies {@link #UpdateTimestamp} from another entity.
    *
    * <p>This method is for the few cases when {@code updateTimestamp} is copied between different
    * types of entities. Use {@link #clone} for same-type copying.
    */
-  protected void copyUpdateTimestamp(BackupGroupRoot other) {
-    this.updateTimestamp = PreconditionsUtils.checkArgumentNotNull(other, "other").updateTimestamp;
+  protected void copyUpdateTimestamp(UpdateAutoTimestampEntity other) {
+    this.UpdateTimestamp = PreconditionsUtils.checkArgumentNotNull(other, "other").UpdateTimestamp;
   }
 
   /**
-   * Resets the {@link #updateTimestamp} to force Hibernate to persist it.
+   * Resets the {@link #UpdateTimestamp} to force Hibernate to persist it.
    *
    * <p>This method is for use in setters in derived builders that do not result in the derived
    * object being persisted.
    */
   protected void resetUpdateTimestamp() {
-    this.updateTimestamp = UpdateAutoTimestamp.create(null);
+    this.UpdateTimestamp = UpdateAutoTimestamp.create(null);
   }
 
   /**
-   * Sets the {@link #updateTimestamp}.
+   * Sets the {@link #UpdateTimestamp}.
    *
    * <p>This method is for use in the few places where we need to restore the update timestamp after
    * mutating a collection in order to force the new timestamp to be persisted when it ordinarily
    * wouldn't.
    */
   protected void setUpdateTimestamp(UpdateAutoTimestamp timestamp) {
-    updateTimestamp = timestamp;
+    UpdateTimestamp = timestamp;
   }
 }

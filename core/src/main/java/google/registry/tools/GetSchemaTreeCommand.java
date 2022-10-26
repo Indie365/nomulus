@@ -28,7 +28,7 @@ import com.google.common.collect.TreeMultimap;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.EntitySubclass;
 import com.googlecode.objectify.annotation.Parent;
-import google.registry.model.BackupGroupRoot;
+import google.registry.model.UpdateAutoTimestampEntity;
 import google.registry.model.annotations.DeleteAfterMigration;
 import google.registry.model.annotations.NotBackedUp;
 import google.registry.model.annotations.VirtualEntity;
@@ -126,13 +126,14 @@ final class GetSchemaTreeCommand implements Command {
 
   private void printTree(Class<?> parent, int indent) {
     for (Class<?> clazz : hierarchy.get(parent)) {
-      System.out.println(new StringBuilder(Strings.repeat(" ", indent))
-          .append(indent == 0 ? "" : "↳ ")
-          .append(getPrintableName(clazz))
-          .append(isAbstract(clazz.getModifiers()) ? " (abstract)" : "")
-          .append(clazz.isAnnotationPresent(VirtualEntity.class) ? " (virtual)" : "")
-          .append(clazz.isAnnotationPresent(NotBackedUp.class) ? " (not backed up)" : "")
-          .append(BackupGroupRoot.class.isAssignableFrom(clazz) ? " (bgr)" : ""));
+      System.out.println(
+          new StringBuilder(Strings.repeat(" ", indent))
+              .append(indent == 0 ? "" : "↳ ")
+              .append(getPrintableName(clazz))
+              .append(isAbstract(clazz.getModifiers()) ? " (abstract)" : "")
+              .append(clazz.isAnnotationPresent(VirtualEntity.class) ? " (virtual)" : "")
+              .append(clazz.isAnnotationPresent(NotBackedUp.class) ? " (not backed up)" : "")
+              .append(UpdateAutoTimestampEntity.class.isAssignableFrom(clazz) ? " (bgr)" : ""));
       printSubclasses(clazz, indent + 2);
       printTree(clazz, indent + 2);
       if (indent == 0) {

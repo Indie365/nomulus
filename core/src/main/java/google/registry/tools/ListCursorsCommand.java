@@ -77,6 +77,6 @@ final class ListCursorsCommand implements CommandWithRemoteApi {
         OUTPUT_FMT,
         tld,
         cursor.map(c -> c.getCursorTime().toString()).orElse("(absent)"),
-        cursor.map(c -> c.getLastUpdateTime().toString()).orElse("(absent)"));
+        cursor.map(c -> c.getUpdateTimestamp().getTimestamp().toString()).orElse("(absent)"));
   }
 }
