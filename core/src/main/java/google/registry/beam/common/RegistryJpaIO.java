@@ -23,14 +23,12 @@ import com.google.common.collect.Streams;
 import google.registry.beam.common.RegistryQuery.CriteriaQuerySupplier;
 import google.registry.persistence.transaction.JpaTransactionManager;
 import google.registry.persistence.transaction.TransactionManagerFactory;
-import java.io.Serializable;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nullable;
 import javax.persistence.criteria.CriteriaQuery;
 import org.apache.beam.sdk.coders.Coder;
-import org.apache.beam.sdk.coders.SerializableCoder;
 import org.apache.beam.sdk.metrics.Counter;
 import org.apache.beam.sdk.metrics.Metrics;
 import org.apache.beam.sdk.transforms.Create;
@@ -177,9 +175,7 @@ public final class RegistryJpaIO {
     }
 
     static <R, T> Builder<R, T> builder() {
-      return new AutoValue_RegistryJpaIO_Read.Builder<R, T>()
-          .name(DEFAULT_NAME)
-          .coder(SerializableCoder.of(Serializable.class));
+      return new AutoValue_RegistryJpaIO_Read.Builder<R, T>().name(DEFAULT_NAME);
     }
 
     @AutoValue.Builder
@@ -191,7 +187,7 @@ public final class RegistryJpaIO {
 
       abstract Builder<R, T> resultMapper(SerializableFunction<R, T> mapper);
 
-      abstract Builder<R, T> coder(Coder<?> coder);
+      abstract Builder<R, T> coder(Coder<T> coder);
 
       abstract Builder<R, T> snapshotId(@Nullable String sharedSnapshotId);
 
@@ -354,8 +350,6 @@ public final class RegistryJpaIO {
 
       abstract Builder<T> jpaConverter(SerializableFunction<T, Object> jpaConverter);
 
-      abstract Builder<T> withUpdateAutoTimestamp(boolean withUpdateAutoTimestamp);
-
       abstract Write<T> build();
     }
   }
@@ -372,7 +366,7 @@ public final class RegistryJpaIO {
 
     @ProcessElement
     public void processElement(@Element KV<ShardedKey<Integer>, Iterable<T>> kv) {
-        actuallyProcessElement(kv);
+      actuallyProcessElement(kv);
     }
 
     private void actuallyProcessElement(@Element KV<ShardedKey<Integer>, Iterable<T>> kv) {
