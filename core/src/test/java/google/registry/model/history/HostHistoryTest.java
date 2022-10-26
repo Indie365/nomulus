@@ -82,7 +82,7 @@ public class HostHistoryTest extends EntityTestCase {
   }
 
   private static void assertHostHistoriesEqual(HostHistory one, HostHistory two) {
-    assertAboutImmutableObjects().that(one).isEqualExceptFields(two, "hostBase");
+    assertAboutImmutableObjects().that(one).isEqualExceptFields(two, "eppResource");
     assertAboutImmutableObjects()
         .that(one.getHostBase().orElse(null))
         .isEqualExceptFields(two.getHostBase().orElse(null), "repoId");

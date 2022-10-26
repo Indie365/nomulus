@@ -155,9 +155,7 @@ public class ContactHistoryTest extends EntityTestCase {
   }
 
   static void assertContactHistoriesEqual(ContactHistory one, ContactHistory two) {
-    assertAboutImmutableObjects()
-        .that(one)
-        .isEqualExceptFields(two, "contactBase", "contactRepoId");
+    assertAboutImmutableObjects().that(one).isEqualExceptFields(two, "eppResource");
     assertAboutImmutableObjects()
         .that(one.getContactBase().orElse(null))
         .isEqualExceptFields(two.getContactBase().orElse(null), "repoId");

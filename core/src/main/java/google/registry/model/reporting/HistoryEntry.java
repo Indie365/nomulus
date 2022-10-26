@@ -302,8 +302,9 @@ public abstract class HistoryEntry extends ImmutableObject
     }
 
     public B setResource(@Nullable EppResource eppResource) {
-      getInstance().eppResource = eppResource;
+      // Nullable for the sake of pre-Registry-3.0 history objects
       if (eppResource != null) {
+        getInstance().eppResource = eppResource;
         getInstance().repoId = eppResource.getRepoId();
       }
       return thisCastToDerived();
