@@ -15,12 +15,14 @@
 package google.registry.model;
 
 import static com.google.common.base.Preconditions.checkState;
+import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
+import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 
-import com.google.appengine.api.datastore.DatastoreServiceFactory;
 import com.google.common.flogger.FluentLogger;
 import google.registry.beam.common.RegistryPipelineWorkerInitializer;
 import google.registry.config.RegistryEnvironment;
 import google.registry.model.annotations.DeleteAfterMigration;
+import java.math.BigInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
@@ -46,7 +48,7 @@ public final class IdService {
   private static Supplier<Long> idSupplier =
       RegistryEnvironment.UNITTEST.equals(RegistryEnvironment.get())
           ? SelfAllocatedIdSupplier.getInstance()
-          : DatastoreIdSupplier.getInstance();
+          : SequenceBasedIdSupplier.getInstance();
 
   /**
    * Provides a {@link Supplier} of ID that overrides the default.
@@ -76,28 +78,30 @@ public final class IdService {
     return idSupplier.get();
   }
 
-  // TODO(b/201547855): Find a way to allocate a unique ID without datastore.
-  private static class DatastoreIdSupplier implements Supplier<Long> {
+  /**
+   * An ID supplier that allocates an ID from a monotonically increasing atomic {@link long} base on
+   * SQL Sequence.
+   *
+   * <p>The generated IDs are project-wide unique
+   */
+  private static class SequenceBasedIdSupplier implements Supplier<Long> {
 
-    private static final DatastoreIdSupplier INSTANCE = new DatastoreIdSupplier();
+    private static final SequenceBasedIdSupplier INSTANCE = new SequenceBasedIdSupplier();
 
-    /**
-     * A placeholder String passed into {@code DatastoreService.allocateIds} that ensures that all
-     * IDs are initialized from the same ID pool.
-     */
-    private static final String APP_WIDE_ALLOCATION_KIND = "common";
-
-    public static DatastoreIdSupplier getInstance() {
+    public static SequenceBasedIdSupplier getInstance() {
       return INSTANCE;
     }
 
     @Override
     public Long get() {
-      return DatastoreServiceFactory.getDatastoreService()
-          .allocateIds(APP_WIDE_ALLOCATION_KIND, 1)
-          .iterator()
-          .next()
-          .getId();
+      return tm().transact(
+              () ->
+                  (BigInteger)
+                      jpaTm()
+                          .getEntityManager()
+                          .createNativeQuery("SELECT nextval('project_wide_unique_id_seq')")
+                          .getSingleResult())
+          .longValue();
     }
   }
 
