@@ -25,6 +25,7 @@ import google.registry.model.common.Cursor.CursorId;
 import google.registry.model.tld.Registry;
 import google.registry.persistence.VKey;
 import java.util.Optional;
+import javax.persistence.AttributeOverride;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
@@ -41,6 +42,9 @@ import org.joda.time.DateTime;
  */
 @Entity
 @IdClass(CursorId.class)
+@AttributeOverride(
+    name = "updateTimestamp.lastUpdateTime",
+    column = @Column(name = "lastUpdateTime"))
 public class Cursor extends UpdateAutoTimestampEntity {
 
   private static final long serialVersionUID = 5777891565780594961L;

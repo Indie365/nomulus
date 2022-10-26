@@ -94,6 +94,9 @@ import org.joda.time.DateTime;
       @Index(columnList = "registrarName", name = "registrar_name_idx"),
       @Index(columnList = "ianaIdentifier", name = "registrar_iana_identifier_idx"),
     })
+@AttributeOverride(
+    name = "updateTimestamp.lastUpdateTime",
+    column = @Column(name = "lastUpdateTime"))
 public class Registrar extends UpdateAutoTimestampEntity implements Buildable, Jsonifiable {
 
   /** Represents the type of a registrar entity. */

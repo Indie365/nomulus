@@ -40,41 +40,41 @@ public abstract class UpdateAutoTimestampEntity extends ImmutableObject
   // require an unnecessary non-private setter method.
   @Access(AccessType.FIELD)
   @Ignore
-  UpdateAutoTimestamp UpdateTimestamp = UpdateAutoTimestamp.create(null);
+  UpdateAutoTimestamp updateTimestamp = UpdateAutoTimestamp.create(null);
 
   /** Get the {@link UpdateAutoTimestamp} for this entity. */
   public UpdateAutoTimestamp getUpdateTimestamp() {
-    return UpdateTimestamp;
+    return updateTimestamp;
   }
 
   /**
-   * Copies {@link #UpdateTimestamp} from another entity.
+   * Copies {@link #updateTimestamp} from another entity.
    *
    * <p>This method is for the few cases when {@code updateTimestamp} is copied between different
    * types of entities. Use {@link #clone} for same-type copying.
    */
   protected void copyUpdateTimestamp(UpdateAutoTimestampEntity other) {
-    this.UpdateTimestamp = PreconditionsUtils.checkArgumentNotNull(other, "other").UpdateTimestamp;
+    this.updateTimestamp = PreconditionsUtils.checkArgumentNotNull(other, "other").updateTimestamp;
   }
 
   /**
-   * Resets the {@link #UpdateTimestamp} to force Hibernate to persist it.
+   * Resets the {@link #updateTimestamp} to force Hibernate to persist it.
    *
    * <p>This method is for use in setters in derived builders that do not result in the derived
    * object being persisted.
    */
   protected void resetUpdateTimestamp() {
-    this.UpdateTimestamp = UpdateAutoTimestamp.create(null);
+    this.updateTimestamp = UpdateAutoTimestamp.create(null);
   }
 
   /**
-   * Sets the {@link #UpdateTimestamp}.
+   * Sets the {@link #updateTimestamp}.
    *
    * <p>This method is for use in the few places where we need to restore the update timestamp after
    * mutating a collection in order to force the new timestamp to be persisted when it ordinarily
    * wouldn't.
    */
   protected void setUpdateTimestamp(UpdateAutoTimestamp timestamp) {
-    UpdateTimestamp = timestamp;
+    updateTimestamp = timestamp;
   }
 }

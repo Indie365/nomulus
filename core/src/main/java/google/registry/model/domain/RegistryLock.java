@@ -23,6 +23,8 @@ import google.registry.model.CreateAutoTimestamp;
 import google.registry.model.UpdateAutoTimestampEntity;
 import java.util.Optional;
 import javax.annotation.Nullable;
+import javax.persistence.Access;
+import javax.persistence.AccessType;
 import javax.persistence.AttributeOverride;
 import javax.persistence.AttributeOverrides;
 import javax.persistence.Column;
@@ -71,6 +73,10 @@ import org.joda.time.Duration;
       @Index(name = "idx_registry_lock_verification_code", columnList = "verificationCode"),
       @Index(name = "idx_registry_lock_registrar_id", columnList = "registrarId")
     })
+@Access(AccessType.FIELD)
+@AttributeOverride(
+    name = "updateTimestamp.lastUpdateTime",
+    column = @Column(name = "lastUpdateTime"))
 public final class RegistryLock extends UpdateAutoTimestampEntity implements Buildable {
 
   @Id
