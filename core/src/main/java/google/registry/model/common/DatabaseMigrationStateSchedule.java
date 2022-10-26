@@ -82,7 +82,10 @@ public class DatabaseMigrationStateSchedule extends CrossTldSingleton {
     SQL_PRIMARY(PrimaryDatabase.CLOUD_SQL, false, ReplayDirection.SQL_TO_DATASTORE),
 
     /** Cloud SQL is the only DB being used. */
-    SQL_ONLY(PrimaryDatabase.CLOUD_SQL, false, ReplayDirection.NO_REPLAY);
+    SQL_ONLY(PrimaryDatabase.CLOUD_SQL, false, ReplayDirection.NO_REPLAY),
+
+    /** Toggles SQL Sequence based allocateId */
+    SEQUENCE_BASED_ALLOCATE_ID(PrimaryDatabase.CLOUD_SQL, false, ReplayDirection.NO_REPLAY);
 
     private final PrimaryDatabase primaryDatabase;
     private final boolean isReadOnly;

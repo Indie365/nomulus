@@ -15,12 +15,16 @@
 package google.registry.model;
 
 import static com.google.common.base.Preconditions.checkState;
+import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
 
 import com.google.appengine.api.datastore.DatastoreServiceFactory;
 import com.google.common.flogger.FluentLogger;
 import google.registry.beam.common.RegistryPipelineWorkerInitializer;
 import google.registry.config.RegistryEnvironment;
 import google.registry.model.annotations.DeleteAfterMigration;
+import google.registry.model.common.DatabaseMigrationStateSchedule;
+import google.registry.model.common.DatabaseMigrationStateSchedule.MigrationState;
+import java.math.BigInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
@@ -46,7 +50,10 @@ public final class IdService {
   private static Supplier<Long> idSupplier =
       RegistryEnvironment.UNITTEST.equals(RegistryEnvironment.get())
           ? SelfAllocatedIdSupplier.getInstance()
-          : DatastoreIdSupplier.getInstance();
+          : (DatabaseMigrationStateSchedule.getValueAtTime(jpaTm().getTransactionTime())
+                  .equals(MigrationState.SEQUENCE_BASED_ALLOCATE_ID)
+              ? SequenceBasedIdSupplier.getInstance()
+              : DatastoreIdSupplier.getInstance());
 
   /**
    * Provides a {@link Supplier} of ID that overrides the default.
@@ -74,6 +81,34 @@ public final class IdService {
   /** Allocates an id. */
   public static long allocateId() {
     return idSupplier.get();
+  }
+
+  /**
+   * An ID supplier that allocates an ID from a monotonically increasing atomic {@link long} base on
+   * SQL Sequence.
+   *
+   * <p>The generated IDs are project-wide unique
+   */
+  private static class SequenceBasedIdSupplier implements Supplier<Long> {
+
+    private static final SequenceBasedIdSupplier INSTANCE = new SequenceBasedIdSupplier();
+
+    public static SequenceBasedIdSupplier getInstance() {
+      return INSTANCE;
+    }
+
+    @Override
+    public Long get() {
+      return jpaTm()
+          .transact(
+              () ->
+                  (BigInteger)
+                      jpaTm()
+                          .getEntityManager()
+                          .createNativeQuery("SELECT nextval('ProjectWideUnique_id_seq')")
+                          .getSingleResult())
+          .longValue();
+    }
   }
 
   // TODO(b/201547855): Find a way to allocate a unique ID without datastore.
