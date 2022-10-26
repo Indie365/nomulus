@@ -27,7 +27,6 @@ import javax.persistence.AttributeOverride;
 import javax.persistence.AttributeOverrides;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.PostLoad;
 
 /**
  * A 'light' version of {@link DomainHistory} with only base table ("DomainHistory") attributes,
@@ -85,16 +84,5 @@ public class DomainHistoryLite extends HistoryEntry {
   @Override
   public Builder<? extends HistoryEntry, ?> asBuilder() {
     throw new UnsupportedOperationException("DomainHistoryLite cannot be converted to a Builder");
-  }
-
-  @PostLoad
-  void postLoad() {
-    if (getRawDomainBase() == null) {
-      return;
-    }
-    // See inline comments in DomainHistory.postLoad for reasons for the following lines.
-    if (getRawDomainBase().getDomainName() == null) {
-      setRawDomainBase(null);
-    }
   }
 }

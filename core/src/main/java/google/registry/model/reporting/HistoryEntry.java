@@ -43,6 +43,7 @@ import javax.persistence.Enumerated;
 import javax.persistence.Id;
 import javax.persistence.IdClass;
 import javax.persistence.MappedSuperclass;
+import javax.persistence.PostLoad;
 import javax.persistence.Transient;
 import org.apache.commons.lang3.BooleanUtils;
 import org.joda.time.DateTime;
@@ -119,6 +120,8 @@ public abstract class HistoryEntry extends ImmutableObject
   @Column(nullable = false, name = "historyRevisionId")
   protected Long revisionId;
 
+  @Id protected String repoId;
+
   @Nullable @Transient protected EppResource eppResource;
 
   /** The type of history entry. */
@@ -183,19 +186,9 @@ public abstract class HistoryEntry extends ImmutableObject
     return eppResource.getClass();
   }
 
-  @Id
-  @Access(AccessType.PROPERTY)
   public String getRepoId() {
-    return eppResource == null ? null : eppResource.getRepoId();
+    return repoId;
   }
-
-  /**
-   * This method exists solely to satisfy Hibernate. Use the {@link Builder} instead.
-   *
-   * <p>It is also a no-op because the repo ID is stored in the {@link #eppResource} instead.
-   */
-  @SuppressWarnings("unused")
-  private void setRepoId(String repoId) {}
 
   public HistoryEntryId getHistoryEntryId() {
     return new HistoryEntryId(getRepoId(), getRevisionId());
@@ -236,6 +229,24 @@ public abstract class HistoryEntry extends ImmutableObject
   }
 
   public abstract Optional<? extends EppResource> getResourceAtPointInTime();
+
+  protected void processResourcePostLoad() {
+    // Normally Hibernate would see that the EPP resource fields are all null and would fill it with
+    // a null object. Unfortunately, the updateTimestamp is never null in SQL.
+    if (eppResource != null && eppResource.getCreationRegistrarId() == null) {
+      eppResource = null;
+    }
+    if (eppResource != null && eppResource.getRepoId() == null) {
+      // The repoId field in EppResource is transient, so we go ahead and set it to the value read
+      // from SQL.
+      eppResource.setRepoId(repoId);
+    }
+  }
+
+  @PostLoad
+  protected void postLoad() {
+    processResourcePostLoad();
+  }
 
   @Override
   public abstract Builder<? extends HistoryEntry, ?> asBuilder();
@@ -292,6 +303,9 @@ public abstract class HistoryEntry extends ImmutableObject
 
     public B setResource(@Nullable EppResource eppResource) {
       getInstance().eppResource = eppResource;
+      if (eppResource != null) {
+        getInstance().repoId = eppResource.getRepoId();
+      }
       return thisCastToDerived();
     }
 

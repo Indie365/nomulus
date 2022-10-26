@@ -206,8 +206,9 @@ public class DomainHistory extends HistoryEntry {
     return period;
   }
 
+  @Override
   @PostLoad
-  void postLoad() {
+  protected void postLoad() {
     // TODO(b/188044616): Determine why Eager loading doesn't work here.
     Hibernate.initialize(domainTransactionRecords);
     Hibernate.initialize(nsHosts);
@@ -223,12 +224,8 @@ public class DomainHistory extends HistoryEntry {
               .collect(toImmutableSet());
       domainBase.dsData =
           dsDataHistories.stream().map(DomainDsData::create).collect(toImmutableSet());
-      // Normally Hibernate would see that the domain fields are all null and would fill
-      // domainBase with a null object. Unfortunately, the updateTimestamp is never null in SQL.
-      if (domainBase.getDomainName() == null) {
-        setRawDomainBase(null);
-      }
     }
+    processResourcePostLoad();
   }
 
   private static void fillAuxiliaryFieldsFromDomain(DomainHistory domainHistory) {

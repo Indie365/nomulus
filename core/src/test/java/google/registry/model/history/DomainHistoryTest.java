@@ -135,7 +135,7 @@ public class DomainHistoryTest extends EntityTestCase {
     assertAboutImmutableObjects().that(one).isEqualExceptFields(two, "eppResource");
     assertAboutImmutableObjects()
         .that(one.getDomainBase().get())
-        .isEqualExceptFields(two.getDomainBase().get(), "updateTimestamp", "repoId");
+        .isEqualExceptFields(two.getDomainBase().get(), "updateTimestamp");
   }
 
   private DomainHistory createDomainHistory(DomainBase domain) {
