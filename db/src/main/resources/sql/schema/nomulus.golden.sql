@@ -759,6 +759,18 @@ ALTER SEQUENCE public."PremiumList_revision_id_seq" OWNED BY public."PremiumList
 
 
 --
+-- Name: ProjectWideUnique_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public."ProjectWideUnique_id_seq"
+    START WITH 59880480006
+    INCREMENT BY 1
+    MINVALUE 59880480005
+    NO MAXVALUE
+    CACHE 10;
+
+
+--
 -- Name: RdeRevision; Type: TABLE; Schema: public; Owner: -
 --
 
