@@ -76,7 +76,7 @@ class HistoryEntryDaoTest extends EntityTestCase {
   @Test
   void testSimpleLoadAll() {
     assertThat(HistoryEntryDao.loadAllHistoryObjects(START_OF_TIME, END_OF_TIME))
-        .comparingElementsUsing(immutableObjectCorrespondence("nsHosts", "domainBase"))
+        .comparingElementsUsing(immutableObjectCorrespondence("nsHosts", "eppResource"))
         .containsExactly(domainHistory);
   }
 
@@ -98,7 +98,7 @@ class HistoryEntryDaoTest extends EntityTestCase {
     tm().transact(
             () ->
                 assertThat(HistoryEntryDao.loadHistoryObjectsForResource(domain.createVKey()))
-                    .comparingElementsUsing(immutableObjectCorrespondence("nsHosts", "domainBase"))
+                    .comparingElementsUsing(immutableObjectCorrespondence("nsHosts", "eppResource"))
                     .containsExactly(domainHistory));
   }
 

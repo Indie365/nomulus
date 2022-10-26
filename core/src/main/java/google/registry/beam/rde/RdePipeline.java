@@ -55,7 +55,6 @@ import google.registry.model.rde.RdeMode;
 import google.registry.model.registrar.Registrar;
 import google.registry.model.registrar.Registrar.Type;
 import google.registry.model.reporting.HistoryEntry;
-import google.registry.model.reporting.HistoryEntryDao;
 import google.registry.persistence.PersistenceModule.TransactionIsolationLevel;
 import google.registry.persistence.VKey;
 import google.registry.rde.DepositFragment;
@@ -172,6 +171,7 @@ import org.joda.time.DateTime;
  * @see <a href="https://cloud.google.com/dataflow/docs/guides/templates/using-flex-templates">Using
  *     Flex Templates</a>
  */
+@SuppressWarnings("ALL")
 @Singleton
 public class RdePipeline implements Serializable {
 
@@ -335,26 +335,23 @@ public class RdePipeline implements Serializable {
    */
   private <T extends HistoryEntry> PCollection<KV<String, Long>> getMostRecentHistoryEntries(
       Pipeline pipeline, Class<T> historyClass) {
-    String repoIdFieldName = HistoryEntryDao.REPO_ID_FIELD_NAMES.get(historyClass);
     String resourceFieldName = EPP_RESOURCE_FIELD_NAME.get(historyClass);
     return pipeline
         .apply(
             String.format("Load most recent %s", historyClass.getSimpleName()),
             RegistryJpaIO.read(
-                ("SELECT %repoIdField%, id FROM %entity% WHERE (%repoIdField%, modificationTime)"
-                     + " IN (SELECT %repoIdField%, MAX(modificationTime) FROM %entity% WHERE"
-                     + " modificationTime <= :watermark GROUP BY %repoIdField%) AND"
-                     + " %resourceField%.deletionTime > :watermark AND"
-                     + " COALESCE(%resourceField%.creationClientId, '') NOT LIKE 'prober-%' AND"
-                     + " COALESCE(%resourceField%.currentSponsorClientId, '') NOT LIKE 'prober-%'"
-                     + " AND COALESCE(%resourceField%.lastEppUpdateClientId, '') NOT LIKE"
-                     + " 'prober-%' "
+                ("SELECT repoId, id FROM %entity% WHERE (repoId, modificationTime) IN (SELECT"
+                     + " repoId, MAX(modificationTime) FROM %entity% WHERE modificationTime <="
+                     + " :watermark GROUP BY repoId AND %resourceField%.deletionTime > :watermark"
+                     + " AND COALESCE(%resourceField%.creationClientId, '') NOT LIKE 'prober-%'"
+                     + " AND COALESCE(%resourceField%.currentSponsorClientId, '') NOT LIKE"
+                     + " 'prober-%' AND COALESCE(%resourceField%.lastEppUpdateClientId, '') NOT"
+                     + " LIKE 'prober-%' "
                         + (historyClass == DomainHistory.class
                             ? "AND %resourceField%.tld IN "
                                 + "(SELECT id FROM Tld WHERE tldType = 'REAL')"
                             : ""))
                     .replace("%entity%", historyClass.getSimpleName())
-                    .replace("%repoIdField%", repoIdFieldName)
                     .replace("%resourceField%", resourceFieldName),
                 ImmutableMap.of("watermark", watermark),
                 Object[].class,

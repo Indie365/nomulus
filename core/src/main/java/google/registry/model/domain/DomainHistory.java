@@ -76,7 +76,8 @@ public class DomainHistory extends HistoryEntry {
     return (DomainBase) eppResource;
   }
 
-  protected void setRawDomainBase(DomainBase domainBase) {
+  @SuppressWarnings("unused")
+  private void setRawDomainBase(DomainBase domainBase) {
     eppResource = domainBase;
   }
 

@@ -53,15 +53,6 @@ public class HistoryEntryDao {
               Host.class,
               HostHistory.class);
 
-  public static ImmutableMap<Class<? extends HistoryEntry>, String> REPO_ID_FIELD_NAMES =
-      ImmutableMap.of(
-          ContactHistory.class,
-          "contactRepoId",
-          DomainHistory.class,
-          "domainRepoId",
-          HostHistory.class,
-          "hostRepoId");
-
   /** Loads all history objects in the times specified, including all types. */
   public static ImmutableList<HistoryEntry> loadAllHistoryObjects(
       DateTime afterTime, DateTime beforeTime) {
@@ -153,20 +144,16 @@ public class HistoryEntryDao {
       VKey<? extends EppResource> resourceKey, DateTime afterTime, DateTime beforeTime) {
     // The class we're searching from is based on which resource type (e.g. Domain) we have
     Class<? extends HistoryEntry> historyClass = getHistoryClassFromParent(resourceKey.getKind());
-    // The field representing repo ID unfortunately varies by history class
-    String repoIdFieldName = getRepoIdFieldNameFromHistoryClass(historyClass);
     CriteriaBuilder criteriaBuilder = jpaTm().getEntityManager().getCriteriaBuilder();
     CriteriaQuery<? extends HistoryEntry> criteriaQuery =
         CriteriaQueryBuilder.create(historyClass)
             .where("modificationTime", criteriaBuilder::greaterThanOrEqualTo, afterTime)
             .where("modificationTime", criteriaBuilder::lessThanOrEqualTo, beforeTime)
-            .where(repoIdFieldName, criteriaBuilder::equal, resourceKey.getSqlKey().toString())
-            .orderByAsc("id")
+            .where("repoId", criteriaBuilder::equal, resourceKey.getSqlKey().toString())
+            .orderByAsc("modificationTime")
             .build();
 
-    return ImmutableList.sortedCopyOf(
-        Comparator.comparing(HistoryEntry::getModificationTime),
-        jpaTm().criteriaQuery(criteriaQuery).getResultList());
+    return ImmutableList.copyOf(jpaTm().criteriaQuery(criteriaQuery).getResultList());
   }
 
   public static Class<? extends HistoryEntry> getHistoryClassFromParent(
@@ -176,15 +163,6 @@ public class HistoryEntryDao {
           String.format("Unknown history type for resourceType %s", resourceType.getName()));
     }
     return RESOURCE_TYPES_TO_HISTORY_TYPES.get(resourceType);
-  }
-
-  public static String getRepoIdFieldNameFromHistoryClass(
-      Class<? extends HistoryEntry> historyClass) {
-    if (!REPO_ID_FIELD_NAMES.containsKey(historyClass)) {
-      throw new IllegalArgumentException(
-          String.format("Unknown history type %s", historyClass.getName()));
-    }
-    return REPO_ID_FIELD_NAMES.get(historyClass);
   }
 
   private static <T extends HistoryEntry> List<T> loadAllHistoryObjects(

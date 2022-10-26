@@ -55,7 +55,8 @@ public class HostHistory extends HistoryEntry {
     return (HostBase) eppResource;
   }
 
-  protected void setRawHostBase(HostBase hostBase) {
+  @SuppressWarnings("unused")
+  private void setRawHostBase(HostBase hostBase) {
     eppResource = hostBase;
   }
 
