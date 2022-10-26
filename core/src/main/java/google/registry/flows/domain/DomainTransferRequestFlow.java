@@ -197,7 +197,7 @@ public final class DomainTransferRequestFlow implements TransactionalFlow {
     // If the period is zero, then there is no fee for the transfer.
     Recurring existingRecurring = tm().loadByKey(existingDomain.getAutorenewBillingEvent());
     Optional<FeesAndCredits> feesAndCredits =
-        (period.getValue() == 0)
+        period.getValue() == 0
             ? Optional.empty()
             : Optional.of(
                 pricingLogic.getTransferPrice(registry, targetId, now, existingRecurring));
@@ -205,7 +205,7 @@ public final class DomainTransferRequestFlow implements TransactionalFlow {
     // behavior
     if (existingDomain.getCurrentPackageToken().isPresent()) {
       feesAndCredits =
-          (period.getValue() == 0)
+          period.getValue() == 0
               ? Optional.empty()
               : Optional.of(
                   pricingLogic.getTransferPrice(
