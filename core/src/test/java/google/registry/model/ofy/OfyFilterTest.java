@@ -28,9 +28,13 @@ import com.googlecode.objectify.ObjectifyService;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import google.registry.model.contact.Contact;
+import google.registry.persistence.transaction.JpaTestExtensions;
+import google.registry.persistence.transaction.JpaTestExtensions.JpaIntegrationTestExtension;
+import google.registry.testing.FakeClock;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 /** Tests for our replacement Objectify filter. */
 class OfyFilterTest {
@@ -57,6 +61,10 @@ class OfyFilterTest {
     ObjectifyFilter.complete();
     helper.tearDown();
   }
+
+  @RegisterExtension
+  final JpaIntegrationTestExtension database =
+      new JpaTestExtensions.Builder().withClock(new FakeClock()).buildIntegrationTestExtension();
 
   /**
    * Key.create looks up kind metadata for the class of the object it is given. If this happens
