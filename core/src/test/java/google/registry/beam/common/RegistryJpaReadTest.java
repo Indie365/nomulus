@@ -45,7 +45,7 @@ import google.registry.persistence.transaction.JpaTestExtensions.JpaIntegrationT
 import google.registry.testing.AppEngineExtension;
 import google.registry.testing.DatastoreEntityExtension;
 import google.registry.testing.FakeClock;
-import org.apache.beam.sdk.coders.SerializableCoder;
+import org.apache.beam.sdk.coders.StringUtf8Coder;
 import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.values.PCollection;
 import org.joda.time.DateTime;
@@ -99,7 +99,7 @@ public class RegistryJpaReadTest {
     Read<Contact, String> read =
         RegistryJpaIO.read(
                 () -> CriteriaQueryBuilder.create(Contact.class).build(), ContactBase::getContactId)
-            .withCoder(SerializableCoder.of(String.class));
+            .withCoder(StringUtf8Coder.of());
     PCollection<String> repoIds = testPipeline.apply(read);
 
     PAssert.that(repoIds).containsInAnyOrder("contact_0", "contact_1", "contact_2");
@@ -121,7 +121,7 @@ public class RegistryJpaReadTest {
                   String emailAddress = (String) row[1];
                   return domain.getRepoId() + "-" + emailAddress;
                 })
-            .withCoder(SerializableCoder.of(String.class));
+            .withCoder(StringUtf8Coder.of());
     PCollection<String> joinedStrings = testPipeline.apply(read);
 
     PAssert.that(joinedStrings).containsInAnyOrder("4-COM-me@google.com");
@@ -143,7 +143,7 @@ public class RegistryJpaReadTest {
                   String emailAddress = (String) row[1];
                   return repoId + "-" + emailAddress;
                 })
-            .withCoder(SerializableCoder.of(String.class));
+            .withCoder(StringUtf8Coder.of());
     PCollection<String> joinedStrings = testPipeline.apply(read);
 
     PAssert.that(joinedStrings).containsInAnyOrder("4-COM-me@google.com");
@@ -161,7 +161,7 @@ public class RegistryJpaReadTest {
                 ImmutableMap.of("type", Registrar.Type.REAL),
                 Domain.class,
                 Domain::getRepoId)
-            .withCoder(SerializableCoder.of(String.class));
+            .withCoder(StringUtf8Coder.of());
     PCollection<String> repoIds = testPipeline.apply(read);
 
     PAssert.that(repoIds).containsInAnyOrder("4-COM");

@@ -144,6 +144,11 @@ public class Cursor extends UpdateAutoTimestampEntity {
     return VKey.createSql(Cursor.class, new CursorId(type, scope));
   }
 
+  public DateTime getLastUpdateTime() {
+    return getUpdateTimestamp().getTimestamp();
+  }
+
+
   public String getScope() {
     return scope;
   }
