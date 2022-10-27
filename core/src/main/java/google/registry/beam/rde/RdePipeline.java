@@ -101,7 +101,6 @@ import org.apache.beam.sdk.values.PCollectionTuple;
 import org.apache.beam.sdk.values.TupleTag;
 import org.apache.beam.sdk.values.TupleTagList;
 import org.apache.beam.sdk.values.TypeDescriptor;
-import org.apache.beam.sdk.values.TypeDescriptors;
 import org.joda.time.DateTime;
 
 /**
@@ -305,7 +304,8 @@ public class RdePipeline implements Serializable {
                     "SELECT registrarId FROM Registrar WHERE type NOT IN (:types)",
                     ImmutableMap.of("types", IGNORED_REGISTRAR_TYPES),
                     String.class,
-                    id -> VKey.createSql(Registrar.class, id)))
+                    x -> x)
+                .withCoder(StringUtf8Coder.of()))
         .apply(
             "Marshall Registrar into DepositFragment",
             FlatMapElements.into(
@@ -313,7 +313,8 @@ public class RdePipeline implements Serializable {
                         TypeDescriptor.of(PendingDeposit.class),
                         TypeDescriptor.of(DepositFragment.class)))
                 .via(
-                    (VKey<Registrar> key) -> {
+                    (String registrarRepoId) -> {
+                      VKey<Registrar> key = VKey.createSql(Registrar.class, registrarRepoId);
                       includedRegistrarCounter.inc();
                       Registrar registrar = jpaTm().transact(() -> jpaTm().loadByKey(key));
                       DepositFragment fragment = marshaller.marshalRegistrar(registrar);
@@ -338,12 +339,11 @@ public class RdePipeline implements Serializable {
       Pipeline pipeline, Class<T> historyClass) {
     String repoIdFieldName = HistoryEntryDao.REPO_ID_FIELD_NAMES.get(historyClass);
     String resourceFieldName = EPP_RESOURCE_FIELD_NAME.get(historyClass);
-    return pipeline
-        .apply(
-            String.format("Load most recent %s", historyClass.getSimpleName()),
-            RegistryJpaIO.read(
-                ("SELECT %repoIdField%, id FROM %entity% WHERE (%repoIdField%, modificationTime) IN"
-                     + " (SELECT %repoIdField%, MAX(modificationTime) FROM %entity% WHERE"
+    return pipeline.apply(
+        String.format("Load most recent %s", historyClass.getSimpleName()),
+        RegistryJpaIO.read(
+                ("SELECT %repoIdField%, id FROM %entity% WHERE (%repoIdField%, modificationTime)"
+                     + " IN (SELECT %repoIdField%, MAX(modificationTime) FROM %entity% WHERE"
                      + " modificationTime <= :watermark GROUP BY %repoIdField%) AND"
                      + " %resourceField%.deletionTime > :watermark AND"
                      + " COALESCE(%resourceField%.creationClientId, '') NOT LIKE 'prober-%' AND"
@@ -359,8 +359,8 @@ public class RdePipeline implements Serializable {
                     .replace("%resourceField%", resourceFieldName),
                 ImmutableMap.of("watermark", watermark),
                 Object[].class,
-                row -> KV.of((String) row[0], (long) row[1])))
-        .setCoder(KvCoder.of(StringUtf8Coder.of(), VarLongCoder.of()));
+                row -> KV.of((String) row[0], (long) row[1]))
+            .withCoder(KvCoder.of(StringUtf8Coder.of(), VarLongCoder.of())));
   }
 
   private <T extends HistoryEntry> EppResource loadResourceByHistoryEntryId(

@@ -111,16 +111,17 @@ public class RegistryJpaReadTest {
     setupForJoinQuery();
     Read<Object[], String> read =
         RegistryJpaIO.read(
-            "select d, r.emailAddress from Domain d join Registrar r on"
-                + " d.currentSponsorClientId = r.registrarId where r.type = :type"
-                + " and d.deletionTime > now()",
-            ImmutableMap.of("type", Registrar.Type.REAL),
-            false,
-            (Object[] row) -> {
-              Domain domain = (Domain) row[0];
-              String emailAddress = (String) row[1];
-              return domain.getRepoId() + "-" + emailAddress;
-            }).withCoder(SerializableCoder.of(String.class));
+                "select d, r.emailAddress from Domain d join Registrar r on"
+                    + " d.currentSponsorClientId = r.registrarId where r.type = :type"
+                    + " and d.deletionTime > now()",
+                ImmutableMap.of("type", Registrar.Type.REAL),
+                false,
+                (Object[] row) -> {
+                  Domain domain = (Domain) row[0];
+                  String emailAddress = (String) row[1];
+                  return domain.getRepoId() + "-" + emailAddress;
+                })
+            .withCoder(SerializableCoder.of(String.class));
     PCollection<String> joinedStrings = testPipeline.apply(read);
 
     PAssert.that(joinedStrings).containsInAnyOrder("4-COM-me@google.com");
@@ -132,16 +133,17 @@ public class RegistryJpaReadTest {
     setupForJoinQuery();
     Read<Object[], String> read =
         RegistryJpaIO.read(
-            "select d.repo_id, r.email_address from \"Domain\" d join \"Registrar\" r on"
-                + " d.current_sponsor_registrar_id = r.registrar_id where r.type = :type"
-                + " and d.deletion_time > now()",
-            ImmutableMap.of("type", "REAL"),
-            true,
-            (Object[] row) -> {
-              String repoId = (String) row[0];
-              String emailAddress = (String) row[1];
-              return repoId + "-" + emailAddress;
-            }).withCoder(SerializableCoder.of(String.class));
+                "select d.repo_id, r.email_address from \"Domain\" d join \"Registrar\" r on"
+                    + " d.current_sponsor_registrar_id = r.registrar_id where r.type = :type"
+                    + " and d.deletion_time > now()",
+                ImmutableMap.of("type", "REAL"),
+                true,
+                (Object[] row) -> {
+                  String repoId = (String) row[0];
+                  String emailAddress = (String) row[1];
+                  return repoId + "-" + emailAddress;
+                })
+            .withCoder(SerializableCoder.of(String.class));
     PCollection<String> joinedStrings = testPipeline.apply(read);
 
     PAssert.that(joinedStrings).containsInAnyOrder("4-COM-me@google.com");

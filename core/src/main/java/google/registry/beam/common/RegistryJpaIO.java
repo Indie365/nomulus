@@ -143,16 +143,15 @@ public final class RegistryJpaIO {
     @SuppressWarnings("deprecation") // Reshuffle still recommended by GCP.
     public PCollection<T> expand(PBegin input) {
       PCollection<T> output =
-       input
-          .apply("Starting " + name(), Create.of((Void) null))
-          .apply(
-              "Run query for " + name(),
-              ParDo.of(new QueryRunner<>(query(), resultMapper(), snapshotId())));
+          input
+              .apply("Starting " + name(), Create.of((Void) null))
+              .apply(
+                  "Run query for " + name(),
+                  ParDo.of(new QueryRunner<>(query(), resultMapper(), snapshotId())));
       if (coder() != null) {
         output = output.setCoder(coder());
       }
-      return output
-          .apply("Reshuffle", Reshuffle.viaRandomKey());
+      return output.apply("Reshuffle", Reshuffle.viaRandomKey());
     }
 
     public Read<R, T> withName(String name) {
