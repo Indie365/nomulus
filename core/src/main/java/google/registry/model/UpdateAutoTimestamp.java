@@ -38,9 +38,7 @@ public class UpdateAutoTimestamp extends ImmutableObject implements UnsafeSerial
   @PrePersist
   @PreUpdate
   void setTimestamp() {
-    if (lastUpdateTime == null) {
-      lastUpdateTime = jpaTm().getTransactionTime();
-    }
+    lastUpdateTime = jpaTm().getTransactionTime();
   }
 
   /** Returns the timestamp, or {@code START_OF_TIME} if it's null. */

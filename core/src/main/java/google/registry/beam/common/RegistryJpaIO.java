@@ -131,6 +131,7 @@ public final class RegistryJpaIO {
 
     abstract SerializableFunction<R, T> resultMapper();
 
+    @Nullable
     abstract Coder<T> coder();
 
     @Nullable
@@ -141,12 +142,16 @@ public final class RegistryJpaIO {
     @Override
     @SuppressWarnings("deprecation") // Reshuffle still recommended by GCP.
     public PCollection<T> expand(PBegin input) {
-      return input
+      PCollection<T> output =
+       input
           .apply("Starting " + name(), Create.of((Void) null))
           .apply(
               "Run query for " + name(),
-              ParDo.of(new QueryRunner<>(query(), resultMapper(), snapshotId())))
-          .setCoder(coder())
+              ParDo.of(new QueryRunner<>(query(), resultMapper(), snapshotId())));
+      if (coder() != null) {
+        output = output.setCoder(coder());
+      }
+      return output
           .apply("Reshuffle", Reshuffle.viaRandomKey());
     }
 
