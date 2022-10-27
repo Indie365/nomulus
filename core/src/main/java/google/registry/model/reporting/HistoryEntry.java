@@ -314,7 +314,7 @@ public abstract class HistoryEntry extends ImmutableObject
     }
 
     public B setXmlBytes(byte[] xmlBytes) {
-      getInstance().xmlBytes = xmlBytes.clone();
+      getInstance().xmlBytes = xmlBytes == null ? null : xmlBytes.clone();
       return thisCastToDerived();
     }
 
