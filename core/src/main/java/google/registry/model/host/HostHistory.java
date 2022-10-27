@@ -51,12 +51,12 @@ public class HostHistory extends HistoryEntry {
   // @Nullable for the sake of pre-Registry-3.0 history objects
   @Access(AccessType.PROPERTY)
   @Nullable
-  HostBase getRawHostBase() {
+  HostBase getResource() {
     return (HostBase) eppResource;
   }
 
   @SuppressWarnings("unused")
-  private void setRawHostBase(HostBase hostBase) {
+  private void setResource(HostBase hostBase) {
     eppResource = hostBase;
   }
 
@@ -67,7 +67,7 @@ public class HostHistory extends HistoryEntry {
    * <p>Will be absent for objects created prior to the Registry 3.0 SQL migration.
    */
   public Optional<HostBase> getHostBase() {
-    return Optional.ofNullable(getRawHostBase());
+    return Optional.ofNullable(getResource());
   }
 
   /** Creates a {@link VKey} instance for this entity. */

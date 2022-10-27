@@ -72,12 +72,12 @@ public class DomainHistory extends HistoryEntry {
   // @Nullable for the sake of pre-Registry-3.0 history objects
   @Nullable
   @Access(AccessType.PROPERTY)
-  public DomainBase getRawDomainBase() {
+  public DomainBase getResource() {
     return (DomainBase) eppResource;
   }
 
   @SuppressWarnings("unused")
-  private void setRawDomainBase(DomainBase domainBase) {
+  private void setResource(DomainBase domainBase) {
     eppResource = domainBase;
   }
 
@@ -181,7 +181,7 @@ public class DomainHistory extends HistoryEntry {
    * <p>Will be absent for objects created prior to the Registry 3.0 SQL migration.
    */
   public Optional<DomainBase> getDomainBase() {
-    return Optional.ofNullable(getRawDomainBase());
+    return Optional.ofNullable(getResource());
   }
 
   public Set<GracePeriodHistory> getGracePeriodHistories() {
@@ -216,7 +216,7 @@ public class DomainHistory extends HistoryEntry {
     Hibernate.initialize(dsDataHistories);
     Hibernate.initialize(gracePeriodHistories);
 
-    DomainBase domainBase = getRawDomainBase();
+    DomainBase domainBase = getResource();
     if (domainBase != null) {
       domainBase.nsHosts = nullToEmptyImmutableCopy(nsHosts);
       domainBase.gracePeriods =
@@ -230,7 +230,7 @@ public class DomainHistory extends HistoryEntry {
   }
 
   private static void fillAuxiliaryFieldsFromDomain(DomainHistory domainHistory) {
-    DomainBase domainBase = domainHistory.getRawDomainBase();
+    DomainBase domainBase = domainHistory.getResource();
     if (domainBase != null) {
       domainHistory.nsHosts = nullToEmptyImmutableCopy(domainBase.nsHosts);
       domainHistory.dsDataHistories =

@@ -50,11 +50,11 @@ public class ContactHistory extends HistoryEntry {
   // @Nullable for the sake of pre-Registry-3.0 history objects
   @Access(AccessType.PROPERTY)
   @Nullable
-  public ContactBase getRawContactBase() {
+  public ContactBase getResource() {
     return (ContactBase) eppResource;
   }
 
-  protected void setRawContactBase(ContactBase contactBase) {
+  protected void setResource(ContactBase contactBase) {
     eppResource = contactBase;
   }
 
@@ -65,7 +65,7 @@ public class ContactHistory extends HistoryEntry {
    * <p>Will be absent for objects created prior to the Registry 3.0 SQL migration.
    */
   public Optional<ContactBase> getContactBase() {
-    return Optional.ofNullable(getRawContactBase());
+    return Optional.ofNullable(getResource());
   }
 
   /** Creates a {@link VKey} instance for this entity. */
@@ -93,8 +93,7 @@ public class ContactHistory extends HistoryEntry {
     }
 
     public Builder wipeOutPii() {
-      getInstance()
-          .setRawContactBase(getInstance().getRawContactBase().asBuilder().wipeOut().build());
+      getInstance().setResource(getInstance().getResource().asBuilder().wipeOut().build());
       return this;
     }
   }
