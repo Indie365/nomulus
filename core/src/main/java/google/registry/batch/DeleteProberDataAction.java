@@ -243,7 +243,7 @@ public class DeleteProberDataAction implements Runnable {
         .setParameter("repoIds", domainRepoIds)
         .executeUpdate();
     jpaTm()
-        .query("DELETE FROM DomainHistory WHERE domainRepoId IN :repoIds")
+        .query("DELETE FROM DomainHistory WHERE repoId IN :repoIds")
         .setParameter("repoIds", domainRepoIds)
         .executeUpdate();
     jpaTm()

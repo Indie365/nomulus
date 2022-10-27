@@ -199,7 +199,7 @@ public abstract class HistoryEntry extends ImmutableObject
   }
 
   public byte[] getXmlBytes() {
-    return xmlBytes.clone();
+    return xmlBytes == null ? null : xmlBytes.clone();
   }
 
   public DateTime getModificationTime() {
@@ -285,7 +285,8 @@ public abstract class HistoryEntry extends ImmutableObject
 
     @Override
     public T build() {
-      // TODO(mcilwain): Add null checking for id/parent once DB migration is complete.
+      checkArgumentNotNull(getInstance().eppResource, "EPP resource must be specified");
+      checkArgumentNotNull(getInstance().repoId, "repoId must be specified");
       checkArgumentNotNull(getInstance().type, "History entry type must be specified");
       checkArgumentNotNull(getInstance().modificationTime, "Modification time must be specified");
       checkArgumentNotNull(getInstance().clientId, "Registrar ID must be specified");
@@ -301,12 +302,9 @@ public abstract class HistoryEntry extends ImmutableObject
       return thisCastToDerived();
     }
 
-    public B setResource(@Nullable EppResource eppResource) {
-      // Nullable for the sake of pre-Registry-3.0 history objects
-      if (eppResource != null) {
-        getInstance().eppResource = eppResource;
-        getInstance().repoId = eppResource.getRepoId();
-      }
+    public B setResource(EppResource eppResource) {
+      getInstance().eppResource = eppResource;
+      getInstance().repoId = eppResource.getRepoId();
       return thisCastToDerived();
     }
 

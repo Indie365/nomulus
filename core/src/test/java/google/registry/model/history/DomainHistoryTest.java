@@ -82,22 +82,6 @@ public class DomainHistoryTest extends EntityTestCase {
     assertThat(SerializeUtils.serializeDeserialize(fromDatabase)).isEqualTo(fromDatabase);
   }
 
-  @Test
-  void testLegacyPersistence_nullResource() {
-    Domain domain = addGracePeriodForSql(createDomainWithContactsAndHosts());
-    DomainHistory domainHistory = createDomainHistory(domain).asBuilder().setResource(null).build();
-    insertInDb(domainHistory);
-
-    jpaTm()
-        .transact(
-            () -> {
-              DomainHistory fromDatabase = jpaTm().loadByKey(domainHistory.createVKey());
-              assertDomainHistoriesEqual(fromDatabase, domainHistory);
-              assertThat(fromDatabase.getNsHosts())
-                  .containsExactlyElementsIn(domainHistory.getNsHosts());
-            });
-  }
-
   static Domain createDomainWithContactsAndHosts() {
     createTld("tld");
     Host host = newHostWithRoid("ns1.example.com", "host1");

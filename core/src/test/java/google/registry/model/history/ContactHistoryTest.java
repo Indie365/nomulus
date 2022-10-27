@@ -70,23 +70,6 @@ public class ContactHistoryTest extends EntityTestCase {
   }
 
   @Test
-  void testLegacyPersistence_nullContactBase() {
-    Contact contact = newContactWithRoid("contactId", "contact1");
-    insertInDb(contact);
-    Contact contactFromDb = loadByEntity(contact);
-    ContactHistory contactHistory =
-        createContactHistory(contactFromDb).asBuilder().setResource(null).build();
-    insertInDb(contactHistory);
-
-    jpaTm()
-        .transact(
-            () -> {
-              ContactHistory fromDatabase = jpaTm().loadByKey(contactHistory.createVKey());
-              assertContactHistoriesEqual(fromDatabase, contactHistory);
-            });
-  }
-
-  @Test
   void testWipeOutPii_assertsAllPiiFieldsAreNull() {
     ContactHistory originalEntity =
         createContactHistory(
@@ -157,7 +140,7 @@ public class ContactHistoryTest extends EntityTestCase {
   static void assertContactHistoriesEqual(ContactHistory one, ContactHistory two) {
     assertAboutImmutableObjects().that(one).isEqualExceptFields(two, "eppResource");
     assertAboutImmutableObjects()
-        .that(one.getContactBase().orElse(null))
-        .isEqualExceptFields(two.getContactBase().orElse(null), "repoId");
+        .that(one.getContactBase().get())
+        .isEqualExceptFields(two.getContactBase().get());
   }
 }

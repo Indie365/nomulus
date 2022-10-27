@@ -1175,7 +1175,7 @@ public class DomainFlowUtils {
       Domain domain, DateTime now, Duration maxSearchPeriod) {
     return jpaTm()
         .query(
-            "FROM DomainHistory WHERE modificationTime >= :beginning AND domainRepoId = "
+            "FROM DomainHistory WHERE modificationTime >= :beginning AND repoId = "
                 + ":repoId ORDER BY modificationTime ASC",
             DomainHistory.class)
         .setParameter("beginning", now.minus(maxSearchPeriod))

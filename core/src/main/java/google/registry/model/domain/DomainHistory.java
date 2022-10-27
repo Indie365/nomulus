@@ -292,10 +292,6 @@ public class DomainHistory extends HistoryEntry {
     @Override
     public DomainHistory build() {
       DomainHistory instance = super.build();
-      // TODO(b/171990736): Assert instance.domainBase is not null after database migration.
-      // Note that we cannot assert that instance.domainBase is not null here because this
-      // builder is also used to convert legacy HistoryEntry objects to DomainHistory, when
-      // domainBase is not available.
       fillAuxiliaryFieldsFromDomain(instance);
       return instance;
     }

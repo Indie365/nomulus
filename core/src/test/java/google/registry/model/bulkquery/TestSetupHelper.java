@@ -89,7 +89,7 @@ public final class TestSetupHelper {
     registrar = saveRegistrar(REGISTRAR_ID);
     contact = putInDb(createContact(DOMAIN_REPO_ID, REGISTRAR_ID));
     domain = putInDb(createSimpleDomain(contact));
-    domainHistory = putInDb(createHistoryWithoutContent(fakeClock));
+    domainHistory = putInDb(createFullHistory(domain, fakeClock));
     host = putInDb(createHost());
   }
 
@@ -203,8 +203,17 @@ public final class TestSetupHelper {
   }
 
   static DomainHistory createFullHistory(Domain domain, FakeClock fakeClock) {
-    return createHistoryWithoutContent(fakeClock)
-        .asBuilder()
+    return new DomainHistory.Builder()
+        .setType(HistoryEntry.Type.DOMAIN_CREATE)
+        .setXmlBytes("<xml></xml>".getBytes(UTF_8))
+        .setModificationTime(fakeClock.nowUtc())
+        .setRegistrarId(REGISTRAR_ID)
+        .setTrid(Trid.create("ABC-123", "server-trid"))
+        .setBySuperuser(false)
+        .setReason("reason")
+        .setRequestedByRegistrar(true)
+        .setOtherRegistrarId("otherClient")
+        .setPeriod(Period.create(1, Period.Unit.YEARS))
         .setType(HistoryEntry.Type.DOMAIN_TRANSFER_APPROVE)
         .setResource(domain)
         .setDomainTransactionRecords(ImmutableSet.of(createDomainTransactionRecord(fakeClock)))

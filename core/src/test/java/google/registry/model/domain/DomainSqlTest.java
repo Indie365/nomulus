@@ -71,14 +71,12 @@ public class DomainSqlTest {
           .build();
 
   private Domain domain;
-  private DomainHistory historyEntry;
   private VKey<Contact> contactKey;
   private VKey<Contact> contact2Key;
   private VKey<Host> host1VKey;
   private Host host;
   private Contact contact;
   private Contact contact2;
-  private ImmutableSet<GracePeriod> gracePeriods;
   private AllocationToken allocationToken;
 
   @BeforeEach
