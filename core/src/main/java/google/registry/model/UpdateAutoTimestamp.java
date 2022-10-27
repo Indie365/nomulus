@@ -29,7 +29,7 @@ import org.joda.time.DateTime;
 @Embeddable
 public class UpdateAutoTimestamp extends ImmutableObject implements UnsafeSerializable {
 
-  @Column(nullable = false, name = "updateTimestamp")
+  @Column(name = "updateTimestamp")
   DateTime lastUpdateTime;
 
   // Unfortunately, we cannot use the @UpdateTimestamp annotation on "lastUpdateTime" in this class

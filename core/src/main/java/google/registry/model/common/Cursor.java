@@ -44,7 +44,7 @@ import org.joda.time.DateTime;
 @IdClass(CursorId.class)
 @AttributeOverride(
     name = "updateTimestamp.lastUpdateTime",
-    column = @Column(name = "lastUpdateTime"))
+    column = @Column(nullable = false, name = "lastUpdateTime"))
 public class Cursor extends UpdateAutoTimestampEntity {
 
   private static final long serialVersionUID = 5777891565780594961L;

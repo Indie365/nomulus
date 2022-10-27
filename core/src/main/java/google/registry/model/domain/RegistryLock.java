@@ -76,7 +76,7 @@ import org.joda.time.Duration;
 @Access(AccessType.FIELD)
 @AttributeOverride(
     name = "updateTimestamp.lastUpdateTime",
-    column = @Column(name = "lastUpdateTime"))
+    column = @Column(nullable = false, name = "lastUpdateTime"))
 public final class RegistryLock extends UpdateAutoTimestampEntity implements Buildable {
 
   @Id

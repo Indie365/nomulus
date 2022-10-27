@@ -96,7 +96,7 @@ import org.joda.time.DateTime;
     })
 @AttributeOverride(
     name = "updateTimestamp.lastUpdateTime",
-    column = @Column(name = "lastUpdateTime"))
+    column = @Column(nullable = false, name = "lastUpdateTime"))
 public class Registrar extends UpdateAutoTimestampEntity implements Buildable, Jsonifiable {
 
   /** Represents the type of a registrar entity. */
