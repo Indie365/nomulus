@@ -88,7 +88,7 @@ public final class ContactTransferApproveFlow implements TransactionalFlow {
     Contact newContact =
         approvePendingTransfer(existingContact, TransferStatus.CLIENT_APPROVED, now);
     ContactHistory contactHistory =
-        historyBuilder.setType(CONTACT_TRANSFER_APPROVE).setResource(newContact).build();
+        historyBuilder.setType(CONTACT_TRANSFER_APPROVE).setContact(newContact).build();
     // Create a poll message for the gaining client.
     PollMessage gainingPollMessage =
         createGainingTransferPollMessage(

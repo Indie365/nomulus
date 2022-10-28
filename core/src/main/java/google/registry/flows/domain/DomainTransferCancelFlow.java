@@ -137,7 +137,7 @@ public final class DomainTransferCancelFlow implements TransactionalFlow {
             ImmutableSet.of(TRANSFER_SUCCESSFUL));
     return historyBuilder
         .setType(DOMAIN_TRANSFER_CANCEL)
-        .setResource(newDomain)
+        .setDomain(newDomain)
         .setDomainTransactionRecords(cancelingRecords)
         .build();
   }

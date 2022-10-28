@@ -18,7 +18,6 @@ import google.registry.model.EppResource;
 import google.registry.model.reporting.HistoryEntry;
 import google.registry.persistence.VKey;
 import java.util.Optional;
-import javax.annotation.Nullable;
 import javax.persistence.Access;
 import javax.persistence.AccessType;
 import javax.persistence.AttributeOverride;
@@ -48,14 +47,11 @@ public class ContactHistory extends HistoryEntry {
 
   // Store ContactBase instead of Contact, so we don't pick up its @Id
   // @Nullable for the sake of pre-Registry-3.0 history objects
-  @Access(AccessType.PROPERTY)
-  @Nullable
-  public ContactBase getResource() {
-    return (ContactBase) eppResource;
-  }
+  ContactBase resource;
 
-  protected void setResource(ContactBase contactBase) {
-    eppResource = contactBase;
+  @Override
+  public ContactBase getResource() {
+    return resource;
   }
 
   /**
@@ -92,8 +88,13 @@ public class ContactHistory extends HistoryEntry {
       super(instance);
     }
 
+    public Builder setContact(ContactBase contactBase) {
+      getInstance().resource = contactBase;
+      return setRepoId(contactBase);
+    }
+
     public Builder wipeOutPii() {
-      getInstance().setResource(getInstance().getResource().asBuilder().wipeOut().build());
+      getInstance().resource = getInstance().resource.asBuilder().wipeOut().build();
       return this;
     }
   }

@@ -333,7 +333,7 @@ public final class DomainDeleteFlow implements TransactionalFlow {
                       : TransactionReportField.DELETED_DOMAINS_NOGRACE,
                   1)));
     }
-    return historyBuilder.setType(DOMAIN_DELETE).setResource(domain).build();
+    return historyBuilder.setType(DOMAIN_DELETE).setDomain(domain).build();
   }
 
   private PollMessage.OneTime createDeletePollMessage(

@@ -82,7 +82,7 @@ public final class ContactTransferRejectFlow implements TransactionalFlow {
     Contact newContact =
         denyPendingTransfer(existingContact, TransferStatus.CLIENT_REJECTED, now, registrarId);
     ContactHistory contactHistory =
-        historyBuilder.setType(CONTACT_TRANSFER_REJECT).setResource(newContact).build();
+        historyBuilder.setType(CONTACT_TRANSFER_REJECT).setContact(newContact).build();
     PollMessage gainingPollMessage =
         createGainingTransferPollMessage(
             targetId, newContact.getTransferData(), now, contactHistory.getHistoryEntryId());

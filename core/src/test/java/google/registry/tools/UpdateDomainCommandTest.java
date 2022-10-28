@@ -321,7 +321,7 @@ class UpdateDomainCommandTest extends EppToolCommandTestCase<UpdateDomainCommand
             new DomainHistory.Builder()
                 .setModificationTime(fakeClock.nowUtc())
                 .setType(DOMAIN_CREATE)
-                .setResource(domain)
+                .setDomain(domain)
                 .setRegistrarId(domain.getCreationRegistrarId())
                 .build());
     BillingEvent.Recurring autorenewBillingEvent =

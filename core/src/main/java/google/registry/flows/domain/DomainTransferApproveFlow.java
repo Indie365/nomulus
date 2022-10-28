@@ -278,7 +278,7 @@ public final class DomainTransferApproveFlow implements TransactionalFlow {
     return historyBuilder
         .setType(DOMAIN_TRANSFER_APPROVE)
         .setOtherRegistrarId(gainingRegistrarId)
-        .setResource(newDomain)
+        .setDomain(newDomain)
         .setDomainTransactionRecords(
             union(
                 cancelingRecords,

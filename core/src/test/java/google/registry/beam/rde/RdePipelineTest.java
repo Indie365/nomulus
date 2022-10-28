@@ -182,7 +182,7 @@ public class RdePipelineTest {
             .setBySuperuser(false)
             .setReason("reason")
             .setRequestedByRegistrar(true)
-            .setResource(contact)
+            .setContact(contact)
             .build());
   }
 
@@ -205,7 +205,7 @@ public class RdePipelineTest {
             .setBySuperuser(false)
             .setReason("reason")
             .setRequestedByRegistrar(true)
-            .setResource(domain)
+            .setDomain(domain)
             .setDomainTransactionRecords(ImmutableSet.of(transactionRecord))
             .setOtherRegistrarId("otherClient")
             .setPeriod(Period.create(1, Period.Unit.YEARS))
@@ -223,7 +223,7 @@ public class RdePipelineTest {
             .setBySuperuser(false)
             .setReason("reason")
             .setRequestedByRegistrar(true)
-            .setResource(hostBase)
+            .setHost(hostBase)
             .build());
   }
 

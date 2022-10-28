@@ -195,7 +195,7 @@ public final class DomainRestoreRequestFlow implements TransactionalFlow {
   private DomainHistory buildDomainHistory(Domain newDomain, DateTime now) {
     return historyBuilder
         .setType(DOMAIN_RESTORE)
-        .setResource(newDomain)
+        .setDomain(newDomain)
         .setDomainTransactionRecords(
             ImmutableSet.of(
                 DomainTransactionRecord.create(

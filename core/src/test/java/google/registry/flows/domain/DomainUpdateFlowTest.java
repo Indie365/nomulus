@@ -167,7 +167,7 @@ class DomainUpdateFlowTest extends ResourceFlowTestCase<DomainUpdateFlow, Domain
             .setType(DOMAIN_CREATE)
             .setModificationTime(clock.nowUtc())
             .setRegistrarId(domain.getCreationRegistrarId())
-            .setResource(domain)
+            .setDomain(domain)
             .build());
     clock.advanceOneMilli();
   }
@@ -189,7 +189,7 @@ class DomainUpdateFlowTest extends ResourceFlowTestCase<DomainUpdateFlow, Domain
             .setType(DOMAIN_CREATE)
             .setModificationTime(clock.nowUtc())
             .setRegistrarId(domain.getCreationRegistrarId())
-            .setResource(domain)
+            .setDomain(domain)
             .build());
     clock.advanceOneMilli();
     return domain;

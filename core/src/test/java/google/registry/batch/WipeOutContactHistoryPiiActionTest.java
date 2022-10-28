@@ -325,7 +325,7 @@ class WipeOutContactHistoryPiiActionTest {
                   .setRegistrarId("NewRegistrar")
                   .setModificationTime(clock.nowUtc().minusMonths(minusMonths).minusDays(minusDays))
                   .setType(ContactHistory.Type.CONTACT_DELETE)
-                  .setResource(persistResource(contact))
+                  .setContact(persistResource(contact))
                   .build()));
     }
     return expectedEntitiesBuilder.build();

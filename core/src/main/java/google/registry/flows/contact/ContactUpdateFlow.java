@@ -150,7 +150,7 @@ public final class ContactUpdateFlow implements TransactionalFlow {
     historyBuilder
         .setType(CONTACT_UPDATE)
         .setXmlBytes(null) // We don't want to store contact details in the history entry.
-        .setResource(newContact);
+        .setContact(newContact);
     tm().insert(historyBuilder.build());
     tm().update(newContact);
     return responseBuilder.build();

@@ -180,7 +180,7 @@ public final class DomainUpdateFlow implements TransactionalFlow {
         AfterValidationParameters.newBuilder().setExistingDomain(existingDomain).build());
     Domain newDomain = performUpdate(command, existingDomain, now);
     DomainHistory domainHistory =
-        historyBuilder.setType(DOMAIN_UPDATE).setResource(newDomain).build();
+        historyBuilder.setType(DOMAIN_UPDATE).setDomain(newDomain).build();
     validateNewState(newDomain);
     if (requiresDnsUpdate(existingDomain, newDomain)) {
       dnsQueue.addDomainRefreshTask(targetId);

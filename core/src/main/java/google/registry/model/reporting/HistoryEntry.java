@@ -30,7 +30,6 @@ import google.registry.model.eppcommon.Trid;
 import google.registry.model.host.HostBase;
 import google.registry.model.host.HostHistory;
 import google.registry.model.reporting.HistoryEntry.HistoryEntryId;
-import google.registry.persistence.EntityCallbacksListener.RegisterJpaCallbacks;
 import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.persistence.Access;
@@ -123,8 +122,6 @@ public abstract class HistoryEntry extends ImmutableObject
 
   @Id protected String repoId;
 
-  @Nullable @Transient @RegisterJpaCallbacks protected EppResource eppResource;
-
   /** The type of history entry. */
   @Column(nullable = false, name = "historyType")
   @Enumerated(EnumType.STRING)
@@ -183,9 +180,7 @@ public abstract class HistoryEntry extends ImmutableObject
     this.revisionId = revisionId;
   }
 
-  public Class<? extends EppResource> getResourceClass() {
-    return eppResource.getClass();
-  }
+  public abstract EppResource getResource();
 
   public String getRepoId() {
     return repoId;
@@ -232,15 +227,10 @@ public abstract class HistoryEntry extends ImmutableObject
   public abstract Optional<? extends EppResource> getResourceAtPointInTime();
 
   protected void processResourcePostLoad() {
-    // Normally Hibernate would see that the EPP resource fields are all null and would fill it with
-    // a null object. Unfortunately, the updateTimestamp is never null in SQL.
-    if (eppResource != null && eppResource.getCreationRegistrarId() == null) {
-      eppResource = null;
-    }
-    if (eppResource != null && eppResource.getRepoId() == null) {
+    if (getResource() != null && getResource().getRepoId() == null) {
       // The repoId field in EppResource is transient, so we go ahead and set it to the value read
       // from SQL.
-      eppResource.setRepoId(repoId);
+      getResource().setRepoId(repoId);
     }
   }
 
@@ -286,7 +276,7 @@ public abstract class HistoryEntry extends ImmutableObject
 
     @Override
     public T build() {
-      checkArgumentNotNull(getInstance().eppResource, "EPP resource must be specified");
+      checkArgumentNotNull(getInstance().getResource(), "EPP resource must be specified");
       checkArgumentNotNull(getInstance().repoId, "repoId must be specified");
       checkArgumentNotNull(getInstance().type, "History entry type must be specified");
       checkArgumentNotNull(getInstance().modificationTime, "Modification time must be specified");
@@ -303,9 +293,10 @@ public abstract class HistoryEntry extends ImmutableObject
       return thisCastToDerived();
     }
 
-    public B setResource(EppResource eppResource) {
-      getInstance().eppResource = eppResource;
-      getInstance().repoId = eppResource.getRepoId();
+    protected B setRepoId(EppResource eppResource) {
+      if (eppResource != null) {
+        getInstance().repoId = eppResource.getRepoId();
+      }
       return thisCastToDerived();
     }
 
@@ -353,11 +344,11 @@ public abstract class HistoryEntry extends ImmutableObject
   public static <E extends EppResource>
       HistoryEntry.Builder<? extends HistoryEntry, ?> createBuilderForResource(E parent) {
     if (parent instanceof DomainBase) {
-      return new DomainHistory.Builder().setResource(parent);
+      return new DomainHistory.Builder().setDomain((DomainBase) parent);
     } else if (parent instanceof ContactBase) {
-      return new ContactHistory.Builder().setResource(parent);
+      return new ContactHistory.Builder().setContact((ContactBase) parent);
     } else if (parent instanceof HostBase) {
-      return new HostHistory.Builder().setResource(parent);
+      return new HostHistory.Builder().setHost((HostBase) parent);
     } else {
       throw new IllegalStateException(
           String.format(

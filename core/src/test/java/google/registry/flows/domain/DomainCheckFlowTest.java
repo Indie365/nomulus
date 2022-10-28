@@ -1414,7 +1414,7 @@ class DomainCheckFlowTest extends ResourceCheckFlowTestCase<DomainCheckFlow, Dom
     DomainHistory historyEntry =
         persistResource(
             new DomainHistory.Builder()
-                .setResource(existingDomain)
+                .setDomain(existingDomain)
                 .setType(HistoryEntry.Type.DOMAIN_DELETE)
                 .setModificationTime(existingDomain.getCreationTime())
                 .setRegistrarId(existingDomain.getCreationRegistrarId())

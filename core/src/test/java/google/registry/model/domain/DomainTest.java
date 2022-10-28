@@ -109,7 +109,7 @@ public class DomainTest {
     domainHistory =
         persistResource(
             new DomainHistory.Builder()
-                .setResource(domain)
+                .setDomain(domain)
                 .setModificationTime(fakeClock.nowUtc())
                 .setType(HistoryEntry.Type.DOMAIN_CREATE)
                 .setRegistrarId("TheRegistrar")
@@ -133,7 +133,7 @@ public class DomainTest {
             .setType(HistoryEntry.Type.DOMAIN_CREATE)
             .setPeriod(Period.create(1, Period.Unit.YEARS))
             .setModificationTime(DateTime.now(UTC))
-            .setResource(domain)
+            .setDomain(domain)
             .setRegistrarId(domain.getCurrentSponsorRegistrarId())
             // These are non-null, but I don't think some tests set them.
             .setReason("felt like it")
@@ -402,7 +402,7 @@ public class DomainTest {
     DomainHistory historyEntry =
         persistResource(
             new DomainHistory.Builder()
-                .setResource(domain)
+                .setDomain(domain)
                 .setModificationTime(fakeClock.nowUtc())
                 .setRegistrarId(domain.getCurrentSponsorRegistrarId())
                 .setType(HistoryEntry.Type.DOMAIN_TRANSFER_REQUEST)

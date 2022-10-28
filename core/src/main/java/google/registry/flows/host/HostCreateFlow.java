@@ -127,7 +127,7 @@ public final class HostCreateFlow implements TransactionalFlow {
             .setRepoId(createRepoId(allocateId(), roidSuffix))
             .setSuperordinateDomain(superordinateDomain.map(Domain::createVKey).orElse(null))
             .build();
-    historyBuilder.setType(HOST_CREATE).setResource(newHost);
+    historyBuilder.setType(HOST_CREATE).setHost(newHost);
     ImmutableSet<ImmutableObject> entitiesToSave = ImmutableSet.of(newHost, historyBuilder.build());
     if (superordinateDomain.isPresent()) {
       tm().update(

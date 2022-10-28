@@ -53,7 +53,7 @@ public class AckPollMessagesCommandTest extends CommandTestCase<AckPollMessagesC
         persistResource(
             new DomainHistory.Builder()
                 .setModificationTime(clock.nowUtc())
-                .setResource(domain)
+                .setDomain(domain)
                 .setRegistrarId(domain.getCreationRegistrarId())
                 .setType(HistoryEntry.Type.DOMAIN_CREATE)
                 .build());

@@ -399,7 +399,7 @@ public final class DomainLockUtils {
             .setRequestedByRegistrar(!lock.isSuperuser())
             .setType(HistoryEntry.Type.DOMAIN_UPDATE)
             .setModificationTime(now)
-            .setResource(domain)
+            .setDomain(domain)
             .setReason(reason)
             .build();
     tm().update(domain);

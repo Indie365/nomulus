@@ -70,20 +70,15 @@ public class DomainHistory extends HistoryEntry {
 
   // Store DomainBase instead of Domain, so we don't pick up its @Id
   // @Nullable for the sake of pre-Registry-3.0 history objects
-  @Nullable
-  @Access(AccessType.PROPERTY)
-  public DomainBase getResource() {
-    return (DomainBase) eppResource;
-  }
+  @Nullable public DomainBase resource;
 
-  @SuppressWarnings("unused")
-  private void setResource(DomainBase domainBase) {
-    eppResource = domainBase;
+  @Override
+  public DomainBase getResource() {
+    return resource;
   }
 
   // We could have reused domainBase.nsHosts here, but Hibernate throws a weird exception after
   // we change to use a composite primary key.
-  // TODO(b/166776754): Investigate if we can reuse domainBase.nsHosts for storing host keys.
   @ElementCollection
   @JoinTable(
       name = "DomainHistoryHost",
@@ -181,7 +176,7 @@ public class DomainHistory extends HistoryEntry {
    * <p>Will be absent for objects created prior to the Registry 3.0 SQL migration.
    */
   public Optional<DomainBase> getDomainBase() {
-    return Optional.ofNullable(getResource());
+    return Optional.ofNullable(resource);
   }
 
   public Set<GracePeriodHistory> getGracePeriodHistories() {
@@ -216,21 +211,20 @@ public class DomainHistory extends HistoryEntry {
     Hibernate.initialize(dsDataHistories);
     Hibernate.initialize(gracePeriodHistories);
 
-    DomainBase domainBase = getResource();
-    if (domainBase != null) {
-      domainBase.nsHosts = nullToEmptyImmutableCopy(nsHosts);
-      domainBase.gracePeriods =
+    if (resource != null) {
+      resource.nsHosts = nullToEmptyImmutableCopy(nsHosts);
+      resource.gracePeriods =
           gracePeriodHistories.stream()
               .map(GracePeriod::createFromHistory)
               .collect(toImmutableSet());
-      domainBase.dsData =
+      resource.dsData =
           dsDataHistories.stream().map(DomainDsData::create).collect(toImmutableSet());
     }
     processResourcePostLoad();
   }
 
   private static void fillAuxiliaryFieldsFromDomain(DomainHistory domainHistory) {
-    DomainBase domainBase = domainHistory.getResource();
+    DomainBase domainBase = domainHistory.resource;
     if (domainBase != null) {
       domainHistory.nsHosts = nullToEmptyImmutableCopy(domainBase.nsHosts);
       domainHistory.dsDataHistories =
@@ -260,6 +254,11 @@ public class DomainHistory extends HistoryEntry {
 
     public Builder(DomainHistory instance) {
       super(instance);
+    }
+
+    public Builder setDomain(DomainBase domainBase) {
+      getInstance().resource = domainBase;
+      return setRepoId(domainBase);
     }
 
     public Builder setPeriod(Period period) {

@@ -262,7 +262,7 @@ public class DeleteProberDataAction implements Runnable {
         domain.asBuilder().setDeletionTime(tm().getTransactionTime()).setStatusValues(null).build();
     DomainHistory historyEntry =
         new DomainHistory.Builder()
-            .setResource(domain)
+            .setDomain(domain)
             .setType(DOMAIN_DELETE)
             .setModificationTime(tm().getTransactionTime())
             .setBySuperuser(true)

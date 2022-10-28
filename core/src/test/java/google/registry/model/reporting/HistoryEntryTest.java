@@ -59,7 +59,7 @@ class HistoryEntryTest extends EntityTestCase {
     // Set up a new persisted HistoryEntry entity.
     domainHistory =
         new DomainHistory.Builder()
-            .setResource(domain)
+            .setDomain(domain)
             .setType(HistoryEntry.Type.DOMAIN_CREATE)
             .setPeriod(Period.create(1, Period.Unit.YEARS))
             .setXmlBytes("<xml></xml>".getBytes(UTF_8))
@@ -93,7 +93,7 @@ class HistoryEntryTest extends EntityTestCase {
             IllegalArgumentException.class,
             () ->
                 new ContactHistory.Builder()
-                    .setResource(contact)
+                    .setContact(contact)
                     .setRevisionId(5L)
                     .setModificationTime(DateTime.parse("1985-07-12T22:30:00Z"))
                     .setRegistrarId("TheRegistrar")
@@ -109,7 +109,7 @@ class HistoryEntryTest extends EntityTestCase {
             IllegalArgumentException.class,
             () ->
                 new ContactHistory.Builder()
-                    .setResource(contact)
+                    .setContact(contact)
                     .setRevisionId(5L)
                     .setType(HistoryEntry.Type.CONTACT_CREATE)
                     .setRegistrarId("TheRegistrar")
@@ -126,7 +126,7 @@ class HistoryEntryTest extends EntityTestCase {
             () ->
                 new ContactHistory.Builder()
                     .setRevisionId(5L)
-                    .setResource(contact)
+                    .setContact(contact)
                     .setType(HistoryEntry.Type.CONTACT_CREATE)
                     .setModificationTime(DateTime.parse("1985-07-12T22:30:00Z"))
                     .setReason("Reason")
@@ -141,7 +141,7 @@ class HistoryEntryTest extends EntityTestCase {
             IllegalArgumentException.class,
             () ->
                 new ContactHistory.Builder()
-                    .setResource(contact)
+                    .setContact(contact)
                     .setRevisionId(5L)
                     .setType(HistoryEntry.Type.SYNTHETIC)
                     .setModificationTime(DateTime.parse("1985-07-12T22:30:00Z"))

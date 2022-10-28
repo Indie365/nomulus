@@ -553,7 +553,7 @@ public final class DomainCreateFlow implements TransactionalFlow {
                       TransactionReportField.netAddsFieldFromYears(period.getValue()),
                       1)));
     }
-    return historyBuilder.setType(DOMAIN_CREATE).setPeriod(period).setResource(domain).build();
+    return historyBuilder.setType(DOMAIN_CREATE).setPeriod(period).setDomain(domain).build();
   }
 
   private BillingEvent.OneTime createOneTimeBillingEvent(

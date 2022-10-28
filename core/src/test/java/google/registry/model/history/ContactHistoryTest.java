@@ -133,12 +133,12 @@ public class ContactHistoryTest extends EntityTestCase {
         .setBySuperuser(false)
         .setReason("reason")
         .setRequestedByRegistrar(true)
-        .setResource(contact)
+        .setContact(contact)
         .build();
   }
 
   static void assertContactHistoriesEqual(ContactHistory one, ContactHistory two) {
-    assertAboutImmutableObjects().that(one).isEqualExceptFields(two, "eppResource");
+    assertAboutImmutableObjects().that(one).isEqualExceptFields(two, "resource");
     assertAboutImmutableObjects()
         .that(one.getContactBase().get())
         .isEqualExceptFields(two.getContactBase().get());

@@ -57,7 +57,7 @@ public class PollMessageTest extends EntityTestCase {
     historyEntry =
         persistResource(
             new DomainHistory.Builder()
-                .setResource(domain)
+                .setDomain(domain)
                 .setType(HistoryEntry.Type.DOMAIN_CREATE)
                 .setPeriod(Period.create(1, Period.Unit.YEARS))
                 .setXmlBytes("<xml></xml>".getBytes(UTF_8))

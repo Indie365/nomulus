@@ -15,10 +15,6 @@
 package google.registry.persistence;
 
 import java.lang.annotation.Annotation;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -173,14 +169,10 @@ public class EntityCallbacksListener {
 
     private Stream<Object> findEmbeddedProperties(Object object, Class<?> clazz) {
       return Arrays.stream(clazz.getDeclaredFields())
+          .filter(field -> !field.isAnnotationPresent(Transient.class))
           .filter(
               field ->
-                  field.isAnnotationPresent(RegisterJpaCallbacks.class)
-                      || !field.isAnnotationPresent(Transient.class))
-          .filter(
-              field ->
-                  field.isAnnotationPresent(RegisterJpaCallbacks.class)
-                      || field.isAnnotationPresent(Embedded.class)
+                  field.isAnnotationPresent(Embedded.class)
                       || field.getType().isAnnotationPresent(Embeddable.class))
           .filter(field -> !Modifier.isStatic(field.getModifiers()))
           .map(field -> getFieldObject(field, object))
@@ -205,8 +197,4 @@ public class EntityCallbacksListener {
       }
     }
   }
-
-  @Target(ElementType.FIELD)
-  @Retention(RetentionPolicy.RUNTIME)
-  public @interface RegisterJpaCallbacks {}
 }

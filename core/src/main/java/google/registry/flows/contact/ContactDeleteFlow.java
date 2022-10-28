@@ -107,7 +107,7 @@ public final class ContactDeleteFlow implements TransactionalFlow {
     newContact =
         newContact.asBuilder().wipeOut().setStatusValues(null).setDeletionTime(now).build();
     ContactHistory contactHistory =
-        historyBuilder.setType(Type.CONTACT_DELETE).setResource(newContact).build();
+        historyBuilder.setType(Type.CONTACT_DELETE).setContact(newContact).build();
     handlePendingTransferOnDelete(existingContact, newContact, now, contactHistory);
     tm().insert(contactHistory);
     tm().update(newContact);

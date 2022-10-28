@@ -84,7 +84,7 @@ public final class ContactTransferCancelFlow implements TransactionalFlow {
     Contact newContact =
         denyPendingTransfer(existingContact, TransferStatus.CLIENT_CANCELLED, now, registrarId);
     ContactHistory contactHistory =
-        historyBuilder.setType(CONTACT_TRANSFER_CANCEL).setResource(newContact).build();
+        historyBuilder.setType(CONTACT_TRANSFER_CANCEL).setContact(newContact).build();
     // Create a poll message for the losing client.
     PollMessage losingPollMessage =
         createLosingTransferPollMessage(

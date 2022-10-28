@@ -107,7 +107,7 @@ public class DomainPricingLogicTest {
                 .setRegistrarId(domain.getCreationRegistrarId())
                 .setType(DOMAIN_CREATE)
                 .setModificationTime(DateTime.parse("1999-01-05T00:00:00Z"))
-                .setResource(domain)
+                .setDomain(domain)
                 .build());
     Recurring recurring =
         persistResource(

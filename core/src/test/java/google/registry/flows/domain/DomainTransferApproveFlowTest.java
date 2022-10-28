@@ -720,7 +720,7 @@ class DomainTransferApproveFlowTest
     persistResource(
         new DomainHistory.Builder()
             .setType(DOMAIN_TRANSFER_REQUEST)
-            .setResource(domain)
+            .setDomain(domain)
             .setModificationTime(clock.nowUtc().minusDays(4))
             .setRegistrarId("TheRegistrar")
             .setDomainTransactionRecords(

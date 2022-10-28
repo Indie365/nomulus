@@ -116,7 +116,7 @@ public class DomainHistoryTest extends EntityTestCase {
   }
 
   static void assertDomainHistoriesEqual(DomainHistory one, DomainHistory two) {
-    assertAboutImmutableObjects().that(one).isEqualExceptFields(two, "eppResource");
+    assertAboutImmutableObjects().that(one).isEqualExceptFields(two, "resource");
     assertAboutImmutableObjects()
         .that(one.getDomainBase().get())
         .isEqualExceptFields(two.getDomainBase().get(), "updateTimestamp");
@@ -140,7 +140,7 @@ public class DomainHistoryTest extends EntityTestCase {
         .setBySuperuser(false)
         .setReason("reason")
         .setRequestedByRegistrar(true)
-        .setResource(domain)
+        .setDomain(domain)
         .setDomainTransactionRecords(ImmutableSet.of(transactionRecord))
         .setOtherRegistrarId("otherClient")
         .setPeriod(Period.create(1, Period.Unit.YEARS))

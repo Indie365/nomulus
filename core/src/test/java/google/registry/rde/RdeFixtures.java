@@ -68,7 +68,7 @@ final class RdeFixtures {
     DomainHistory historyEntry =
         persistResource(
             new DomainHistory.Builder()
-                .setResource(domain)
+                .setDomain(domain)
                 .setType(HistoryEntry.Type.DOMAIN_CREATE)
                 .setModificationTime(clock.nowUtc())
                 .setRegistrarId("TheRegistrar")

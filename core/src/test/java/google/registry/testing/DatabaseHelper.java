@@ -332,7 +332,7 @@ public final class DatabaseHelper {
                 .setRegistrarId(domain.getCreationRegistrarId())
                 .setType(HistoryEntry.Type.DOMAIN_CREATE)
                 .setModificationTime(domain.getCreationTime())
-                .setResource(domain)
+                .setDomain(domain)
                 .build());
     Recurring recurring =
         persistResource(
@@ -554,7 +554,7 @@ public final class DatabaseHelper {
         persistResource(
             new ContactHistory.Builder()
                 .setType(HistoryEntry.Type.CONTACT_TRANSFER_REQUEST)
-                .setResource(persistResource(contact))
+                .setContact(persistResource(contact))
                 .setModificationTime(now)
                 .setRegistrarId(contact.getCurrentSponsorRegistrarId())
                 .build());
@@ -628,7 +628,7 @@ public final class DatabaseHelper {
             new DomainHistory.Builder()
                 .setType(HistoryEntry.Type.DOMAIN_CREATE)
                 .setModificationTime(now)
-                .setResource(domain)
+                .setDomain(domain)
                 .setRegistrarId(domain.getCreationRegistrarId())
                 .build());
     BillingEvent.Recurring autorenewEvent =
@@ -670,7 +670,7 @@ public final class DatabaseHelper {
             new DomainHistory.Builder()
                 .setType(HistoryEntry.Type.DOMAIN_TRANSFER_REQUEST)
                 .setModificationTime(tm().transact(() -> tm().getTransactionTime()))
-                .setResource(domain)
+                .setDomain(domain)
                 .setRegistrarId("TheRegistrar")
                 .build());
     BillingEvent.OneTime transferBillingEvent =
@@ -1111,7 +1111,7 @@ public final class DatabaseHelper {
                                     && pollMessage
                                         .getType()
                                         .getResourceClass()
-                                        .equals(historyEntry.getResourceClass()))
+                                        .equals(historyEntry.getResource().getClass()))
                         .collect(toImmutableList())));
   }
 

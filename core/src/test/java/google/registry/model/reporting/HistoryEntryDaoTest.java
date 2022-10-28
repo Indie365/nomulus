@@ -57,7 +57,7 @@ class HistoryEntryDaoTest extends EntityTestCase {
     // Set up a new persisted DomainHistory entity.
     domainHistory =
         new DomainHistory.Builder()
-            .setResource(domain)
+            .setDomain(domain)
             .setType(HistoryEntry.Type.DOMAIN_CREATE)
             .setPeriod(Period.create(1, Period.Unit.YEARS))
             .setXmlBytes("<xml></xml>".getBytes(UTF_8))

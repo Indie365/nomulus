@@ -100,7 +100,7 @@ public class ExpandRecurringBillingEventsActionTest {
                 .setRegistrarId(domain.getCreationRegistrarId())
                 .setType(HistoryEntry.Type.DOMAIN_CREATE)
                 .setModificationTime(DateTime.parse("1999-01-05T00:00:00Z"))
-                .setResource(domain)
+                .setDomain(domain)
                 .build());
     recurring =
         new BillingEvent.Recurring.Builder()
@@ -196,7 +196,7 @@ public class ExpandRecurringBillingEventsActionTest {
     historyEntry =
         persistResource(
             new DomainHistory.Builder()
-                .setResource(deletedDomain)
+                .setDomain(deletedDomain)
                 .setRegistrarId(deletedDomain.getCreationRegistrarId())
                 .setModificationTime(deletedDomain.getCreationTime())
                 .setType(DOMAIN_CREATE)
@@ -652,7 +652,7 @@ public class ExpandRecurringBillingEventsActionTest {
                 .setRegistrarId(domain2.getCreationRegistrarId())
                 .setType(HistoryEntry.Type.DOMAIN_CREATE)
                 .setModificationTime(DateTime.parse("1999-04-05T00:00:00Z"))
-                .setResource(domain2)
+                .setDomain(domain2)
                 .build());
     BillingEvent.Recurring recurring2 =
         persistResource(
@@ -677,7 +677,7 @@ public class ExpandRecurringBillingEventsActionTest {
                 .setRegistrarId(domain3.getCreationRegistrarId())
                 .setType(HistoryEntry.Type.DOMAIN_CREATE)
                 .setModificationTime(DateTime.parse("1999-06-05T00:00:00Z"))
-                .setResource(domain3)
+                .setDomain(domain3)
                 .build());
     BillingEvent.Recurring recurring3 =
         persistResource(

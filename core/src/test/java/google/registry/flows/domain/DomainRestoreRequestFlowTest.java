@@ -116,7 +116,7 @@ class DomainRestoreRequestFlowTest extends ResourceFlowTestCase<DomainRestoreReq
                 .setType(HistoryEntry.Type.DOMAIN_DELETE)
                 .setModificationTime(clock.nowUtc())
                 .setRegistrarId(domain.getCurrentSponsorRegistrarId())
-                .setResource(domain)
+                .setDomain(domain)
                 .build());
     persistResource(
         domain

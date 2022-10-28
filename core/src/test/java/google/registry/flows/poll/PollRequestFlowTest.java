@@ -235,7 +235,7 @@ class PollRequestFlowTest extends FlowTestCase<PollRequestFlow> {
                 .setRegistrarId("NewRegistrar")
                 .setModificationTime(clock.nowUtc().minusDays(1))
                 .setType(HistoryEntry.Type.CONTACT_DELETE)
-                .setResource(contact)
+                .setContact(contact)
                 .build());
     persistResource(
         new PollMessage.OneTime.Builder()
@@ -258,7 +258,7 @@ class PollRequestFlowTest extends FlowTestCase<PollRequestFlow> {
                 .setRegistrarId("NewRegistrar")
                 .setModificationTime(clock.nowUtc().minusDays(1))
                 .setType(HistoryEntry.Type.HOST_DELETE)
-                .setResource(host)
+                .setHost(host)
                 .build());
     persistResource(
         new PollMessage.OneTime.Builder()

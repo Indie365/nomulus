@@ -1,11 +1,8 @@
 // Copyright 2020 The Nomulus Authors. All Rights Reserved.
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
+// Licensed under the Apache License, Version 2.0 (the "License"); // you may not use this file
+// except in compliance with the License. // You may obtain a copy of the License at // //
+// http://www.apache.org/licenses/LICENSE-2.0 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -49,15 +46,11 @@ public class HostHistory extends HistoryEntry {
 
   // Store HostBase instead of Host, so we don't pick up its @Id
   // @Nullable for the sake of pre-Registry-3.0 history objects
-  @Access(AccessType.PROPERTY)
-  @Nullable
-  HostBase getResource() {
-    return (HostBase) eppResource;
-  }
+  @Nullable HostBase resource;
 
-  @SuppressWarnings("unused")
-  private void setResource(HostBase hostBase) {
-    eppResource = hostBase;
+  @Override
+  public HostBase getResource() {
+    return resource;
   }
 
   /**
@@ -86,12 +79,19 @@ public class HostHistory extends HistoryEntry {
     return new Builder(clone(this));
   }
 
+
+
   public static class Builder extends HistoryEntry.Builder<HostHistory, Builder> {
 
     public Builder() {}
 
     public Builder(HostHistory instance) {
       super(instance);
+    }
+
+    public Builder setHost(HostBase hostBase) {
+      getInstance().resource = hostBase;
+      return setRepoId(hostBase);
     }
   }
 }

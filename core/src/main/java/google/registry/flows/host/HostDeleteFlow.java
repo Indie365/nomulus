@@ -113,7 +113,7 @@ public final class HostDeleteFlow implements TransactionalFlow {
                   .removeSubordinateHost(existingHost.getHostName())
                   .build());
     }
-    historyBuilder.setType(Type.HOST_DELETE).setResource(newHost);
+    historyBuilder.setType(Type.HOST_DELETE).setHost(newHost);
     tm().insert(historyBuilder.build());
     tm().update(newHost);
     return responseBuilder.setResultFromCode(SUCCESS).build();
