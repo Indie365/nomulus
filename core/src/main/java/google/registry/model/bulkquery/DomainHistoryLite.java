@@ -48,12 +48,12 @@ public class DomainHistoryLite extends HistoryEntry {
   // @Nullable for the sake of pre-Registry-3.0 history objects
   @Nullable
   @Access(AccessType.PROPERTY)
-  public DomainBase getRawDomainBase() {
+  public DomainBase getResource() {
     return (DomainBase) eppResource;
   }
 
   @SuppressWarnings("unused")
-  private void setRawDomainBase(DomainBase domainBase) {
+  private void setResource(DomainBase domainBase) {
     eppResource = domainBase;
   }
 

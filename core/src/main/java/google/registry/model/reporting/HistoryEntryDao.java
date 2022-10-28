@@ -150,6 +150,7 @@ public class HistoryEntryDao {
             .where("modificationTime", criteriaBuilder::greaterThanOrEqualTo, afterTime)
             .where("modificationTime", criteriaBuilder::lessThanOrEqualTo, beforeTime)
             .where("repoId", criteriaBuilder::equal, resourceKey.getSqlKey().toString())
+            .orderByAsc("revisionId")
             .orderByAsc("modificationTime")
             .build();
 

@@ -98,19 +98,7 @@ public class DomainHistoryLiteTest {
         Sets.difference(domainHistoryAttributes, domainHistoryLiteAttributes);
     assertThat(excludedFromDomainHistory)
         .containsExactly(
-            "dsDataHistories",
-            "gracePeriodHistories",
-            "internalDomainTransactionRecords",
-            "nsHosts");
-  }
-
-  @Test
-  void readDomainHistory_noContent() {
-    setupHelper.setupBulkQueryJpaTm(appEngine);
-    assertThat(
-            BulkQueryHelper.loadAndAssembleDomainHistory(
-                setupHelper.domainHistory.getHistoryEntryId()))
-        .isEqualTo(setupHelper.domainHistory);
+            "dsDataHistories", "gracePeriodHistories", "domainTransactionRecords", "nsHosts");
   }
 
   @Test
