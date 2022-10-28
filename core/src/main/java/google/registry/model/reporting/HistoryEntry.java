@@ -30,6 +30,7 @@ import google.registry.model.eppcommon.Trid;
 import google.registry.model.host.HostBase;
 import google.registry.model.host.HostHistory;
 import google.registry.model.reporting.HistoryEntry.HistoryEntryId;
+import google.registry.persistence.EntityCallbacksListener.RegisterJpaCallbacks;
 import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.persistence.Access;
@@ -122,7 +123,7 @@ public abstract class HistoryEntry extends ImmutableObject
 
   @Id protected String repoId;
 
-  @Nullable @Transient protected EppResource eppResource;
+  @Nullable @Transient @RegisterJpaCallbacks protected EppResource eppResource;
 
   /** The type of history entry. */
   @Column(nullable = false, name = "historyType")
