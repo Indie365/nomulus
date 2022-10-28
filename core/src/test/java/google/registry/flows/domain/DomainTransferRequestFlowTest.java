@@ -248,7 +248,7 @@ class DomainTransferRequestFlowTest
 
   /** Implements the missing Optional.stream function that is added in Java 9. */
   private static <T> Stream<T> optionalToStream(Optional<T> optional) {
-    return optional.stream();
+    return optional.map(Stream::of).orElseGet(Stream::empty);
   }
 
   private void assertHistoryEntriesContainBillingEventsAndGracePeriods(

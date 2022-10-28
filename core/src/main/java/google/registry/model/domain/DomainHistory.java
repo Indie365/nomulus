@@ -70,11 +70,21 @@ public class DomainHistory extends HistoryEntry {
 
   // Store DomainBase instead of Domain, so we don't pick up its @Id
   // @Nullable for the sake of pre-Registry-3.0 history objects
-  @Nullable public DomainBase resource;
+  @Nullable DomainBase resource;
 
   @Override
-  public DomainBase getResource() {
+  protected DomainBase getResource() {
     return resource;
+  }
+
+  /**
+   * The values of all the fields on the {@link DomainBase} object after the action represented by
+   * this history object was executed.
+   *
+   * <p>Will be absent for objects created prior to the Registry 3.0 SQL migration.
+   */
+  public Optional<DomainBase> getDomainBase() {
+    return Optional.ofNullable(resource);
   }
 
   // We could have reused domainBase.nsHosts here, but Hibernate throws a weird exception after
@@ -167,16 +177,6 @@ public class DomainHistory extends HistoryEntry {
   /** Returns the collection of {@link DomainDsDataHistory} instances. */
   public ImmutableSet<DomainDsDataHistory> getDsDataHistories() {
     return nullToEmptyImmutableCopy(dsDataHistories);
-  }
-
-  /**
-   * The values of all the fields on the {@link DomainBase} object after the action represented by
-   * this history object was executed.
-   *
-   * <p>Will be absent for objects created prior to the Registry 3.0 SQL migration.
-   */
-  public Optional<DomainBase> getDomainBase() {
-    return Optional.ofNullable(resource);
   }
 
   public Set<GracePeriodHistory> getGracePeriodHistories() {
@@ -274,17 +274,6 @@ public class DomainHistory extends HistoryEntry {
     public Builder setDomainTransactionRecords(
         ImmutableSet<DomainTransactionRecord> domainTransactionRecords) {
       getInstance().domainTransactionRecords = domainTransactionRecords;
-      return this;
-    }
-
-    public Builder copyFrom(DomainHistory historyEntry) {
-      copy(historyEntry, getInstance());
-      getInstance().period = historyEntry.period;
-      getInstance().otherRegistrarId = historyEntry.otherRegistrarId;
-      getInstance().domainTransactionRecords =
-          historyEntry.domainTransactionRecords == null
-              ? null
-              : ImmutableSet.copyOf(historyEntry.domainTransactionRecords);
       return this;
     }
 

@@ -18,6 +18,7 @@ import google.registry.model.EppResource;
 import google.registry.model.reporting.HistoryEntry;
 import google.registry.persistence.VKey;
 import java.util.Optional;
+import javax.annotation.Nullable;
 import javax.persistence.Access;
 import javax.persistence.AccessType;
 import javax.persistence.AttributeOverride;
@@ -47,10 +48,10 @@ public class ContactHistory extends HistoryEntry {
 
   // Store ContactBase instead of Contact, so we don't pick up its @Id
   // @Nullable for the sake of pre-Registry-3.0 history objects
-  ContactBase resource;
+  @Nullable ContactBase resource;
 
   @Override
-  public ContactBase getResource() {
+  protected ContactBase getResource() {
     return resource;
   }
 
@@ -61,7 +62,7 @@ public class ContactHistory extends HistoryEntry {
    * <p>Will be absent for objects created prior to the Registry 3.0 SQL migration.
    */
   public Optional<ContactBase> getContactBase() {
-    return Optional.ofNullable(getResource());
+    return Optional.ofNullable(resource);
   }
 
   /** Creates a {@link VKey} instance for this entity. */

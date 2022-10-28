@@ -69,6 +69,7 @@ public class DomainHistoryTest extends EntityTestCase {
             () -> {
               DomainHistory fromDatabase = jpaTm().loadByKey(domainHistory.createVKey());
               assertDomainHistoriesEqual(fromDatabase, domainHistory);
+              assertThat(fromDatabase.getRepoId()).isEqualTo(domainHistory.getRepoId());
             });
   }
 

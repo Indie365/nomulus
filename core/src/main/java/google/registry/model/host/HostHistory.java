@@ -41,7 +41,7 @@ import javax.persistence.Table;
       @Index(columnList = "historyModificationTime")
     })
 @Access(AccessType.FIELD)
-@AttributeOverride(name = "repoId", column = @Column(name = "HostRepoId"))
+@AttributeOverride(name = "repoId", column = @Column(name = "hostRepoId"))
 public class HostHistory extends HistoryEntry {
 
   // Store HostBase instead of Host, so we don't pick up its @Id
@@ -49,7 +49,7 @@ public class HostHistory extends HistoryEntry {
   @Nullable HostBase resource;
 
   @Override
-  public HostBase getResource() {
+  protected HostBase getResource() {
     return resource;
   }
 
@@ -60,7 +60,7 @@ public class HostHistory extends HistoryEntry {
    * <p>Will be absent for objects created prior to the Registry 3.0 SQL migration.
    */
   public Optional<HostBase> getHostBase() {
-    return Optional.ofNullable(getResource());
+    return Optional.ofNullable(resource);
   }
 
   /** Creates a {@link VKey} instance for this entity. */

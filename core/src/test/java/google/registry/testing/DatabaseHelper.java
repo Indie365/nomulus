@@ -1111,7 +1111,7 @@ public final class DatabaseHelper {
                                     && pollMessage
                                         .getType()
                                         .getResourceClass()
-                                        .equals(historyEntry.getResource().getClass()))
+                                        .equals(historyEntry.getResourceType()))
                         .collect(toImmutableList())));
   }
 
