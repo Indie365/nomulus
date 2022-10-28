@@ -38,7 +38,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /** Unit tests for {@link HistoryEntry}. */
-
 class HistoryEntryTest extends EntityTestCase {
 
   private DomainHistory domainHistory;
@@ -82,8 +81,24 @@ class HistoryEntryTest extends EntityTestCase {
               DomainHistory fromDatabase = tm().loadByEntity(domainHistory);
               assertAboutImmutableObjects()
                   .that(fromDatabase)
-                  .isEqualExceptFields(domainHistory, "eppResource");
+                  .isEqualExceptFields(domainHistory, "resource");
             });
+  }
+
+  @Test
+  void testBuilder_resourceMustBeSpecified() {
+    IllegalArgumentException thrown =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                new ContactHistory.Builder()
+                    .setRevisionId(5L)
+                    .setModificationTime(DateTime.parse("1985-07-12T22:30:00Z"))
+                    .setRegistrarId("TheRegistrar")
+                    .setReason("Reason")
+                    .setType(HistoryEntry.Type.CONTACT_CREATE)
+                    .build());
+    assertThat(thrown).hasMessageThat().isEqualTo("EPP resource must be specified");
   }
 
   @Test

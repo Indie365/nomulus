@@ -326,10 +326,9 @@ public class RdePipeline implements Serializable {
    */
   private <T extends HistoryEntry> PCollection<KV<String, Long>> getMostRecentHistoryEntries(
       Pipeline pipeline, Class<T> historyClass) {
-    return pipeline
-        .apply(
-            String.format("Load most recent %s", historyClass.getSimpleName()),
-            RegistryJpaIO.read(
+    return pipeline.apply(
+        String.format("Load most recent %s", historyClass.getSimpleName()),
+        RegistryJpaIO.read(
                 ("SELECT repoId, revisionId FROM %entity% WHERE (repoId, modificationTime) IN"
                      + " (SELECT repoId, MAX(modificationTime) FROM %entity% WHERE"
                      + " modificationTime <= :watermark GROUP BY repoId) AND resource.deletionTime"
