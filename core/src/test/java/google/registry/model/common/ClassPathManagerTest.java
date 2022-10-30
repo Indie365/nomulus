@@ -17,10 +17,7 @@ package google.registry.model.common;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import google.registry.model.contact.Contact;
-import google.registry.model.domain.Domain;
 import google.registry.model.domain.DomainHistory;
-import google.registry.model.host.Host;
 import google.registry.testing.TestObject;
 import org.junit.jupiter.api.Test;
 
@@ -37,10 +34,7 @@ public class ClassPathManagerTest {
      * below are all classes supported in CLASS_REGISTRY. This test breaks if someone changes a
      * classname without preserving the original name.
      */
-    assertThat(ClassPathManager.getClass("Host")).isEqualTo(Host.class);
-    assertThat(ClassPathManager.getClass("Contact")).isEqualTo(Contact.class);
     assertThat(ClassPathManager.getClass("GaeUserIdConverter")).isEqualTo(GaeUserIdConverter.class);
-    assertThat(ClassPathManager.getClass("Domain")).isEqualTo(Domain.class);
   }
 
   @Test
@@ -73,11 +67,8 @@ public class ClassPathManagerTest {
      * The classes below are all classes supported in CLASS_NAME_REGISTRY. This test breaks if
      * someone changes a classname without preserving the original name.
      */
-    assertThat(ClassPathManager.getClassName(Host.class)).isEqualTo("Host");
-    assertThat(ClassPathManager.getClassName(Contact.class)).isEqualTo("Contact");
     assertThat(ClassPathManager.getClassName(GaeUserIdConverter.class))
         .isEqualTo("GaeUserIdConverter");
-    assertThat(ClassPathManager.getClassName(Domain.class)).isEqualTo("Domain");
   }
 
   @Test

@@ -20,10 +20,12 @@ import static google.registry.model.EntityClasses.ALL_CLASSES;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.googlecode.objectify.annotation.EntitySubclass;
+import google.registry.model.annotations.DeleteAfterMigration;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 /** A helper to manage class name and class path mapping. */
+@DeleteAfterMigration
 public class ClassPathManager {
   /**
    * Class registry allowing us to restore the original class object from the unqualified class
