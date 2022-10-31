@@ -1469,7 +1469,6 @@ class DomainTransferRequestFlowTest
     domain =
         persistResource(
             domain.asBuilder().setCurrentPackageToken(allocationToken.createVKey()).build());
-    DateTime now = clock.nowUtc();
 
     doSuccessfulSuperuserExtensionTest(
         "domain_transfer_request_superuser_extension.xml",
