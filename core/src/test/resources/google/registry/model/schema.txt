@@ -1,4 +1,0 @@
-class google.registry.model.common.GaeUserIdConverter {
-  @Id long id;
-  com.google.appengine.api.users.User user;
-}

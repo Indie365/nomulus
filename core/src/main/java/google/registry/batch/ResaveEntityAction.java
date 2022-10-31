@@ -75,7 +75,7 @@ public class ResaveEntityAction implements Runnable {
         "Re-saving entity %s which was enqueued at %s.", resourceKey, requestedTime);
     tm().transact(
             () -> {
-              ImmutableObject entity = tm().loadByKey(VKey.create(resourceKey));
+              Object entity = tm().loadByKey(VKey.create(resourceKey));
               tm().put(
                       (entity instanceof EppResource)
                           ? ((EppResource) entity).cloneProjectedAtTime(tm().getTransactionTime())
