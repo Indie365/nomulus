@@ -56,7 +56,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
-import com.googlecode.objectify.Key;
 import google.registry.config.RegistryConfig;
 import google.registry.flows.EppException;
 import google.registry.flows.EppException.UnimplementedExtensionException;
@@ -90,7 +89,6 @@ import google.registry.flows.domain.DomainFlowUtils.UrgentAttributeNotSupportedE
 import google.registry.flows.exceptions.OnlyToolCanPassMetadataException;
 import google.registry.flows.exceptions.ResourceHasClientUpdateProhibitedException;
 import google.registry.flows.exceptions.ResourceStatusProhibitsOperationException;
-import google.registry.model.EppResource;
 import google.registry.model.ImmutableObject;
 import google.registry.model.billing.BillingEvent;
 import google.registry.model.billing.BillingEvent.Reason;
@@ -216,7 +214,7 @@ class DomainUpdateFlowTest extends ResourceFlowTestCase<DomainUpdateFlow, Domain
         .and()
         .hasLastEppUpdateTime(clock.nowUtc())
         .and()
-        .hasLastEppUpdateClientId("TheRegistrar")
+        .hasLastEppUpdateRegistrarId("TheRegistrar")
         .and()
         .hasNoAutorenewEndTime();
     assertNoBillingEvents();
@@ -1659,7 +1657,8 @@ class DomainUpdateFlowTest extends ResourceFlowTestCase<DomainUpdateFlow, Domain
     assertThat(reloadResourceByForeignKey().getNameservers())
         .doesNotContain(
             loadByForeignKey(Host.class, "ns1.example.foo", clock.nowUtc())
-                .map(ImmutableObject::createVKey).get());
+                .map(ImmutableObject::createVKey)
+                .get());
   }
 
   @Test

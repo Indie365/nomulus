@@ -546,7 +546,7 @@ public class DomainBase extends EppResource
       }
     }
 
-    // It is possible that the lastEppUpdateClientId is different from current sponsor client
+    // It is possible that the lastEppUpdateRegistrarId is different from current sponsor client
     // id, so we have to do the comparison instead of having one variable just storing the most
     // recent time.
     if (newLastEppUpdateTime.isPresent()) {

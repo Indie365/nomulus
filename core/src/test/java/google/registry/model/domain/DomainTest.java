@@ -524,7 +524,7 @@ public class DomainTest {
     assertThat(beforeAutoRenew.getLastEppUpdateRegistrarId()).isEqualTo("TheRegistrar");
 
     // If autorenew happens before transfer succeeds(before transfer grace period starts as well),
-    // lastEppUpdateClientId should still be the current sponsor client id
+    // lastEppUpdateRegistrarId should still be the current sponsor client id
     Domain afterAutoRenew = domain.cloneProjectedAtTime(autorenewDateTime.plusDays(1));
     assertThat(afterAutoRenew.getLastEppUpdateTime()).isEqualTo(autorenewDateTime);
     assertThat(afterAutoRenew.getLastEppUpdateRegistrarId()).isEqualTo("NewRegistrar");

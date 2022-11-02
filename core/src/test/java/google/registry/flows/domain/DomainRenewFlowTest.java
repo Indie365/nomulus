@@ -267,7 +267,7 @@ class DomainRenewFlowTest extends ResourceFlowTestCase<DomainRenewFlow, Domain> 
         .and()
         .hasLastEppUpdateTime(clock.nowUtc())
         .and()
-        .hasLastEppUpdateClientId(renewalClientId);
+        .hasLastEppUpdateRegistrarId(renewalClientId);
     assertAboutHistoryEntries().that(historyEntryDomainRenew).hasPeriodYears(renewalYears);
     BillingEvent.OneTime renewBillingEvent =
         new BillingEvent.OneTime.Builder()
