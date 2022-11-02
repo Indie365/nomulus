@@ -332,9 +332,9 @@ public class RdePipeline implements Serializable {
                 ("SELECT repoId, revisionId FROM %entity% WHERE (repoId, modificationTime) IN"
                      + " (SELECT repoId, MAX(modificationTime) FROM %entity% WHERE"
                      + " modificationTime <= :watermark GROUP BY repoId) AND resource.deletionTime"
-                     + " > :watermark AND COALESCE(resource.creationClientId, '') NOT LIKE"
-                     + " 'prober-%' AND COALESCE(resource.currentSponsorClientId, '') NOT LIKE"
-                     + " 'prober-%' AND COALESCE(resource.lastEppUpdateClientId, '') NOT LIKE"
+                     + " > :watermark AND COALESCE(resource.creationRegistrarId, '') NOT LIKE"
+                     + " 'prober-%' AND COALESCE(resource.currentSponsorRegistrarId, '') NOT LIKE"
+                     + " 'prober-%' AND COALESCE(resource.lastEppUpdateRegistrarId, '') NOT LIKE"
                      + " 'prober-%' "
                         + (historyClass == DomainHistory.class
                             ? "AND resource.tld IN " + "(SELECT id FROM Tld WHERE tldType = 'REAL')"

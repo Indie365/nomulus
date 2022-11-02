@@ -44,6 +44,9 @@ import java.util.Optional;
 import java.util.Set;
 import javax.persistence.Access;
 import javax.persistence.AccessType;
+import javax.persistence.AttributeOverride;
+import javax.persistence.AttributeOverrides;
+import javax.persistence.Column;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.Transient;
 import org.joda.time.DateTime;
@@ -102,6 +105,7 @@ public abstract class EppResource extends UpdateAutoTimestampEntity implements B
    * <p>This can be null in the case of pre-Registry-3.0-migration history objects with null
    * resource fields.
    */
+  @AttributeOverride(name = "creationTime", column = @Column)
   CreateAutoTimestamp creationTime = CreateAutoTimestamp.create(null);
 
   /**

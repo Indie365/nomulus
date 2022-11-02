@@ -318,7 +318,7 @@ public class RdapDomainSearchAction extends RdapSearchActionBase {
               if (desiredRegistrar.isPresent()) {
                 builder =
                     builder.where(
-                        "currentSponsorClientId",
+                        "currentSponsorRegistrarId",
                         replicaJpaTm().getEntityManager().getCriteriaBuilder()::equal,
                         desiredRegistrar.get());
               }

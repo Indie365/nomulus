@@ -82,8 +82,4 @@ public class DesignatedContact extends ImmutableObject implements UnsafeSerializ
   public VKey<Contact> getContactKey() {
     return contactVKey;
   }
-
-  public DesignatedContact reconstitute() {
-    return create(type, VKey.from(contact));
-  }
 }

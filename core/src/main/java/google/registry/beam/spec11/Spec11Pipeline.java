@@ -115,7 +115,7 @@ public class Spec11Pipeline implements Serializable {
     Read<Object[], KV<String, String>> read =
         RegistryJpaIO.read(
                 "select d.repoId, r.emailAddress from Domain d join Registrar r on"
-                    + " d.currentSponsorClientId = r.registrarId where r.type = 'REAL' and"
+                    + " d.currentSponsorRegistrarId = r.registrarId where r.type = 'REAL' and"
                     + " d.deletionTime > now()",
                 false,
                 Spec11Pipeline::parseRow)

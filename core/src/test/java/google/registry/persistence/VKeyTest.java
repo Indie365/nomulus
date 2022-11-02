@@ -15,15 +15,12 @@ package google.registry.persistence;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
-import static google.registry.testing.DatabaseHelper.newDomain;
-import static google.registry.testing.DatabaseHelper.persistActiveContact;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Entity;
 import google.registry.model.billing.BillingEvent.OneTime;
 import google.registry.model.common.ClassPathManager;
-import google.registry.model.domain.Domain;
 import google.registry.model.host.Host;
 import google.registry.model.registrar.RegistrarPoc;
 import google.registry.testing.AppEngineExtension;
@@ -122,19 +119,6 @@ class VKeyTest {
         .contains("Missing value for last key of type class google.registry.testing.TestObject");
   }
 
-  @Test
-  void testFromWebsafeKey() {
-    // Creating an objectify key instead of a datastore key as this should get a correctly formatted
-    // key path.  We have to one of our actual model object classes for this, TestObject can not be
-    // reconstructed by the VKeyTranslatorFactory.
-    Domain domain = newDomain("example.com", "ROID-1", persistActiveContact("contact-1"));
-    Key<Domain> key = Key.create(domain);
-    VKey<Domain> vkey = VKey.fromWebsafeKey(key.getString());
-    assertThat(vkey.getKind()).isEqualTo(Domain.class);
-    assertThat(vkey.getOfyKey()).isEqualTo(key);
-    assertThat(vkey.getSqlKey()).isEqualTo("ROID-1");
-  }
-
   /** Test stringify() with vkey created via different ways. */
   @Test
   void testStringify_sqlOnlyVKey() {
@@ -146,16 +130,6 @@ class VKeyTest {
   void testStringify_ofyOnlyVKey() {
     assertThat(VKey.createOfy(TestObject.class, Key.create(TestObject.class, "foo")).stringify())
         .isEqualTo("kind:TestObject@ofy:agR0ZXN0chMLEgpUZXN0T2JqZWN0IgNmb28M");
-  }
-
-  @Test
-  void testStringify_vkeyFromWebsafeKey() {
-    Domain domain = newDomain("example.com", "ROID-1", persistActiveContact("contact-1"));
-    Key<Domain> key = Key.create(domain);
-    VKey<Domain> vkey = VKey.fromWebsafeKey(key.getString());
-    assertThat(vkey.stringify())
-        .isEqualTo(
-            "kind:Domain" + "@sql:rO0ABXQABlJPSUQtMQ" + "@ofy:agR0ZXN0chILEgZEb21haW4iBlJPSUQtMQw");
   }
 
   @Test
@@ -217,24 +191,6 @@ class VKeyTest {
   }
 
   @Test
-  void testCreate_stringifyVkey_fromWebsafeKey() {
-    assertThat(
-            VKey.create(
-                "kind:Domain@sql:rO0ABXQABlJPSUQtMQ"
-                    + "@ofy:agR0ZXN0chYLEgpEb21haW5CYXNlIgZST0lELTEM"))
-        .isEqualTo(
-            VKey.fromWebsafeKey(
-                Key.create(newDomain("example.com", "ROID-1", persistActiveContact("contact-1")))
-                    .getString()));
-  }
-
-  @Test
-  void testCreate_stringifedVKey_websafeKey() {
-    assertThat(VKey.create("agR0ZXN0chkLEgZEb21haW4iDUdBU0RHSDQyMkQtSUQM"))
-        .isEqualTo(VKey.fromWebsafeKey("agR0ZXN0chkLEgZEb21haW4iDUdBU0RHSDQyMkQtSUQM"));
-  }
-
-  @Test
   void testCreate_invalidStringifiedVKey_failure() {
     IllegalArgumentException thrown =
         assertThrows(
@@ -254,36 +210,22 @@ class VKeyTest {
   /** Test stringify() then create() flow. */
   @Test
   void testStringifyThenCreate_sqlOnlyVKey_testObject_stringKey_success() {
-    //VKey<TestObject> vkey = VKey.createSql(TestObject.class, "foo");
-    //VKey<TestObject> newVkey = VKey.create(vkey.stringify());
-    //assertThat(newVkey).isEqualTo(vkey);
+    // VKey<TestObject> vkey = VKey.createSql(TestObject.class, "foo");
+    // VKey<TestObject> newVkey = VKey.create(vkey.stringify());
+    // assertThat(newVkey).isEqualTo(vkey);
   }
 
   @Test
   void testStringifyThenCreate_sqlOnlyVKey_testObject_longKey_success() {
-    //VKey<TestObject> vkey = VKey.createSql(TestObject.class, (long) 12345);
-    //VKey<TestObject> newVkey = VKey.create(vkey.stringify());
-    //assertThat(newVkey).isEqualTo(vkey);
-  }
-
-  @Test
-  void testCreate_createFromExistingOfyKey_success() {
-    String keyString =
-        Key.create(newDomain("example.com", "ROID-1", persistActiveContact("contact-1")))
-            .getString();
-    assertThat(VKey.fromWebsafeKey(keyString)).isEqualTo(VKey.create(keyString));
+    // VKey<TestObject> vkey = VKey.createSql(TestObject.class, (long) 12345);
+    // VKey<TestObject> newVkey = VKey.create(vkey.stringify());
+    // assertThat(newVkey).isEqualTo(vkey);
   }
 
   @Test
   void testStringifyThenCreate_ofyOnlyVKey_testObject_success() {
     VKey<TestObject> vkey =
         VKey.createOfy(TestObject.class, Key.create(TestObject.class, "tmpKey"));
-    assertThat(VKey.create(vkey.stringify())).isEqualTo(vkey);
-  }
-
-  @Test
-  void testStringifyThenCreate_ofyOnlyVKey_testObject_websafeString_success() {
-    VKey<TestObject> vkey = VKey.fromWebsafeKey(Key.create(TestObject.create("foo")).getString());
     assertThat(VKey.create(vkey.stringify())).isEqualTo(vkey);
   }
 

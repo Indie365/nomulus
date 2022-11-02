@@ -69,7 +69,7 @@ public class RdapEntityAction extends RdapActionBase {
     // RDAP Technical Implementation Guide 2.3.1 - MUST support contact entity lookup using the
     // handle
     if (ROID_PATTERN.matcher(pathSearchString).matches()) {
-      VKey<Contact> contactVKey = VKey.create(Contact.class, pathSearchString);
+      VKey<Contact> contactVKey = VKey.createSql(Contact.class, pathSearchString);
       Optional<Contact> contact =
           replicaJpaTm().transact(() -> replicaJpaTm().loadByKeyIfPresent(contactVKey));
       // As per Andy Newton on the regext mailing list, contacts by themselves have no role, since

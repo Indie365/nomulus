@@ -90,6 +90,8 @@ import google.registry.flows.domain.DomainFlowUtils.UrgentAttributeNotSupportedE
 import google.registry.flows.exceptions.OnlyToolCanPassMetadataException;
 import google.registry.flows.exceptions.ResourceHasClientUpdateProhibitedException;
 import google.registry.flows.exceptions.ResourceStatusProhibitsOperationException;
+import google.registry.model.EppResource;
+import google.registry.model.ImmutableObject;
 import google.registry.model.billing.BillingEvent;
 import google.registry.model.billing.BillingEvent.Reason;
 import google.registry.model.contact.Contact;
@@ -1656,7 +1658,8 @@ class DomainUpdateFlowTest extends ResourceFlowTestCase<DomainUpdateFlow, Domain
     runFlow();
     assertThat(reloadResourceByForeignKey().getNameservers())
         .doesNotContain(
-            Key.create(loadByForeignKey(Host.class, "ns1.example.foo", clock.nowUtc()).get()));
+            loadByForeignKey(Host.class, "ns1.example.foo", clock.nowUtc())
+                .map(ImmutableObject::createVKey).get());
   }
 
   @Test

@@ -30,7 +30,6 @@ import google.registry.model.UpdateAutoTimestampEntity;
 import google.registry.model.contact.Contact;
 import google.registry.model.domain.Domain;
 import google.registry.model.host.Host;
-import google.registry.model.translators.VKeyTranslatorFactory;
 import google.registry.util.SerializeUtils;
 import java.io.Serializable;
 import java.util.Optional;
@@ -154,29 +153,24 @@ public class VKey<T> extends ImmutableObject implements Serializable {
    * key and ofy key values are encoded in Base64.
    */
   public static <T extends EppResource> VKey<T> create(String keyString) {
-    if (!keyString.startsWith(CLASS_TYPE + KV_SEPARATOR)) {
-      // handle the existing ofy key string
-      return fromWebsafeKey(keyString);
-    } else {
-      ImmutableMap<String, String> kvs =
-          ImmutableMap.copyOf(
-              Splitter.on(DELIMITER).withKeyValueSeparator(KV_SEPARATOR).split(keyString));
-      @SuppressWarnings("unchecked")
-      Class<T> classType = (Class<T>) EPP_RESOURCE_CLASS_MAP.get(kvs.get(CLASS_TYPE));
+    ImmutableMap<String, String> kvs =
+        ImmutableMap.copyOf(
+            Splitter.on(DELIMITER).withKeyValueSeparator(KV_SEPARATOR).split(keyString));
+    @SuppressWarnings("unchecked")
+    Class<T> classType = (Class<T>) EPP_RESOURCE_CLASS_MAP.get(kvs.get(CLASS_TYPE));
 
-      if (kvs.containsKey(SQL_LOOKUP_KEY) && kvs.containsKey(OFY_LOOKUP_KEY)) {
-        return VKey.create(
-            classType,
-            SerializeUtils.parse(Serializable.class, kvs.get(SQL_LOOKUP_KEY)),
-            Key.create(kvs.get(OFY_LOOKUP_KEY)));
-      } else if (kvs.containsKey(SQL_LOOKUP_KEY)) {
-        return VKey.createSql(
-            classType, SerializeUtils.parse(Serializable.class, kvs.get(SQL_LOOKUP_KEY)));
-      } else if (kvs.containsKey(OFY_LOOKUP_KEY)) {
-        return VKey.createOfy(classType, Key.create(kvs.get(OFY_LOOKUP_KEY)));
-      } else {
-        throw new IllegalArgumentException(String.format("Cannot parse key string: %s", keyString));
-      }
+    if (kvs.containsKey(SQL_LOOKUP_KEY) && kvs.containsKey(OFY_LOOKUP_KEY)) {
+      return VKey.create(
+          classType,
+          SerializeUtils.parse(Serializable.class, kvs.get(SQL_LOOKUP_KEY)),
+          Key.create(kvs.get(OFY_LOOKUP_KEY)));
+    } else if (kvs.containsKey(SQL_LOOKUP_KEY)) {
+      return VKey.createSql(
+          classType, SerializeUtils.parse(Serializable.class, kvs.get(SQL_LOOKUP_KEY)));
+    } else if (kvs.containsKey(OFY_LOOKUP_KEY)) {
+      return VKey.createOfy(classType, Key.create(kvs.get(OFY_LOOKUP_KEY)));
+    } else {
+      throw new IllegalArgumentException(String.format("Cannot parse key string: %s", keyString));
     }
   }
 
@@ -282,22 +276,6 @@ public class VKey<T> extends ImmutableObject implements Serializable {
   /** Returns the objectify key if it exists. */
   public Optional<Key<T>> maybeGetOfyKey() {
     return Optional.ofNullable(this.ofyKey);
-  }
-
-  /** Convenience method to construct a VKey from an objectify Key. */
-  @Nullable
-  public static <T> VKey<T> from(Key<T> key) {
-    return VKeyTranslatorFactory.createVKey(key);
-  }
-
-  /**
-   * Construct a VKey from the string representation of an ofy key.
-   *
-   * <p>TODO(b/184350590): After migration, we'll want remove the ofy key dependency from this.
-   */
-  @Nullable
-  public static <T> VKey<T> fromWebsafeKey(String ofyKeyRepr) {
-    return from(Key.create(ofyKeyRepr));
   }
 
   /**

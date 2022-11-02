@@ -273,7 +273,7 @@ public class RdapEntitySearchAction extends RdapSearchActionBase {
                       if (!rdapAuthorization.role().equals(Role.ADMINISTRATOR)) {
                         builder =
                             builder.whereFieldIsIn(
-                                "currentSponsorClientId", rdapAuthorization.registrarIds());
+                                "currentSponsorRegistrarId", rdapAuthorization.registrarIds());
                       }
                       return getMatchingResources(builder, false, rdapResultSetMaxSize + 1);
                     });
@@ -312,7 +312,8 @@ public class RdapEntitySearchAction extends RdapSearchActionBase {
                     () ->
                         replicaJpaTm()
                             .loadByKeyIfPresent(
-                                VKey.create(Contact.class, partialStringQuery.getInitialString())));
+                                VKey.createSql(
+                                    Contact.class, partialStringQuery.getInitialString())));
         contactList =
             (contact.isPresent() && shouldBeVisible(contact.get()))
                 ? ImmutableList.of(contact.get())
