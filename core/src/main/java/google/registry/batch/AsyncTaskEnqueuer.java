@@ -44,6 +44,7 @@ public final class AsyncTaskEnqueuer {
 
   /** The HTTP parameter names used by async flows. */
   public static final String PARAM_RESOURCE_KEY = "resourceKey";
+
   public static final String PARAM_REQUESTING_CLIENT_ID = "requestingClientId";
   public static final String PARAM_CLIENT_TRANSACTION_ID = "clientTransactionId";
   public static final String PARAM_SERVER_TRANSACTION_ID = "serverTransactionId";
@@ -54,6 +55,7 @@ public final class AsyncTaskEnqueuer {
 
   /** The task queue names used by async flows. */
   public static final String QUEUE_ASYNC_ACTIONS = "async-actions";
+
   public static final String QUEUE_ASYNC_DELETE = "async-delete-pull";
   public static final String QUEUE_ASYNC_HOST_RENAME = "async-host-rename-pull";
 
@@ -65,7 +67,7 @@ public final class AsyncTaskEnqueuer {
   private final Queue asyncDnsRefreshPullQueue;
   private final Retrier retrier;
 
-  private CloudTasksUtils cloudTasksUtils;
+  private final CloudTasksUtils cloudTasksUtils;
 
   @Inject
   public AsyncTaskEnqueuer(
@@ -82,7 +84,8 @@ public final class AsyncTaskEnqueuer {
   }
 
   /** Enqueues a task to asynchronously re-save an entity at some point in the future. */
-  public void enqueueAsyncResave(VKey<?> entityToResave, DateTime now, DateTime whenToResave) {
+  public void enqueueAsyncResave(
+      VKey<? extends EppResource> entityToResave, DateTime now, DateTime whenToResave) {
     enqueueAsyncResave(entityToResave, now, ImmutableSortedSet.of(whenToResave));
   }
 
@@ -93,7 +96,9 @@ public final class AsyncTaskEnqueuer {
    * itself to run at the next time if there are remaining re-saves scheduled.
    */
   public void enqueueAsyncResave(
-      VKey<?> entityKey, DateTime now, ImmutableSortedSet<DateTime> whenToResave) {
+      VKey<? extends EppResource> entityKey,
+      DateTime now,
+      ImmutableSortedSet<DateTime> whenToResave) {
     DateTime firstResave = whenToResave.first();
     checkArgument(isBeforeOrAt(now, firstResave), "Can't enqueue a resave to run in the past");
     Duration etaDuration = new Duration(now, firstResave);

@@ -437,22 +437,22 @@ public class RdapDomainSearchAction extends RdapSearchActionBase {
         queryBuilder.append(" AND h.current_sponsor_registrar_id = :desiredRegistrar");
         parameters.put("desiredRegistrar", desiredRegistrar.get());
       }
-      hostKeys =
-          replicaJpaTm()
-              .transact(
-                  () -> {
-                    javax.persistence.Query query =
-                        replicaJpaTm()
-                            .getEntityManager()
-                            .createNativeQuery(queryBuilder.toString())
-                            .setMaxResults(maxNameserversInFirstStage);
-                    parameters.build().forEach(query::setParameter);
-                    @SuppressWarnings("unchecked")
-                    Stream<String> resultStream = query.getResultStream();
-                    return resultStream
-                        .map(repoId -> VKey.create(Host.class, repoId))
-                        .collect(toImmutableSet());
-                  });
+    hostKeys =
+        replicaJpaTm()
+            .transact(
+                () -> {
+                  javax.persistence.Query query =
+                      replicaJpaTm()
+                          .getEntityManager()
+                          .createNativeQuery(queryBuilder.toString())
+                          .setMaxResults(maxNameserversInFirstStage);
+                  parameters.build().forEach(query::setParameter);
+                  @SuppressWarnings("unchecked")
+                  Stream<String> resultStream = query.getResultStream();
+                  return resultStream
+                      .map(repoId -> VKey.createSql(Host.class, repoId))
+                      .collect(toImmutableSet());
+                });
     return searchByNameserverRefs(hostKeys);
   }
 

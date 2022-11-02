@@ -74,14 +74,11 @@ public class ResaveEntityAction implements Runnable {
         "Re-saving entity %s which was enqueued at %s.", resourceKey, requestedTime);
     tm().transact(
             () -> {
-              Object entity = tm().loadByKey(VKey.create(resourceKey));
-              tm().put(
-                      (entity instanceof EppResource)
-                          ? ((EppResource) entity).cloneProjectedAtTime(tm().getTransactionTime())
-                          : entity);
+              EppResource entity = tm().loadByKey(VKey.createEppVKeyFromString(resourceKey));
+              tm().put(entity.cloneProjectedAtTime(tm().getTransactionTime()));
               if (!resaveTimes.isEmpty()) {
                 asyncTaskEnqueuer.enqueueAsyncResave(
-                    VKey.create(resourceKey), requestedTime, resaveTimes);
+                    VKey.createEppVKeyFromString(resourceKey), requestedTime, resaveTimes);
               }
             });
     response.setPayload("Entity re-saved.");

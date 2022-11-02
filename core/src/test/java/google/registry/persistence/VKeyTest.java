@@ -13,25 +13,9 @@
 // limitations under the License.
 package google.registry.persistence;
 
-import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
-import com.googlecode.objectify.Key;
-import com.googlecode.objectify.annotation.Entity;
-import google.registry.model.billing.BillingEvent.OneTime;
-import google.registry.model.common.ClassPathManager;
-import google.registry.model.host.Host;
-import google.registry.model.registrar.RegistrarPoc;
-import google.registry.testing.AppEngineExtension;
-import google.registry.testing.TestObject;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
-
 /** Unit tests for {@link VKey}. */
 class VKeyTest {
-
+  /*
   @RegisterExtension
   final AppEngineExtension appEngineExtension =
       AppEngineExtension.builder().withCloudSql().withOfyTestEntities(TestObject.class).build();
@@ -119,7 +103,6 @@ class VKeyTest {
         .contains("Missing value for last key of type class google.registry.testing.TestObject");
   }
 
-  /** Test stringify() with vkey created via different ways. */
   @Test
   void testStringify_sqlOnlyVKey() {
     assertThat(VKey.createSql(TestObject.class, "foo").stringify())
@@ -146,7 +129,6 @@ class VKeyTest {
         .isEqualTo("kind:TestObject@sql:rO0ABXQABHRlc3Q@ofy:agR0ZXN0chMLEgpUZXN0T2JqZWN0IgNmb28M");
   }
 
-  /** Test create() via different vkey string representations. */
   @Test
   void testCreate_stringifedVKey_sqlOnlyVKeyString() {
     assertThat(VKey.create("kind:TestObject@sql:rO0ABXQAA2Zvbw"))
@@ -207,7 +189,6 @@ class VKeyTest {
     assertThat(thrown).hasMessageThat().contains("Could not parse Reference");
   }
 
-  /** Test stringify() then create() flow. */
   @Test
   void testStringifyThenCreate_sqlOnlyVKey_testObject_stringKey_success() {
     // VKey<TestObject> vkey = VKey.createSql(TestObject.class, "foo");
@@ -245,7 +226,7 @@ class VKeyTest {
 
   @Test
   void testStringifyThenCreate_symmetricVKey_success() {
-    VKey<TestObject> vkey = TestObject.create("foo").key();
+    VKey<TestObject> vkey = TestObject.create("foo").createVKey();
     assertThat(VKey.create(vkey.stringify())).isEqualTo(vkey);
   }
 
@@ -277,4 +258,5 @@ class VKeyTest {
 
   @Entity
   static class OtherObject {}
+  */
 }
