@@ -16,14 +16,20 @@ package google.registry.persistence;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static google.registry.util.PreconditionsUtils.checkArgumentNotNull;
+import static java.util.function.Function.identity;
 
 import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.googlecode.objectify.Key;
+import google.registry.model.EppResource;
 import google.registry.model.ImmutableObject;
 import google.registry.model.UpdateAutoTimestampEntity;
-import google.registry.model.common.ClassPathManager;
+import google.registry.model.contact.Contact;
+import google.registry.model.domain.Domain;
+import google.registry.model.host.Host;
 import google.registry.model.translators.VKeyTranslatorFactory;
 import google.registry.util.SerializeUtils;
 import java.io.Serializable;
@@ -48,6 +54,10 @@ public class VKey<T> extends ImmutableObject implements Serializable {
   // Web safe delimiters that won't be used in base 64.
   private static final String KV_SEPARATOR = ":";
   private static final String DELIMITER = "@";
+
+  private static final ImmutableMap<String, Class<? extends EppResource>> EPP_RESOURCE_CLASS_MAP =
+      ImmutableList.of(Domain.class, Host.class, Contact.class).stream()
+          .collect(toImmutableMap(Class::getSimpleName, identity()));
 
   // The SQL key for the referenced entity.
   Serializable sqlKey;
@@ -143,7 +153,7 @@ public class VKey<T> extends ImmutableObject implements Serializable {
    * "@ofy:agR0ZXN0cjELEg9FbnRpdHlHcm91cFJvb3QiCWNyb3NzLXRsZAwLEgpUZXN0T2JqZWN0IgNmb28M", where sql
    * key and ofy key values are encoded in Base64.
    */
-  public static <T> VKey<T> create(String keyString) {
+  public static <T extends EppResource> VKey<T> create(String keyString) {
     if (!keyString.startsWith(CLASS_TYPE + KV_SEPARATOR)) {
       // handle the existing ofy key string
       return fromWebsafeKey(keyString);
@@ -152,8 +162,7 @@ public class VKey<T> extends ImmutableObject implements Serializable {
           ImmutableMap.copyOf(
               Splitter.on(DELIMITER).withKeyValueSeparator(KV_SEPARATOR).split(keyString));
       @SuppressWarnings("unchecked")
-      Class<T> classType =
-          (Class<T>) PersistenceXmlUtility.getManagedClassMap().get(kvs.get(CLASS_TYPE));
+      Class<T> classType = (Class<T>) EPP_RESOURCE_CLASS_MAP.get(kvs.get(CLASS_TYPE));
 
       if (kvs.containsKey(SQL_LOOKUP_KEY) && kvs.containsKey(OFY_LOOKUP_KEY)) {
         return VKey.create(

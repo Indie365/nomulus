@@ -15,26 +15,15 @@
 package google.registry.persistence;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static java.util.function.Function.identity;
 
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import java.util.Properties;
-import java.util.function.Supplier;
 import org.hibernate.jpa.boot.internal.ParsedPersistenceXmlDescriptor;
 import org.hibernate.jpa.boot.internal.PersistenceXmlParser;
 
 /** Utility class that provides methods to manipulate persistence.xml file. */
-public final class PersistenceXmlUtility {
+public class PersistenceXmlUtility {
   private PersistenceXmlUtility() {}
-
-  private static final Supplier<ImmutableMap<String, Class<?>>> CLASS_NAME_MAP =
-      Suppliers.memoize(
-          () ->
-              getManagedClassesInternal().stream()
-                  .collect(toImmutableMap(Class::getSimpleName, identity())));
 
   /**
    * Returns the {@link ParsedPersistenceXmlDescriptor} instance constructed from persistence.xml.
@@ -53,14 +42,6 @@ public final class PersistenceXmlUtility {
 
   /** Returns all managed classes defined in persistence.xml. */
   public static ImmutableList<Class<?>> getManagedClasses() {
-    return ImmutableList.copyOf(CLASS_NAME_MAP.get().values());
-  }
-
-  public static ImmutableMap<String, Class<?>> getManagedClassMap() {
-    return CLASS_NAME_MAP.get();
-  }
-
-  public static ImmutableList<Class<?>> getManagedClassesInternal() {
     return getParsedPersistenceXmlDescriptor().getManagedClassNames().stream()
         .map(
             className -> {

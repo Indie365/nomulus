@@ -134,7 +134,7 @@ public class RelockDomainAction implements Runnable {
                       new IllegalArgumentException(
                           String.format("Unknown revision ID %d", oldUnlockRevisionId)));
       domain =
-          tm().loadByKey(VKey.create(Domain.class, oldLock.getRepoId()))
+          tm().loadByKey(VKey.createSql(Domain.class, oldLock.getRepoId()))
               .cloneProjectedAtTime(tm().getTransactionTime());
     } catch (Throwable t) {
       handleTransientFailure(Optional.ofNullable(oldLock), t);

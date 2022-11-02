@@ -369,9 +369,7 @@ public final class EppResourceUtils {
                   (ImmutableSet<VKey<Domain>>)
                       query
                           .getResultStream()
-                          .map(
-                              repoId ->
-                                  Domain.createVKey((String) repoId))
+                          .map(repoId -> Domain.createVKey((String) repoId))
                           .collect(toImmutableSet());
               return domainKeySet;
             });
