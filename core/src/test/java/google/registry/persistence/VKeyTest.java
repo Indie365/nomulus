@@ -31,7 +31,7 @@ class VKeyTest {
         VKey.create(TestObject.class, "foo", Key.create(TestObject.create("foo")));
     assertThat(key.maybeGetSqlKey().isPresent()).isTrue();
     assertThat(key.maybeGetOfyKey().isPresent()).isTrue();
-    assertThat(VKey.createSql(TestObject.class, "foo").maybeGetSqlKey()).hasValue("foo");
+    assertThat(VKey.create(TestObject.class, "foo").maybeGetSqlKey()).hasValue("foo");
   }
 
   @Test
@@ -54,7 +54,7 @@ class VKeyTest {
   void testRestoreOfy() {
     assertThat(VKey.restoreOfyFrom(null, TestObject.class, 100)).isNull();
 
-    VKey<TestObject> key = VKey.createSql(TestObject.class, "foo");
+    VKey<TestObject> key = VKey.create(TestObject.class, "foo");
     VKey<TestObject> restored = key.restoreOfy(TestObject.class, "bar");
     assertThat(restored.getOfyKey())
         .isEqualTo(Key.create(Key.create(TestObject.class, "bar"), TestObject.class, "foo"));
@@ -105,7 +105,7 @@ class VKeyTest {
 
   @Test
   void testStringify_sqlOnlyVKey() {
-    assertThat(VKey.createSql(TestObject.class, "foo").stringify())
+    assertThat(VKey.create(TestObject.class, "foo").stringify())
         .isEqualTo("kind:TestObject@sql:rO0ABXQAA2Zvbw");
   }
 
@@ -132,7 +132,7 @@ class VKeyTest {
   @Test
   void testCreate_stringifedVKey_sqlOnlyVKeyString() {
     assertThat(VKey.create("kind:TestObject@sql:rO0ABXQAA2Zvbw"))
-        .isEqualTo(VKey.createSql(TestObject.class, "foo"));
+        .isEqualTo(VKey.create(TestObject.class, "foo"));
   }
 
   @Test
@@ -191,14 +191,14 @@ class VKeyTest {
 
   @Test
   void testStringifyThenCreate_sqlOnlyVKey_testObject_stringKey_success() {
-    // VKey<TestObject> vkey = VKey.createSql(TestObject.class, "foo");
+    // VKey<TestObject> vkey = VKey.create(TestObject.class, "foo");
     // VKey<TestObject> newVkey = VKey.create(vkey.stringify());
     // assertThat(newVkey).isEqualTo(vkey);
   }
 
   @Test
   void testStringifyThenCreate_sqlOnlyVKey_testObject_longKey_success() {
-    // VKey<TestObject> vkey = VKey.createSql(TestObject.class, (long) 12345);
+    // VKey<TestObject> vkey = VKey.create(TestObject.class, (long) 12345);
     // VKey<TestObject> newVkey = VKey.create(vkey.stringify());
     // assertThat(newVkey).isEqualTo(vkey);
   }
@@ -232,7 +232,7 @@ class VKeyTest {
 
   @Test
   void testToString_sqlOnlyVKey() {
-    assertThat(VKey.createSql(TestObject.class, "testId").toString())
+    assertThat(VKey.create(TestObject.class, "testId").toString())
         .isEqualTo("VKey<TestObject>(sql:testId)");
   }
 

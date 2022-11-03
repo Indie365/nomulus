@@ -41,7 +41,7 @@ public class VKey<T> extends ImmutableObject implements Serializable {
   private static final long serialVersionUID = -5291472863840231240L;
 
   // Info that's stored in VKey string generated via stringify().
-  private static final String SQL_LOOKUP_KEY = "sql";
+  private static final String LOOKUP_KEY = "sql";
   private static final String CLASS_TYPE = "kind";
 
   // Web safe delimiters that won't be used in base 64.
@@ -52,40 +52,31 @@ public class VKey<T> extends ImmutableObject implements Serializable {
       ImmutableList.of(Domain.class, Host.class, Contact.class).stream()
           .collect(toImmutableMap(Class::getSimpleName, identity()));
 
-  // The SQL key for the referenced entity.
-  Serializable sqlKey;
+  // The primary key for the referenced entity.
+  Serializable key;
 
   Class<? extends T> kind;
 
   @SuppressWarnings("unused")
   VKey() {}
 
-  VKey(Class<? extends T> kind, Serializable sqlKey) {
+  VKey(Class<? extends T> kind, Serializable key) {
     this.kind = kind;
-    this.sqlKey = sqlKey;
+    this.key = key;
   }
 
-  /** Creates a {@link VKey} with supplied the sql primary key. */
-  public static <T> VKey<T> createSql(Class<T> kind, Serializable sqlKey) {
+  /** Creates a {@link VKey} with supplied the SQL primary key. */
+  public static <T> VKey<T> create(Class<T> kind, Serializable sqlKey) {
     checkArgumentNotNull(kind, "kind must not be null");
     checkArgumentNotNull(sqlKey, "sqlKey must not be null");
     return new VKey<>(kind, sqlKey);
   }
 
   /**
-   * Constructs a {@link VKey} from the string representation of a vkey.
+   * Constructs a {@link VKey} for an {@link EppResource } from the string representation.
    *
-   * <p>There are two types of string representations: 1) existing ofy key string handled by
-   * fromWebsafeKey() and 2) string encoded via stringify() where @ separates the substrings and
-   * each of the substrings contains a look up key, ":", and its corresponding value. The key info
-   * is encoded via Base64. The string begins with "kind:" and it must contains at least ofy key or
-   * sql key.
-   *
-   * <p>Example of a Vkey string by fromWebsafeKey(): "agR0ZXN0chYLEgpEb21haW5CYXNlIgZST0lELTEM"
-   *
-   * <p>Example of a vkey string by stringify(): "kind:TestObject@sql:rO0ABXQAA2Zvbw" +
-   * "@ofy:agR0ZXN0cjELEg9FbnRpdHlHcm91cFJvb3QiCWNyb3NzLXRsZAwLEgpUZXN0T2JqZWN0IgNmb28M", where sql
-   * key and ofy key values are encoded in Base64.
+   * <p>The string representation is obtained from the {@link #stringify()} function and like this:
+   * {@code kind:TestObject@sql:rO0ABXQAA2Zvbw}
    */
   public static <T extends EppResource> VKey<T> createEppVKeyFromString(String keyString) {
     ImmutableMap<String, String> kvs =
@@ -101,13 +92,12 @@ public class VKey<T> extends ImmutableObject implements Serializable {
     if (classType == null) {
       throw new IllegalArgumentException(String.format("%s is not an EppResource", classString));
     }
-    String encodedString = kvs.get(SQL_LOOKUP_KEY);
+    String encodedString = kvs.get(LOOKUP_KEY);
     if (encodedString == null) {
       throw new IllegalArgumentException(
-          String.format("%s does not contain the required key: %s", keyString, SQL_LOOKUP_KEY));
+          String.format("%s does not contain the required key: %s", keyString, LOOKUP_KEY));
     }
-    return VKey.createSql(
-        classType, SerializeUtils.parse(Serializable.class, kvs.get(SQL_LOOKUP_KEY)));
+    return VKey.create(classType, SerializeUtils.parse(Serializable.class, kvs.get(LOOKUP_KEY)));
   }
 
   /** Returns the type of the entity. */
@@ -115,40 +105,28 @@ public class VKey<T> extends ImmutableObject implements Serializable {
     return this.kind;
   }
 
-  /** Returns the SQL primary key. */
-  public Serializable getSqlKey() {
-    checkState(sqlKey != null, "Attempting obtain a null SQL key.");
-    return this.sqlKey;
+  /** Returns the primary key. */
+  public Serializable getKey() {
+    checkState(key != null, "Attempting obtain a null SQL key.");
+    return this.key;
   }
 
   /**
    * Constructs the string representation of a {@link VKey}.
    *
-   * <p>The string representation of a vkey contains its kind, and sql key or ofy key, or both. Each
-   * of the keys is first serialized into a byte array then encoded via Base64 into a web safe
-   * string.
-   *
-   * <p>The string representation of a vkey contains key values pairs separated by delimiter "@".
-   * Another delimiter ":" is put in between each key and value. The following is the complete
-   * format of the string: "kind:class_name@sql:encoded_sqlKey@ofy:encoded_ofyKey", where kind is
-   * required. The string representation may contain an encoded ofy key, or an encoded sql key, or
-   * both.
+   * <p>The string representation contains its kind and Base64 SQL key, in the following format:
+   * {@code kind:class_name@sql:encoded_sqlKey}.
    */
   public String stringify() {
     return Joiner.on(DELIMITER)
         .join(
             CLASS_TYPE + KV_SEPARATOR + getKind().getSimpleName(),
-            SQL_LOOKUP_KEY + KV_SEPARATOR + SerializeUtils.stringify(getSqlKey()));
+            LOOKUP_KEY + KV_SEPARATOR + SerializeUtils.stringify(getKey()));
   }
 
-  /**
-   * Constructs the readable string representation of a {@link VKey}.
-   *
-   * <p>This readable string representation of a vkey contains its kind and its sql key or ofy key,
-   * or both.
-   */
+  /** Constructs the readable string representation of a {@link VKey}. */
   @Override
   public String toString() {
-    return String.format("VKey<%s>(%s:%s)", getKind().getSimpleName(), SQL_LOOKUP_KEY, sqlKey);
+    return String.format("VKey<%s>(%s:%s)", getKind().getSimpleName(), LOOKUP_KEY, key);
   }
 }

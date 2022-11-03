@@ -48,7 +48,7 @@ public class Contact extends ContactBase implements ForeignKeyedEppResource {
 
   @Override
   public VKey<Contact> createVKey() {
-    return VKey.createSql(Contact.class, getRepoId());
+    return VKey.create(Contact.class, getRepoId());
   }
 
   @Override

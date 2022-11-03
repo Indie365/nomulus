@@ -144,7 +144,7 @@ public class Domain extends DomainBase implements ForeignKeyedEppResource {
 
   @Override
   public VKey<Domain> createVKey() {
-    return VKey.createSql(Domain.class, getRepoId());
+    return VKey.create(Domain.class, getRepoId());
   }
 
   @Override
@@ -153,7 +153,7 @@ public class Domain extends DomainBase implements ForeignKeyedEppResource {
   }
 
   public static VKey<Domain> createVKey(String repoId) {
-    return VKey.createSql(Domain.class, repoId);
+    return VKey.create(Domain.class, repoId);
   }
 
   /** An override of {@link EppResource#asBuilder} with tighter typing. */

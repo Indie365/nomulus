@@ -166,8 +166,8 @@ public class DomainTest {
             .build();
     insertInDb(historyEntry, oneTimeBill, recurringBill);
     recurringBillKey = recurringBill.createVKey();
-    VKey<PollMessage.Autorenew> autorenewPollKey = VKey.createSql(PollMessage.Autorenew.class, 3L);
-    VKey<PollMessage.OneTime> onetimePollKey = VKey.createSql(PollMessage.OneTime.class, 1L);
+    VKey<PollMessage.Autorenew> autorenewPollKey = VKey.create(PollMessage.Autorenew.class, 3L);
+    VKey<PollMessage.OneTime> onetimePollKey = VKey.create(PollMessage.OneTime.class, 1L);
     // Set up a new persisted domain entity.
     domain =
         persistResource(

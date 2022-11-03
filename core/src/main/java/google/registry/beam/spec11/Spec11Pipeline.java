@@ -133,9 +133,7 @@ public class Spec11Pipeline implements Serializable {
                     Domain domain =
                         jpaTm()
                             .transact(
-                                () ->
-                                    jpaTm()
-                                        .loadByKey(VKey.createSql(Domain.class, input.getKey())));
+                                () -> jpaTm().loadByKey(VKey.create(Domain.class, input.getKey())));
                     String emailAddress = input.getValue();
                     if (emailAddress == null) {
                       emailAddress = "";

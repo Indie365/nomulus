@@ -312,8 +312,7 @@ public class RdapEntitySearchAction extends RdapSearchActionBase {
                     () ->
                         replicaJpaTm()
                             .loadByKeyIfPresent(
-                                VKey.createSql(
-                                    Contact.class, partialStringQuery.getInitialString())));
+                                VKey.create(Contact.class, partialStringQuery.getInitialString())));
         contactList =
             (contact.isPresent() && shouldBeVisible(contact.get()))
                 ? ImmutableList.of(contact.get())

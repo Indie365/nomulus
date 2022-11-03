@@ -153,7 +153,7 @@ public class TransactionManagerTest {
   void update_succeeds() {
     tm().transact(() -> tm().insert(theEntity));
     TestEntity persisted =
-        tm().transact(() -> tm().loadByKey(VKey.createSql(TestEntity.class, theEntity.name)));
+        tm().transact(() -> tm().loadByKey(VKey.create(TestEntity.class, theEntity.name)));
     assertThat(persisted.data).isEqualTo("foo");
     theEntity.data = "bar";
     tm().transact(() -> tm().update(theEntity));
@@ -320,7 +320,7 @@ public class TransactionManagerTest {
                     () ->
                         tm().loadByEntitiesIfPresent(moreEntities).stream()
                             .map(TestEntity::createVKey)
-                            .map(VKey::getSqlKey)
+                            .map(VKey::getKey)
                             .collect(toImmutableList())))
         .containsExactly("entity2", "entity3");
   }
@@ -403,7 +403,7 @@ public class TransactionManagerTest {
 
     @Override
     public VKey<TestEntity> createVKey() {
-      return VKey.createSql(TestEntity.class, name);
+      return VKey.create(TestEntity.class, name);
     }
   }
 }

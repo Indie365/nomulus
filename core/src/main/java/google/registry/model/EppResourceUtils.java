@@ -358,7 +358,7 @@ public final class EppResourceUtils {
                     jpaTm()
                         .getEntityManager()
                         .createNativeQuery(HOST_LINKED_DOMAIN_QUERY)
-                        .setParameter("fkRepoId", key.getSqlKey())
+                        .setParameter("fkRepoId", key.getKey())
                         .setParameter("now", now.toDate());
               }
               if (limit != null) {

@@ -180,7 +180,7 @@ public class ResaveAllEppResourcesPipeline implements Serializable {
                 DateTime now = jpaTm().getTransactionTime();
                 ImmutableList<VKey<? extends EppResource>> keys =
                     Streams.stream(element.getValue())
-                        .map(repoId -> VKey.createSql(clazz, repoId))
+                        .map(repoId -> VKey.create(clazz, repoId))
                         .collect(toImmutableList());
                 ImmutableList<EppResource> mappedResources =
                     jpaTm().loadByKeys(keys).values().stream()

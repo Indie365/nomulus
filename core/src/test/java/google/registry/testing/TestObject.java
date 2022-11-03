@@ -40,7 +40,7 @@ public class TestObject extends ImmutableObject {
   }
 
   public VKey<TestObject> key() {
-    return VKey.createSql(TestObject.class, id);
+    return VKey.create(TestObject.class, id);
   }
 
   public static TestObject create(String id) {

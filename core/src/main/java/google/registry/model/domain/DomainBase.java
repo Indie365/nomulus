@@ -926,7 +926,7 @@ public class DomainBase extends EppResource
                       new IllegalArgumentException(
                           String.format(
                               "The package token %s does not exist",
-                              currentPackageToken.getSqlKey())));
+                              currentPackageToken.getKey())));
       checkArgument(
           token.getTokenType().equals(TokenType.PACKAGE),
           "The currentPackageToken must have a PACKAGE TokenType");

@@ -450,7 +450,7 @@ public class RdapDomainSearchAction extends RdapSearchActionBase {
                   @SuppressWarnings("unchecked")
                   Stream<String> resultStream = query.getResultStream();
                   return resultStream
-                      .map(repoId -> VKey.createSql(Host.class, repoId))
+                      .map(repoId -> VKey.create(Host.class, repoId))
                       .collect(toImmutableSet());
                 });
     return searchByNameserverRefs(hostKeys);
