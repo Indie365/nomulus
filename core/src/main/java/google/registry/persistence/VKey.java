@@ -14,7 +14,6 @@
 
 package google.registry.persistence;
 
-import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static google.registry.util.PreconditionsUtils.checkArgumentNotNull;
 import static java.util.function.Function.identity;
@@ -66,10 +65,10 @@ public class VKey<T> extends ImmutableObject implements Serializable {
   }
 
   /** Creates a {@link VKey} with supplied the SQL primary key. */
-  public static <T> VKey<T> create(Class<T> kind, Serializable sqlKey) {
+  public static <T> VKey<T> create(Class<T> kind, Serializable key) {
     checkArgumentNotNull(kind, "kind must not be null");
-    checkArgumentNotNull(sqlKey, "sqlKey must not be null");
-    return new VKey<>(kind, sqlKey);
+    checkArgumentNotNull(key, "key must not be null");
+    return new VKey<>(kind, key);
   }
 
   /**
@@ -85,7 +84,7 @@ public class VKey<T> extends ImmutableObject implements Serializable {
     String classString = kvs.get(CLASS_TYPE);
     if (classString == null) {
       throw new IllegalArgumentException(
-          String.format("%s does not contain the required key: %s", keyString, CLASS_TYPE));
+          String.format("\"%s\" missing from the string: %s", CLASS_TYPE, keyString));
     }
     @SuppressWarnings("unchecked")
     Class<T> classType = (Class<T>) EPP_RESOURCE_CLASS_MAP.get(classString);
@@ -95,7 +94,7 @@ public class VKey<T> extends ImmutableObject implements Serializable {
     String encodedString = kvs.get(LOOKUP_KEY);
     if (encodedString == null) {
       throw new IllegalArgumentException(
-          String.format("%s does not contain the required key: %s", keyString, LOOKUP_KEY));
+          String.format("\"%s\" missing from the string: %s", LOOKUP_KEY, keyString));
     }
     return VKey.create(classType, SerializeUtils.parse(Serializable.class, kvs.get(LOOKUP_KEY)));
   }
@@ -107,7 +106,6 @@ public class VKey<T> extends ImmutableObject implements Serializable {
 
   /** Returns the primary key. */
   public Serializable getKey() {
-    checkState(key != null, "Attempting obtain a null SQL key.");
     return this.key;
   }
 
