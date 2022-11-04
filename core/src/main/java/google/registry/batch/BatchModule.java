@@ -19,7 +19,6 @@ import static google.registry.batch.AsyncTaskEnqueuer.PARAM_REQUESTED_TIME;
 import static google.registry.batch.AsyncTaskEnqueuer.PARAM_RESAVE_TIMES;
 import static google.registry.batch.AsyncTaskEnqueuer.PARAM_RESOURCE_KEY;
 import static google.registry.batch.AsyncTaskEnqueuer.QUEUE_ASYNC_ACTIONS;
-import static google.registry.batch.AsyncTaskEnqueuer.QUEUE_ASYNC_DELETE;
 import static google.registry.batch.AsyncTaskEnqueuer.QUEUE_ASYNC_HOST_RENAME;
 import static google.registry.batch.CannedScriptExecutionAction.SCRIPT_PARAM;
 import static google.registry.request.RequestParameters.extractBooleanParameter;
@@ -133,12 +132,6 @@ public class BatchModule {
   @Named(QUEUE_ASYNC_ACTIONS)
   static Queue provideAsyncActionsPushQueue() {
     return getQueue(QUEUE_ASYNC_ACTIONS);
-  }
-
-  @Provides
-  @Named(QUEUE_ASYNC_DELETE)
-  static Queue provideAsyncDeletePullQueue() {
-    return getQueue(QUEUE_ASYNC_DELETE);
   }
 
   @Provides

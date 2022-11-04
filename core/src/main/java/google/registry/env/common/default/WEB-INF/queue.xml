@@ -19,11 +19,6 @@
   </queue>
 
   <queue>
-    <name>async-delete-pull</name>
-    <mode>pull</mode>
-  </queue>
-
-  <queue>
     <name>async-host-rename-pull</name>
     <mode>pull</mode>
   </queue>

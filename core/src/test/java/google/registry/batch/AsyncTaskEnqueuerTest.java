@@ -19,7 +19,6 @@ import static google.registry.batch.AsyncTaskEnqueuer.PARAM_REQUESTED_TIME;
 import static google.registry.batch.AsyncTaskEnqueuer.PARAM_RESAVE_TIMES;
 import static google.registry.batch.AsyncTaskEnqueuer.PARAM_RESOURCE_KEY;
 import static google.registry.batch.AsyncTaskEnqueuer.QUEUE_ASYNC_ACTIONS;
-import static google.registry.batch.AsyncTaskEnqueuer.QUEUE_ASYNC_DELETE;
 import static google.registry.batch.AsyncTaskEnqueuer.QUEUE_ASYNC_HOST_RENAME;
 import static google.registry.testing.DatabaseHelper.persistActiveContact;
 import static google.registry.testing.TestLogHandlerUtils.assertLogMessage;
@@ -71,9 +70,7 @@ public class AsyncTaskEnqueuerTest {
   public static AsyncTaskEnqueuer createForTesting(
       CloudTasksUtils cloudTasksUtils, FakeClock clock, Duration asyncDeleteDelay) {
     return new AsyncTaskEnqueuer(
-        getQueue(QUEUE_ASYNC_DELETE),
         getQueue(QUEUE_ASYNC_HOST_RENAME),
-        asyncDeleteDelay,
         cloudTasksUtils,
         new Retrier(new FakeSleeper(clock), 1));
   }
