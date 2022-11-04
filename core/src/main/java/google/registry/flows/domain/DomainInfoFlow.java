@@ -105,6 +105,7 @@ public final class DomainInfoFlow implements Flow {
     verifyOptionalAuthInfo(authInfo, domain);
     flowCustomLogic.afterValidation(
         AfterValidationParameters.newBuilder().setDomain(domain).build());
+    HostsRequest hostsRequest = ((Info) resourceCommand).getHostsRequest();
     // Registrars can only see a few fields on unauthorized domains.
     // This is a policy decision that is left up to us by the rfcs.
     DomainInfoData.Builder infoBuilder =
@@ -112,24 +113,24 @@ public final class DomainInfoFlow implements Flow {
             .setDomainName(domain.getDomainName())
             .setRepoId(domain.getRepoId())
             .setCurrentSponsorClientId(domain.getCurrentSponsorRegistrarId())
+            .setStatusValues(domain.getStatusValues())
+            .setCreationTime(domain.getCreationTime())
+            .setLastEppUpdateTime(domain.getLastEppUpdateTime())
+            .setNameservers(
+                hostsRequest.requestDelegated() ? domain.loadNameserverHostNames() : null)
+            .setRegistrationExpirationTime(domain.getRegistrationExpirationTime())
             .setRegistrant(
                 tm().transact(() -> tm().loadByKey(domain.getRegistrant())).getContactId());
     // If authInfo is non-null, then the caller is authorized to see the full information since we
     // will have already verified the authInfo is valid.
     if (registrarId.equals(domain.getCurrentSponsorRegistrarId()) || authInfo.isPresent()) {
-      HostsRequest hostsRequest = ((Info) resourceCommand).getHostsRequest();
       infoBuilder
-          .setStatusValues(domain.getStatusValues())
           .setContacts(
               tm().transact(() -> loadForeignKeyedDesignatedContacts(domain.getContacts())))
-          .setNameservers(hostsRequest.requestDelegated() ? domain.loadNameserverHostNames() : null)
           .setSubordinateHosts(
               hostsRequest.requestSubordinate() ? domain.getSubordinateHosts() : null)
           .setCreationClientId(domain.getCreationRegistrarId())
-          .setCreationTime(domain.getCreationTime())
           .setLastEppUpdateClientId(domain.getLastEppUpdateRegistrarId())
-          .setLastEppUpdateTime(domain.getLastEppUpdateTime())
-          .setRegistrationExpirationTime(domain.getRegistrationExpirationTime())
           .setLastTransferTime(domain.getLastTransferTime())
           .setAuthInfo(domain.getAuthInfo());
     }
