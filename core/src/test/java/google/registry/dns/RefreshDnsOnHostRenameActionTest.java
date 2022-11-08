@@ -53,7 +53,7 @@ public class RefreshDnsOnHostRenameActionTest {
   private RefreshDnsOnHostRenameAction action;
 
   private void createAction(String hostKey) {
-    action = new RefreshDnsOnHostRenameAction(hostKey, clock, response, dnsQueue);
+    action = new RefreshDnsOnHostRenameAction(hostKey, response, dnsQueue);
   }
 
   private void assertDnsTasksEnqueued(String... domains) {
