@@ -17,11 +17,11 @@ package google.registry.dns;
 import static google.registry.dns.RefreshDnsOnHostRenameAction.PATH;
 import static google.registry.model.EppResourceUtils.getLinkedDomainKeys;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
-import static google.registry.util.DateTimeUtils.latestOf;
 import static javax.servlet.http.HttpServletResponse.SC_NO_CONTENT;
 
 import com.google.common.net.MediaType;
 import google.registry.model.EppResourceUtils;
+import google.registry.model.domain.Domain;
 import google.registry.model.host.Host;
 import google.registry.persistence.VKey;
 import google.registry.request.Action;
@@ -29,7 +29,6 @@ import google.registry.request.Action.Service;
 import google.registry.request.Parameter;
 import google.registry.request.Response;
 import google.registry.request.auth.Auth;
-import google.registry.util.Clock;
 import javax.inject.Inject;
 import org.joda.time.DateTime;
 
@@ -44,52 +43,48 @@ public class RefreshDnsOnHostRenameAction implements Runnable {
   public static final String PARAM_HOST_KEY = "hostKey";
   public static final String PATH = "/_dr/task/refreshDnsOnHostRename";
 
-  private final Clock clock;
   private final VKey<Host> hostKey;
   private final Response response;
   private final DnsQueue dnsQueue;
 
   @Inject
   RefreshDnsOnHostRenameAction(
-      @Parameter(PARAM_HOST_KEY) String hostKey,
-      Clock clock,
-      Response response,
-      DnsQueue dnsQueue) {
+      @Parameter(PARAM_HOST_KEY) String hostKey, Response response, DnsQueue dnsQueue) {
     this.hostKey = VKey.createEppVKeyFromString(hostKey);
-    this.clock = clock;
     this.response = response;
     this.dnsQueue = dnsQueue;
   }
 
   @Override
   public void run() {
-    DateTime now = clock.nowUtc();
-    Host host = tm().transact(() -> tm().loadByKeyIfPresent(hostKey)).orElse(null);
-    boolean hostValid = true;
-    String failureMessage = null;
-    if (host == null) {
-      hostValid = false;
-      failureMessage = String.format("Host to refresh does not exist: %s", hostKey);
-    } else if (EppResourceUtils.isDeleted(
-        host, latestOf(now, host.getUpdateTimestamp().getTimestamp()))) {
-      hostValid = false;
-      failureMessage = String.format("Host to refresh is already deleted: %s", host.getHostName());
-    } else {
-      enqueueDomainsForRefresh(host);
-    }
+    tm().transact(
+            () -> {
+              DateTime now = tm().getTransactionTime();
+              Host host = tm().loadByKeyIfPresent(hostKey).orElse(null);
+              boolean hostValid = true;
+              String failureMessage = null;
+              if (host == null) {
+                hostValid = false;
+                failureMessage = String.format("Host to refresh does not exist: %s", hostKey);
+              } else if (EppResourceUtils.isDeleted(host, now)) {
+                hostValid = false;
+                failureMessage =
+                    String.format("Host to refresh is already deleted: %s", host.getHostName());
+              } else {
+                getLinkedDomainKeys(
+                        host.createVKey(), host.getUpdateTimestamp().getTimestamp(), null)
+                    .stream()
+                    .map(domainKey -> tm().loadByKey(domainKey))
+                    .filter(Domain::shouldPublishToDns)
+                    .forEach(domain -> dnsQueue.addDomainRefreshTask(domain.getDomainName()));
+              }
 
-    if (!hostValid) {
-      // Set the response status code to be 204 so to not retry.
-      response.setContentType(MediaType.PLAIN_TEXT_UTF_8);
-      response.setStatus(SC_NO_CONTENT);
-      response.setPayload(failureMessage);
-    }
-  }
-
-  private void enqueueDomainsForRefresh(Host host) {
-    getLinkedDomainKeys(host.createVKey(), host.getUpdateTimestamp().getTimestamp(), null).stream()
-        .map(domainKey -> tm().transact(() -> tm().loadByKeyIfPresent(domainKey)).orElse(null))
-        .filter(domain -> domain != null && domain.shouldPublishToDns())
-        .forEach(domain -> dnsQueue.addDomainRefreshTask(domain.getDomainName()));
+              if (!hostValid) {
+                // Set the response status code to be 204 so to not retry.
+                response.setContentType(MediaType.PLAIN_TEXT_UTF_8);
+                response.setStatus(SC_NO_CONTENT);
+                response.setPayload(failureMessage);
+              }
+            });
   }
 }
