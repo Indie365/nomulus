@@ -843,7 +843,8 @@ CREATE TABLE public."RegistrarPoc" (
     visible_in_whois_as_admin boolean NOT NULL,
     visible_in_whois_as_tech boolean NOT NULL,
     registry_lock_email_address text,
-    registrar_id text NOT NULL
+    registrar_id text NOT NULL,
+    login_email_address text
 );
 
 

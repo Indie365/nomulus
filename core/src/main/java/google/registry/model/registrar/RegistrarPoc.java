@@ -97,7 +97,12 @@ public class RegistrarPoc extends ImmutableObject implements Jsonifiable, Unsafe
   /** The name of the contact. */
   String name;
 
-  /** The email address of the contact. */
+  /**
+   * The contact email address of the contact.
+   *
+   * <p>This is different from the login email which is assgined to the regstrar and cannot be
+   * changed.
+   */
   @Id String emailAddress;
 
   @Id String registrarId;
@@ -124,7 +129,11 @@ public class RegistrarPoc extends ImmutableObject implements Jsonifiable, Unsafe
    *
    * @see com.google.appengine.api.users.User#getUserId()
    */
+  @Deprecated
   String gaeUserId;
+
+  /** A dasher domain email that was assigned to the registrar for login purpose. */
+  String loginEmailAddress;
 
   /**
    * Whether this contact is publicly visible in WHOIS registrar query results as an Admin contact.
