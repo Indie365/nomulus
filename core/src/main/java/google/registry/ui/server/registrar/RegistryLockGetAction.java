@@ -123,8 +123,8 @@ public final class RegistryLockGetAction implements JsonGetAction {
   static Optional<RegistrarPoc> getContactMatchingLogin(User user, Registrar registrar) {
     ImmutableList<RegistrarPoc> matchingContacts =
         registrar.getContacts().stream()
-            .filter(contact -> contact.getGaeUserId() != null)
-            .filter(contact -> Objects.equals(contact.getGaeUserId(), user.getUserId()))
+            .filter(contact -> contact.getLoginEmailAddress() != null)
+            .filter(contact -> Objects.equals(contact.getLoginEmailAddress(), user.getEmail()))
             .collect(toImmutableList());
     if (matchingContacts.size() > 1) {
       ImmutableList<String> matchingEmails =
@@ -188,7 +188,7 @@ public final class RegistryLockGetAction implements JsonGetAction {
         getLockedDomains(registrarId, isAdmin));
   }
 
-  private ImmutableList<ImmutableMap<String, ?>> getLockedDomains(
+  private static ImmutableList<ImmutableMap<String, ?>> getLockedDomains(
       String registrarId, boolean isAdmin) {
     return jpaTm()
         .transact(
@@ -199,7 +199,7 @@ public final class RegistryLockGetAction implements JsonGetAction {
                     .collect(toImmutableList()));
   }
 
-  private ImmutableMap<String, ?> lockToMap(RegistryLock lock, boolean isAdmin) {
+  private static ImmutableMap<String, ?> lockToMap(RegistryLock lock, boolean isAdmin) {
     DateTime now = jpaTm().getTransactionTime();
     return new ImmutableMap.Builder<String, Object>()
         .put(DOMAIN_NAME_PARAM, lock.getDomainName())

@@ -316,10 +316,10 @@ public class AuthenticatedRegistrarAccessor {
                   jpaTm()
                       .query(
                           "SELECT r FROM Registrar r INNER JOIN RegistrarPoc rp ON "
-                              + "r.registrarId = rp.registrarId WHERE rp.gaeUserId = "
-                              + ":gaeUserId AND r.state != :state",
+                              + "r.registrarId = rp.registrarId WHERE rp.loginEmailAddress = "
+                              + ":email AND r.state != :state",
                           Registrar.class)
-                      .setParameter("gaeUserId", user.getUserId())
+                      .setParameter("email", user.getEmail())
                       .setParameter("state", State.DISABLED)
                       .getResultStream()
                       .forEach(registrar -> builder.put(registrar.getRegistrarId(), Role.OWNER)));
