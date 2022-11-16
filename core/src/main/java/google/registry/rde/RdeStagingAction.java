@@ -291,9 +291,6 @@ public final class RdeStagingAction implements Runnable {
                                 .put("registryEnvironment", RegistryEnvironment.get().name())
                                 .put("workerMachineType", machineType)
                                 .put("numWorkers", String.valueOf(numWorkers))
-                                .put(
-                                    "jpaTransactionManagerType",
-                                    JpaTransactionManagerType.READ_ONLY_REPLICA.toString())
                                 // TODO (jianglai): Investigate turning off public IPs (for which
                                 // there is a quota) in order to increase the total number of
                                 // workers allowed (also under quota).
