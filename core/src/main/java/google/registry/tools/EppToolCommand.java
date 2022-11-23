@@ -48,7 +48,7 @@ import java.util.Objects;
 
 /** A command to execute an epp command. */
 abstract class EppToolCommand extends ConfirmingCommand
-    implements CommandWithConnection, CommandWithRemoteApi {
+    implements CommandWithConnection, CommandWithSql {
 
   @Parameter(
       names = {"-u", "--superuser"},

@@ -27,7 +27,7 @@ import javax.annotation.Nullable;
  * lists.
  */
 public abstract class CreateOrUpdateReservedListCommand extends ConfirmingCommand
-    implements CommandWithRemoteApi {
+    implements CommandWithSql {
 
   static final FluentLogger logger = FluentLogger.forEnclosingClass();
 

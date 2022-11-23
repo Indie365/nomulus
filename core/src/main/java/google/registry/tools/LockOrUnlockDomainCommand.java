@@ -36,7 +36,7 @@ import javax.inject.Inject;
 
 /** Shared base class for commands to registry lock or unlock a domain via EPP. */
 public abstract class LockOrUnlockDomainCommand extends ConfirmingCommand
-    implements CommandWithRemoteApi {
+    implements CommandWithSql {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 

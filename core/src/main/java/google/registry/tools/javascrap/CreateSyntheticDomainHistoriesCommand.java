@@ -32,7 +32,7 @@ import google.registry.model.reporting.HistoryEntry;
 import google.registry.persistence.VKey;
 import google.registry.tools.AppEngineConnection;
 import google.registry.tools.CommandWithConnection;
-import google.registry.tools.CommandWithRemoteApi;
+import google.registry.tools.CommandWithSql;
 import google.registry.tools.ConfirmingCommand;
 import google.registry.tools.RemoteApiOptionsUtil;
 import java.io.ByteArrayInputStream;
@@ -75,7 +75,7 @@ import org.joda.time.DateTime;
     separators = " =",
     commandDescription = "Create synthetic domain history objects to fix RDE.")
 public class CreateSyntheticDomainHistoriesCommand extends ConfirmingCommand
-    implements CommandWithRemoteApi, CommandWithConnection {
+    implements CommandWithSql, CommandWithConnection {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 

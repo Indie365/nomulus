@@ -24,7 +24,7 @@ import google.registry.model.billing.BillingEvent.Cancellation;
 import google.registry.model.billing.BillingEvent.OneTime;
 import google.registry.persistence.VKey;
 import google.registry.persistence.transaction.QueryComposer.Comparator;
-import google.registry.tools.CommandWithRemoteApi;
+import google.registry.tools.CommandWithSql;
 import google.registry.tools.ConfirmingCommand;
 import google.registry.tools.params.LongParameter;
 import java.util.List;
@@ -38,7 +38,7 @@ import java.util.List;
  */
 @Parameters(separators = " =", commandDescription = "Manually create Cancellations for OneTimes.")
 public class CreateCancellationsForOneTimesCommand extends ConfirmingCommand
-    implements CommandWithRemoteApi {
+    implements CommandWithSql {
 
   @Parameter(
       description = "Space-delimited billing event ID(s) to cancel",

@@ -28,7 +28,7 @@ import org.joda.money.CurrencyUnit;
  * lists.
  */
 abstract class CreateOrUpdatePremiumListCommand extends ConfirmingCommand
-    implements CommandWithRemoteApi {
+    implements CommandWithSql {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
   protected List<String> inputData;

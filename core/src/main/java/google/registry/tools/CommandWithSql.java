@@ -15,9 +15,9 @@
 package google.registry.tools;
 
 /**
- * Marker interface for commands that use the remote api.
+ * Marker interface for commands that use the SQL database.
  *
- * <p>Just implementing this is sufficient to use the remote api; {@link RegistryTool} will install
- * it as needed.
+ * <p>Just implementing this is sufficient to use the DB; {@link RegistryTool} will instantiate it
+ * as needed.
  */
-public interface CommandWithRemoteApi extends Command {}
+public interface CommandWithSql extends Command {}
