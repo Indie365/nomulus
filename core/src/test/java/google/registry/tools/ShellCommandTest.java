@@ -156,8 +156,8 @@ class ShellCommandTest {
 
   @Test
   void testMultipleCommandInvocations() throws Exception {
-    try (RegistryCli cli =
-        new RegistryCli("unittest", ImmutableMap.of("test_command", TestCommand.class))) {
+    RegistryCli cli =
+        new RegistryCli("unittest", ImmutableMap.of("test_command", TestCommand.class));
       RegistryToolEnvironment.UNITTEST.setup(systemPropertyExtension);
       cli.setEnvironment(RegistryToolEnvironment.UNITTEST);
       cli.run(new String[] {"test_command", "-x", "xval", "arg1", "arg2"});
@@ -168,17 +168,16 @@ class ShellCommandTest {
               ImmutableList.of("xval", "arg1", "arg2"),
               ImmutableList.of("otherxval", "arg3"),
               ImmutableList.of("default value"));
-    }
+
   }
 
   @Test
   void testNonExistentCommand() {
-    try (RegistryCli cli =
-        new RegistryCli("unittest", ImmutableMap.of("test_command", TestCommand.class))) {
+    RegistryCli cli =
+        new RegistryCli("unittest", ImmutableMap.of("test_command", TestCommand.class));
 
       cli.setEnvironment(RegistryToolEnvironment.UNITTEST);
       assertThrows(MissingCommandException.class, () -> cli.run(new String[] {"bad_command"}));
-    }
   }
 
   private void performJCommanderCompletorTest(
