@@ -53,10 +53,8 @@ import google.registry.model.transfer.TransferStatus;
 import google.registry.testing.AppEngineExtension;
 import google.registry.testing.FakeClock;
 import google.registry.testing.FakeResponse;
-import google.registry.testing.FakeSleeper;
 import google.registry.testing.FullFieldsTestEntityHelper;
 import google.registry.testing.TestCacheExtension;
-import google.registry.util.Retrier;
 import google.registry.whois.WhoisMetrics.WhoisMetric;
 import java.io.IOException;
 import java.io.Reader;
@@ -97,7 +95,6 @@ public class WhoisActionTest {
     whoisAction.metricBuilder = WhoisMetric.builderForRequest(clock);
     whoisAction.disclaimer =
         "Doodle Disclaimer\nI exist so that carriage return\nin disclaimer can be tested.";
-    whoisAction.retrier = new Retrier(new FakeSleeper(clock), 3);
     return whoisAction;
   }
 
