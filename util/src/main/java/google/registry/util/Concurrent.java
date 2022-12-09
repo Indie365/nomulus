@@ -14,7 +14,6 @@
 
 package google.registry.util;
 
-import static com.google.appengine.api.ThreadManager.currentRequestThreadFactory;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.lang.Math.max;
@@ -30,7 +29,6 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
-import java.util.concurrent.ThreadFactory;
 import java.util.function.Function;
 
 /** Utilities for multithreaded operations in App Engine requests. */
@@ -67,16 +65,10 @@ public final class Concurrent {
     checkNotNull(funk);
     checkNotNull(items);
     int threadCount = max(1, min(items.size(), maxThreadCount));
-    ThreadFactory threadFactory = threadCount > 1 ? currentRequestThreadFactory() : null;
-    if (threadFactory == null) {
-      // Fall back to non-concurrent transform if we only want 1 thread, or if we can't get an App
-      // Engine thread factory (most likely caused by hitting this code from a command-line tool).
-      // Default Java system threads are not compatible with code that needs to interact with App
-      // Engine (such as Objectify), which we often have in funk when calling
-      // Concurrent.transform(). For more info see: http://stackoverflow.com/questions/15976406
+    if (threadCount == 1) {
       return items.stream().map(funk).collect(toImmutableList());
     }
-    ExecutorService executor = newFixedThreadPool(threadCount, threadFactory);
+    ExecutorService executor = newFixedThreadPool(threadCount);
     try {
       List<Future<B>> futures = new ArrayList<>();
       for (final A item : items) {
