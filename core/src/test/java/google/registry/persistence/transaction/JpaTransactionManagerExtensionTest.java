@@ -15,8 +15,8 @@
 package google.registry.persistence.transaction;
 
 import static com.google.common.truth.Truth.assertThat;
-import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
 import static google.registry.persistence.transaction.TransactionManagerFactory.replicaJpaTm;
+import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 import static google.registry.testing.DatabaseHelper.insertInDb;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -44,19 +44,15 @@ public class JpaTransactionManagerExtensionTest {
     assertThrows(
         PersistenceException.class,
         () ->
-            jpaTm()
-                .transact(
+            tm().transact(
                     () ->
-                        jpaTm()
-                            .getEntityManager()
+                        tm().getEntityManager()
                             .createNativeQuery("SELECT * FROM NoneExistentTable")
                             .getResultList()));
-    jpaTm()
-        .transact(
+    tm().transact(
             () -> {
               List<?> results =
-                  jpaTm()
-                      .getEntityManager()
+                  tm().getEntityManager()
                       .createNativeQuery("SELECT * FROM \"TestEntity\"")
                       .getResultList();
               assertThat(results).isEmpty();
@@ -81,7 +77,7 @@ public class JpaTransactionManagerExtensionTest {
     TestEntity original = new TestEntity("key", "value");
     insertInDb(original);
     TestEntity retrieved =
-        jpaTm().transact(() -> jpaTm().getEntityManager().find(TestEntity.class, "key"));
+        tm().transact(() -> tm().getEntityManager().find(TestEntity.class, "key"));
     assertThat(retrieved).isEqualTo(original);
   }
 

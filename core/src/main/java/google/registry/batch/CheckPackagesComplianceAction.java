@@ -14,7 +14,6 @@
 package google.registry.batch;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 
 import com.google.common.collect.ImmutableList;
@@ -25,6 +24,7 @@ import google.registry.model.domain.token.AllocationToken;
 import google.registry.model.domain.token.PackagePromotion;
 import google.registry.model.registrar.Registrar;
 import google.registry.model.registrar.RegistrarPoc;
+import google.registry.persistence.transaction.TransactionManagerFactory;
 import google.registry.request.Action;
 import google.registry.request.Action.Service;
 import google.registry.request.auth.Auth;
@@ -71,7 +71,7 @@ public class CheckPackagesComplianceAction implements Runnable {
               for (PackagePromotion packagePromo : packages) {
                 Long creates =
                     (Long)
-                        jpaTm()
+                        TransactionManagerFactory.tm()
                             .query(
                                 "SELECT COUNT(*) FROM DomainHistory WHERE current_package_token ="
                                     + " :token AND modificationTime >= :lastBilling AND type ="

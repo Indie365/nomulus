@@ -15,7 +15,6 @@
 package google.registry.tools;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 
 import com.beust.jcommander.Parameter;
@@ -23,6 +22,7 @@ import google.registry.model.domain.token.AllocationToken;
 import google.registry.model.domain.token.AllocationToken.TokenType;
 import google.registry.model.domain.token.PackagePromotion;
 import google.registry.persistence.VKey;
+import google.registry.persistence.transaction.TransactionManagerFactory;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -87,7 +87,7 @@ abstract class CreateOrUpdatePackagePromotionCommand extends MutatingCommand {
   @Override
   protected final void init() throws Exception {
     for (String token : mainParameters) {
-      jpaTm()
+      TransactionManagerFactory.tm()
           .transact(
               () -> {
                 PackagePromotion oldPackage = getOldPackagePromotion(token);

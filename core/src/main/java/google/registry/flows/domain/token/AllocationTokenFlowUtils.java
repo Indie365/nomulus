@@ -15,7 +15,6 @@
 package google.registry.flows.domain.token;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 
 import com.google.common.base.Strings;
@@ -39,6 +38,7 @@ import google.registry.model.domain.token.AllocationTokenExtension;
 import google.registry.model.reporting.HistoryEntry.HistoryEntryId;
 import google.registry.model.tld.Registry;
 import google.registry.persistence.VKey;
+import google.registry.persistence.transaction.TransactionManagerFactory;
 import java.util.List;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -229,8 +229,8 @@ public class AllocationTokenFlowUtils {
     // the Recurring billing event is reloaded later in the renew flow, so we synchronize changed
     // RecurringBillingEvent with storage manually
     tm().put(newRecurringBillingEvent);
-    jpaTm().getEntityManager().flush();
-    jpaTm().getEntityManager().clear();
+    TransactionManagerFactory.tm().getEntityManager().flush();
+    TransactionManagerFactory.tm().getEntityManager().clear();
 
     // Remove current package token
     return domain

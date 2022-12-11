@@ -23,7 +23,6 @@ import static google.registry.model.common.Cursor.CursorType.RECURRING_BILLING;
 import static google.registry.model.domain.Period.Unit.YEARS;
 import static google.registry.model.reporting.HistoryEntry.Type.DOMAIN_AUTORENEW;
 import static google.registry.persistence.transaction.QueryComposer.Comparator.EQ;
-import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 import static google.registry.util.CollectionUtils.union;
 import static google.registry.util.DateTimeUtils.START_OF_TIME;
@@ -50,6 +49,7 @@ import google.registry.model.reporting.DomainTransactionRecord;
 import google.registry.model.reporting.DomainTransactionRecord.TransactionReportField;
 import google.registry.model.tld.Registry;
 import google.registry.persistence.VKey;
+import google.registry.persistence.transaction.TransactionManagerFactory;
 import google.registry.request.Action;
 import google.registry.request.Parameter;
 import google.registry.request.Response;
@@ -118,14 +118,14 @@ public class ExpandRecurringBillingEventsAction implements Runnable {
     do {
       final long prevMaxProcessedRecurrenceId = maxProcessedRecurrenceId;
       sqlBatchResults =
-          jpaTm()
+          TransactionManagerFactory.tm()
               .transact(
                   () -> {
                     Set<String> expandedDomains = newHashSet();
                     int batchBillingEventsSaved = 0;
                     long maxRecurrenceId = prevMaxProcessedRecurrenceId;
                     List<Recurring> recurrings =
-                        jpaTm()
+                        TransactionManagerFactory.tm()
                             .query(
                                 "FROM BillingRecurrence "
                                     + "WHERE eventTime <= :executeTime "

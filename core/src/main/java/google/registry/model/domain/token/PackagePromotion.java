@@ -15,7 +15,6 @@
 package google.registry.model.domain.token;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 import static google.registry.util.DateTimeUtils.END_OF_TIME;
 import static google.registry.util.PreconditionsUtils.checkArgumentNotNull;
@@ -25,6 +24,7 @@ import google.registry.model.ImmutableObject;
 import google.registry.model.domain.token.AllocationToken.TokenType;
 import google.registry.persistence.VKey;
 import google.registry.persistence.converter.JodaMoneyType;
+import google.registry.persistence.transaction.TransactionManagerFactory;
 import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.persistence.Column;
@@ -101,8 +101,8 @@ public class PackagePromotion extends ImmutableObject implements Buildable {
 
   /** Loads and returns a PackagePromotion entity by its token string directly from Cloud SQL. */
   public static Optional<PackagePromotion> loadByTokenString(String tokenString) {
-    jpaTm().assertInTransaction();
-    return jpaTm()
+    TransactionManagerFactory.tm().assertInTransaction();
+    return TransactionManagerFactory.tm()
         .query("FROM PackagePromotion WHERE token = :token", PackagePromotion.class)
         .setParameter("token", VKey.create(AllocationToken.class, tokenString))
         .getResultStream()

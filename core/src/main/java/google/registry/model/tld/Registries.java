@@ -22,7 +22,6 @@ import static com.google.common.base.Strings.emptyToNull;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Maps.filterValues;
 import static google.registry.model.CacheUtils.memoizeWithShortExpiration;
-import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 import static google.registry.util.CollectionUtils.entriesToImmutableMap;
 import static google.registry.util.PreconditionsUtils.checkArgumentNotNull;
@@ -34,6 +33,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Streams;
 import com.google.common.net.InternetDomainName;
 import google.registry.model.tld.Registry.TldType;
+import google.registry.persistence.transaction.TransactionManagerFactory;
 import google.registry.util.DomainNameUtils;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -59,7 +59,8 @@ public final class Registries {
         () ->
             tm().transact(
                     () -> {
-                      EntityManager entityManager = jpaTm().getEntityManager();
+                      EntityManager entityManager =
+                          TransactionManagerFactory.tm().getEntityManager();
                       Stream<?> resultStream =
                           entityManager
                               .createQuery("SELECT tldStr, tldType FROM Tld")

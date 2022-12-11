@@ -18,8 +18,8 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static google.registry.config.RegistryConfig.getEppResourceCachingDuration;
 import static google.registry.config.RegistryConfig.getEppResourceMaxCachedEntries;
-import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
 import static google.registry.persistence.transaction.TransactionManagerFactory.replicaJpaTm;
+import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.LoadingCache;
@@ -108,7 +108,7 @@ public final class ForeignKeyUtils {
   private static <E extends EppResource> ImmutableMap<String, MostRecentResource> load(
       Class<E> clazz, Collection<String> foreignKeys, boolean useReplicaJpaTm) {
     String fkProperty = RESOURCE_TYPE_TO_FK_PROPERTY.get(clazz);
-    JpaTransactionManager jpaTmToUse = useReplicaJpaTm ? replicaJpaTm() : jpaTm();
+    JpaTransactionManager jpaTmToUse = useReplicaJpaTm ? replicaJpaTm() : tm();
     return jpaTmToUse.transact(
         () ->
             jpaTmToUse

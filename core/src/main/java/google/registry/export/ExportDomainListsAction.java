@@ -16,7 +16,6 @@ package google.registry.export;
 
 import static com.google.common.base.Verify.verifyNotNull;
 import static google.registry.model.tld.Registries.getTldsOfType;
-import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 import static google.registry.request.Action.Method.POST;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -30,6 +29,7 @@ import google.registry.config.RegistryConfig.Config;
 import google.registry.gcs.GcsUtils;
 import google.registry.model.tld.Registry;
 import google.registry.model.tld.Registry.TldType;
+import google.registry.persistence.transaction.TransactionManagerFactory;
 import google.registry.request.Action;
 import google.registry.request.auth.Auth;
 import google.registry.storage.drive.DriveConnection;
@@ -89,7 +89,7 @@ public class ExportDomainListsAction implements Runnable {
                           // DateTime are persisted as timestamp_z in SQL. It is only the
                           // validation that compares the Java types, and only with the first
                           // field that compares with the substituted value.
-                          jpaTm()
+                          TransactionManagerFactory.tm()
                               .query(
                                   "SELECT domainName FROM Domain "
                                       + "WHERE tld = :tld "

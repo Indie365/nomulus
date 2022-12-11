@@ -17,7 +17,6 @@ package google.registry.tools.server;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.io.BaseEncoding.base16;
 import static google.registry.model.EppResourceUtils.loadAtPointInTime;
-import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 import static google.registry.request.Action.Method.POST;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -32,6 +31,7 @@ import google.registry.gcs.GcsUtils;
 import google.registry.model.domain.Domain;
 import google.registry.model.domain.secdns.DomainDsData;
 import google.registry.model.host.Host;
+import google.registry.persistence.transaction.TransactionManagerFactory;
 import google.registry.request.Action;
 import google.registry.request.HttpException.BadRequestException;
 import google.registry.request.JsonActionRunner;
@@ -144,7 +144,8 @@ public class GenerateZoneFilesAction implements Runnable, JsonActionRunner.JsonA
   }
 
   private void generateForTld(String tld, DateTime exportTime) {
-    ImmutableList<String> stanzas = jpaTm().transact(() -> getStanzasForTld(tld, exportTime));
+    ImmutableList<String> stanzas =
+        TransactionManagerFactory.tm().transact(() -> getStanzasForTld(tld, exportTime));
     BlobId outputBlobId = BlobId.of(bucket, String.format(FILENAME_FORMAT, tld, exportTime));
     try (OutputStream gcsOutput = gcsUtils.openOutputStream(outputBlobId);
         Writer osWriter = new OutputStreamWriter(gcsOutput, UTF_8);
@@ -160,7 +161,7 @@ public class GenerateZoneFilesAction implements Runnable, JsonActionRunner.JsonA
   private ImmutableList<String> getStanzasForTld(String tld, DateTime exportTime) {
     ImmutableList.Builder<String> result = new ImmutableList.Builder<>();
     ScrollableResults scrollableResults =
-        jpaTm()
+        TransactionManagerFactory.tm()
             .query("FROM Domain WHERE tld = :tld AND deletionTime > :exportTime")
             .setParameter("tld", tld)
             .setParameter("exportTime", exportTime)
@@ -171,8 +172,8 @@ public class GenerateZoneFilesAction implements Runnable, JsonActionRunner.JsonA
       Domain domain = (Domain) scrollableResults.get(0);
       populateStanzasForDomain(domain, exportTime, result);
       if (i == 0) {
-        jpaTm().getEntityManager().flush();
-        jpaTm().getEntityManager().clear();
+        TransactionManagerFactory.tm().getEntityManager().flush();
+        TransactionManagerFactory.tm().getEntityManager().clear();
       }
     }
     return result.build();

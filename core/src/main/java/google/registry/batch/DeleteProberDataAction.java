@@ -21,7 +21,6 @@ import static google.registry.batch.BatchModule.PARAM_DRY_RUN;
 import static google.registry.config.RegistryEnvironment.PRODUCTION;
 import static google.registry.model.reporting.HistoryEntry.Type.DOMAIN_DELETE;
 import static google.registry.model.tld.Registries.getTldsOfType;
-import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 import static google.registry.request.Action.Method.POST;
 import static google.registry.request.RequestParameters.PARAM_TLDS;
@@ -39,6 +38,7 @@ import google.registry.model.EppResourceUtils;
 import google.registry.model.domain.Domain;
 import google.registry.model.domain.DomainHistory;
 import google.registry.model.tld.Registry.TldType;
+import google.registry.persistence.transaction.TransactionManagerFactory;
 import google.registry.request.Action;
 import google.registry.request.Parameter;
 import google.registry.request.auth.Auth;
@@ -140,7 +140,8 @@ public class DeleteProberDataAction implements Runnable {
   private void runSqlJob(ImmutableSet<String> deletableTlds) {
     AtomicInteger softDeletedDomains = new AtomicInteger();
     AtomicInteger hardDeletedDomains = new AtomicInteger();
-    jpaTm().transact(() -> processDomains(deletableTlds, softDeletedDomains, hardDeletedDomains));
+    TransactionManagerFactory.tm()
+        .transact(() -> processDomains(deletableTlds, softDeletedDomains, hardDeletedDomains));
     logger.atInfo().log(
         "%s %d domains.",
         isDryRun ? "Would have soft-deleted" : "Soft-deleted", softDeletedDomains.get());
@@ -157,7 +158,7 @@ public class DeleteProberDataAction implements Runnable {
     // Scroll through domains, soft-deleting as necessary (very few will be soft-deleted) and
     // keeping track of which domains to hard-delete (there can be many, so we batch them up)
     try (ScrollableResults scrollableResult =
-        jpaTm()
+        TransactionManagerFactory.tm()
             .query(DOMAIN_QUERY_STRING, Domain.class)
             .setParameter("tlds", deletableTlds)
             .setParameter(
@@ -183,8 +184,8 @@ public class DeleteProberDataAction implements Runnable {
               domainRepoIdsToHardDelete.build(), hostNamesToHardDelete.build());
           domainRepoIdsToHardDelete = new ImmutableList.Builder<>();
           hostNamesToHardDelete = new ImmutableList.Builder<>();
-          jpaTm().getEntityManager().flush();
-          jpaTm().getEntityManager().clear();
+          TransactionManagerFactory.tm().getEntityManager().flush();
+          TransactionManagerFactory.tm().getEntityManager().clear();
         }
       }
       // process the remainder
@@ -226,31 +227,31 @@ public class DeleteProberDataAction implements Runnable {
 
   private void hardDeleteDomainsAndHosts(
       ImmutableList<String> domainRepoIds, ImmutableList<String> hostNames) {
-    jpaTm()
+    TransactionManagerFactory.tm()
         .query("DELETE FROM Host WHERE hostName IN :hostNames")
         .setParameter("hostNames", hostNames)
         .executeUpdate();
-    jpaTm()
+    TransactionManagerFactory.tm()
         .query("DELETE FROM BillingEvent WHERE domainRepoId IN :repoIds")
         .setParameter("repoIds", domainRepoIds)
         .executeUpdate();
-    jpaTm()
+    TransactionManagerFactory.tm()
         .query("DELETE FROM BillingRecurrence WHERE domainRepoId IN :repoIds")
         .setParameter("repoIds", domainRepoIds)
         .executeUpdate();
-    jpaTm()
+    TransactionManagerFactory.tm()
         .query("DELETE FROM BillingCancellation WHERE domainRepoId IN :repoIds")
         .setParameter("repoIds", domainRepoIds)
         .executeUpdate();
-    jpaTm()
+    TransactionManagerFactory.tm()
         .query("DELETE FROM DomainHistory WHERE repoId IN :repoIds")
         .setParameter("repoIds", domainRepoIds)
         .executeUpdate();
-    jpaTm()
+    TransactionManagerFactory.tm()
         .query("DELETE FROM PollMessage WHERE domainRepoId IN :repoIds")
         .setParameter("repoIds", domainRepoIds)
         .executeUpdate();
-    jpaTm()
+    TransactionManagerFactory.tm()
         .query("DELETE FROM Domain WHERE repoId IN :repoIds")
         .setParameter("repoIds", domainRepoIds)
         .executeUpdate();

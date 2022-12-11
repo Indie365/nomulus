@@ -20,7 +20,6 @@ import static com.google.common.collect.Iterables.partition;
 import static google.registry.model.eppcommon.StatusValue.SERVER_DELETE_PROHIBITED;
 import static google.registry.model.eppcommon.StatusValue.SERVER_TRANSFER_PROHIBITED;
 import static google.registry.model.eppcommon.StatusValue.SERVER_UPDATE_PROHIBITED;
-import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 import static google.registry.util.CollectionUtils.findDuplicates;
 
@@ -31,6 +30,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import google.registry.config.RegistryConfig.Config;
 import google.registry.model.eppcommon.StatusValue;
+import google.registry.persistence.transaction.TransactionManagerFactory;
 import java.util.List;
 import javax.inject.Inject;
 
@@ -84,7 +84,7 @@ public abstract class LockOrUnlockDomainCommand extends ConfirmingCommand {
         .forEach(
             batch ->
                 // we require that the jpaTm is the outer transaction in DomainLockUtils
-                jpaTm()
+                TransactionManagerFactory.tm()
                     .transact(
                         () ->
                             tm().transact(

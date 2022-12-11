@@ -20,7 +20,6 @@ import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.io.BaseEncoding.base64;
 import static google.registry.model.registrar.Registrar.checkValidEmail;
-import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 import static google.registry.util.CollectionUtils.nullToEmptyImmutableSortedCopy;
 import static google.registry.util.PasswordUtils.SALT_SUPPLIER;
@@ -37,6 +36,7 @@ import google.registry.model.Jsonifiable;
 import google.registry.model.UnsafeSerializable;
 import google.registry.model.registrar.RegistrarPoc.RegistrarPocId;
 import google.registry.persistence.VKey;
+import google.registry.persistence.transaction.TransactionManagerFactory;
 import java.io.Serializable;
 import java.util.Map;
 import java.util.Optional;
@@ -185,7 +185,7 @@ public class RegistrarPoc extends ImmutableObject implements Jsonifiable, Unsafe
             () -> {
               ImmutableSet<String> emailAddressesToKeep =
                   contacts.stream().map(RegistrarPoc::getEmailAddress).collect(toImmutableSet());
-              jpaTm()
+              TransactionManagerFactory.tm()
                   .query(
                       "DELETE FROM RegistrarPoc WHERE registrarId = :registrarId AND "
                           + "emailAddress NOT IN :emailAddressesToKeep")

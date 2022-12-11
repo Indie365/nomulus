@@ -33,7 +33,6 @@ import static google.registry.model.ImmutableObjectSubject.assertAboutImmutableO
 import static google.registry.model.ImmutableObjectSubject.immutableObjectCorrespondence;
 import static google.registry.model.ResourceTransferUtils.createTransferResponse;
 import static google.registry.model.tld.Registry.TldState.GENERAL_AVAILABILITY;
-import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 import static google.registry.pricing.PricingEngineProxy.getDomainRenewCost;
 import static google.registry.util.CollectionUtils.difference;
@@ -105,6 +104,7 @@ import google.registry.model.transfer.DomainTransferData;
 import google.registry.model.transfer.TransferData;
 import google.registry.model.transfer.TransferStatus;
 import google.registry.persistence.VKey;
+import google.registry.persistence.transaction.TransactionManagerFactory;
 import google.registry.tmch.LordnTaskUtils;
 import java.util.Arrays;
 import java.util.List;
@@ -1185,21 +1185,25 @@ public final class DatabaseHelper {
    * the database at all.
    */
   public static List<Object> loadAllEntities() {
-      return jpaTm()
-          .transact(
-              () -> {
-                ImmutableList<? extends Class<?>> entityClasses =
-                    jpaTm().getEntityManager().getMetamodel().getEntities().stream()
-                        .map(javax.persistence.metamodel.Type::getJavaType)
-                        .collect(toImmutableList());
-                ImmutableList.Builder<Object> result = new ImmutableList.Builder<>();
-                for (Class<?> entityClass : entityClasses) {
-                  for (Object object : jpaTm().loadAllOf(entityClass)) {
-                    result.add(object);
-                  }
+    return TransactionManagerFactory.tm()
+        .transact(
+            () -> {
+              ImmutableList<? extends Class<?>> entityClasses =
+                  TransactionManagerFactory.tm()
+                      .getEntityManager()
+                      .getMetamodel()
+                      .getEntities()
+                      .stream()
+                      .map(javax.persistence.metamodel.Type::getJavaType)
+                      .collect(toImmutableList());
+              ImmutableList.Builder<Object> result = new ImmutableList.Builder<>();
+              for (Class<?> entityClass : entityClasses) {
+                for (Object object : TransactionManagerFactory.tm().loadAllOf(entityClass)) {
+                  result.add(object);
                 }
-                return result.build();
-              });
+              }
+              return result.build();
+            });
   }
 
   /**
@@ -1281,37 +1285,42 @@ public final class DatabaseHelper {
 
   /** Returns whether or not the given entity exists in Cloud SQL. */
   public static boolean existsInDb(ImmutableObject object) {
-    return jpaTm().transact(() -> jpaTm().exists(object));
+    return TransactionManagerFactory.tm()
+        .transact(() -> TransactionManagerFactory.tm().exists(object));
   }
 
   /** Inserts the given entity/entities into Cloud SQL in a single transaction. */
   public static <T extends ImmutableObject> void insertInDb(T... entities) {
-    jpaTm().transact(() -> jpaTm().insertAll(entities));
+    TransactionManagerFactory.tm()
+        .transact(() -> TransactionManagerFactory.tm().insertAll(entities));
   }
 
   /** Inserts the given entities into Cloud SQL in a single transaction. */
   public static <T extends ImmutableObject> void insertInDb(ImmutableCollection<T> entities) {
-    jpaTm().transact(() -> jpaTm().insertAll(entities));
+    TransactionManagerFactory.tm()
+        .transact(() -> TransactionManagerFactory.tm().insertAll(entities));
   }
 
   /** Puts the given entity/entities into Cloud SQL in a single transaction. */
   public static <T extends ImmutableObject> void putInDb(T... entities) {
-    jpaTm().transact(() -> jpaTm().putAll(entities));
+    TransactionManagerFactory.tm().transact(() -> TransactionManagerFactory.tm().putAll(entities));
   }
 
   /** Puts the given entities into Cloud SQL in a single transaction. */
   public static <T extends ImmutableObject> void putInDb(ImmutableCollection<T> entities) {
-    jpaTm().transact(() -> jpaTm().putAll(entities));
+    TransactionManagerFactory.tm().transact(() -> TransactionManagerFactory.tm().putAll(entities));
   }
 
   /** Updates the given entities in Cloud SQL in a single transaction. */
   public static <T extends ImmutableObject> void updateInDb(T... entities) {
-    jpaTm().transact(() -> jpaTm().updateAll(entities));
+    TransactionManagerFactory.tm()
+        .transact(() -> TransactionManagerFactory.tm().updateAll(entities));
   }
 
   /** Updates the given entities in Cloud SQL in a single transaction. */
   public static <T extends ImmutableObject> void updateInDb(ImmutableCollection<T> entities) {
-    jpaTm().transact(() -> jpaTm().updateAll(entities));
+    TransactionManagerFactory.tm()
+        .transact(() -> TransactionManagerFactory.tm().updateAll(entities));
   }
 
   /**
@@ -1320,7 +1329,7 @@ public final class DatabaseHelper {
    * <p>Returns the original entity object.
    */
   public static <T> T assertDetachedFromEntityManager(T entity) {
-    assertThat(jpaTm().getEntityManager().contains(entity)).isFalse();
+    assertThat(TransactionManagerFactory.tm().getEntityManager().contains(entity)).isFalse();
     return entity;
   }
 
@@ -1337,7 +1346,7 @@ public final class DatabaseHelper {
    */
   public static void setMigrationScheduleToDatastorePrimaryNoAsync(FakeClock fakeClock) {
     DateTime now = fakeClock.nowUtc();
-    jpaTm()
+    TransactionManagerFactory.tm()
         .transact(
             () ->
                 DatabaseMigrationStateSchedule.set(
@@ -1364,7 +1373,7 @@ public final class DatabaseHelper {
    */
   public static void setMigrationScheduleToDatastorePrimaryReadOnly(FakeClock fakeClock) {
     DateTime now = fakeClock.nowUtc();
-    jpaTm()
+    TransactionManagerFactory.tm()
         .transact(
             () ->
                 DatabaseMigrationStateSchedule.set(
@@ -1392,7 +1401,7 @@ public final class DatabaseHelper {
    */
   public static void setMigrationScheduleToSqlPrimary(FakeClock fakeClock) {
     DateTime now = fakeClock.nowUtc();
-    jpaTm()
+    TransactionManagerFactory.tm()
         .transact(
             () ->
                 DatabaseMigrationStateSchedule.set(
@@ -1413,10 +1422,10 @@ public final class DatabaseHelper {
   /** Removes the database migration schedule, in essence transitioning to DATASTORE_ONLY. */
   public static void removeDatabaseMigrationSchedule() {
     // use the raw calls because going SQL_PRIMARY -> DATASTORE_ONLY is not valid
-    jpaTm()
+    TransactionManagerFactory.tm()
         .transact(
             () ->
-                jpaTm()
+                TransactionManagerFactory.tm()
                     .put(
                         new DatabaseMigrationStateSchedule(
                             DatabaseMigrationStateSchedule.DEFAULT_TRANSITION_MAP)));

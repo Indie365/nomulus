@@ -15,7 +15,7 @@
 package google.registry.beam.common;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
+import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 import static org.apache.beam.sdk.values.TypeDescriptors.integers;
 
 import com.google.auto.value.AutoValue;
@@ -51,8 +51,8 @@ import org.apache.beam.sdk.values.PCollection;
  *
  * <p>The {@code JpaTransactionManager} is instantiated once on each pipeline worker VM (through
  * {@link RegistryPipelineWorkerInitializer}), made available through the static method {@link
- * TransactionManagerFactory#jpaTm()}, and is shared by all threads on the VM. Configuration is
- * through {@link RegistryPipelineOptions}.
+ * TransactionManagerFactory#tm()}, and is shared by all threads on the VM. Configuration is through
+ * {@link RegistryPipelineOptions}.
  */
 public final class RegistryJpaIO {
 
@@ -232,11 +232,10 @@ public final class RegistryJpaIO {
 
       @ProcessElement
       public void processElement(OutputReceiver<T> outputReceiver) {
-        jpaTm()
-            .transactNoRetry(
+        tm().transactNoRetry(
                 () -> {
                   if (snapshotId != null) {
-                    jpaTm().setDatabaseSnapshot(snapshotId);
+                    tm().setDatabaseSnapshot(snapshotId);
                   }
                   query.stream().map(resultMapper::apply).forEach(outputReceiver::output);
                 });
@@ -382,12 +381,11 @@ public final class RegistryJpaIO {
               .filter(Objects::nonNull)
               .collect(ImmutableList.toImmutableList());
       try {
-        jpaTm()
-            .transact(
+        tm().transact(
                 () -> {
                   // Don't modify existing objects as it could lead to race conditions
                   entities.forEach(this::verifyObjectNonexistence);
-                  jpaTm().putAll(entities);
+                  tm().putAll(entities);
                 });
         counter.inc(entities.size());
       } catch (RuntimeException e) {
@@ -402,12 +400,11 @@ public final class RegistryJpaIO {
     private void processSingly(ImmutableList<Object> entities) {
       for (Object entity : entities) {
         try {
-          jpaTm()
-              .transact(
+          tm().transact(
                   () -> {
                     // Don't modify existing objects as it could lead to race conditions
                     verifyObjectNonexistence(entity);
-                    jpaTm().put(entity);
+                    tm().put(entity);
                   });
           counter.inc();
         } catch (RuntimeException e) {
@@ -419,14 +416,12 @@ public final class RegistryJpaIO {
     /** Returns this entity's primary key field(s) in a string. */
     private String toEntityKeyString(Object entity) {
       try {
-        return jpaTm()
-            .transact(
+        return tm().transact(
                 () ->
                     String.format(
                         "%s_%s",
                         entity.getClass().getSimpleName(),
-                        jpaTm()
-                            .getEntityManager()
+                        tm().getEntityManager()
                             .getEntityManagerFactory()
                             .getPersistenceUnitUtil()
                             .getIdentifier(entity)));
@@ -442,8 +437,7 @@ public final class RegistryJpaIO {
       // updateTimestamp) are reflected in the input object. Beam doesn't allow modification of
       // input objects, so this throws an exception.
       // TODO(go/non-datastore-allocateid): also check that all the objects have IDs
-      checkArgument(
-          !jpaTm().exists(obj), "Entities created in SqlBatchWriter must not already exist");
+      checkArgument(!tm().exists(obj), "Entities created in SqlBatchWriter must not already exist");
     }
   }
 }

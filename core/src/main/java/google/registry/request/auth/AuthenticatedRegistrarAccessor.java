@@ -16,7 +16,6 @@ package google.registry.request.auth;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.base.Preconditions.checkNotNull;
-import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 
 import com.google.appengine.api.users.User;
@@ -31,6 +30,7 @@ import google.registry.groups.GroupsConnection;
 import google.registry.model.registrar.Registrar;
 import google.registry.model.registrar.Registrar.State;
 import google.registry.model.registrar.RegistrarPoc;
+import google.registry.persistence.transaction.TransactionManagerFactory;
 import java.util.Optional;
 import javax.annotation.concurrent.Immutable;
 import javax.inject.Inject;
@@ -311,10 +311,10 @@ public class AuthenticatedRegistrarAccessor {
       logger.atInfo().log("Checking registrar contacts for user ID %s.", user.getEmail());
 
       // Find all registrars that have a registrar contact with this user's ID.
-      jpaTm()
+      TransactionManagerFactory.tm()
           .transact(
               () ->
-                  jpaTm()
+                  TransactionManagerFactory.tm()
                       .query(
                           "SELECT r FROM Registrar r INNER JOIN RegistrarPoc rp ON r.registrarId ="
                               + " rp.registrarId WHERE lower(rp.loginEmailAddress) = :email AND"

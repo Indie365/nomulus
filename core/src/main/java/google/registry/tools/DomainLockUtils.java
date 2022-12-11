@@ -17,7 +17,6 @@ package google.registry.tools;
 import static com.google.common.base.Preconditions.checkArgument;
 import static google.registry.batch.AsyncTaskEnqueuer.QUEUE_ASYNC_ACTIONS;
 import static google.registry.model.EppResourceUtils.loadByForeignKeyCached;
-import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 import static google.registry.tools.LockOrUnlockDomainCommand.REGISTRY_LOCK_STATUSES;
 
@@ -34,6 +33,7 @@ import google.registry.model.domain.RegistryLock;
 import google.registry.model.reporting.HistoryEntry;
 import google.registry.model.tld.Registry;
 import google.registry.model.tld.RegistryLockDao;
+import google.registry.persistence.transaction.TransactionManagerFactory;
 import google.registry.request.Action.Service;
 import google.registry.util.CloudTasksUtils;
 import google.registry.util.StringGenerator;
@@ -76,7 +76,7 @@ public final class DomainLockUtils {
    */
   public RegistryLock saveNewRegistryLockRequest(
       String domainName, String registrarId, @Nullable String registrarPocId, boolean isAdmin) {
-    return jpaTm()
+    return TransactionManagerFactory.tm()
         .transact(
             () ->
                 RegistryLockDao.save(
@@ -90,7 +90,7 @@ public final class DomainLockUtils {
    */
   public RegistryLock saveNewRegistryUnlockRequest(
       String domainName, String registrarId, boolean isAdmin, Optional<Duration> relockDuration) {
-    return jpaTm()
+    return TransactionManagerFactory.tm()
         .transact(
             () ->
                 RegistryLockDao.save(
@@ -99,10 +99,10 @@ public final class DomainLockUtils {
 
   /** Verifies and applies the lock request previously requested by a user. */
   public RegistryLock verifyAndApplyLock(String verificationCode, boolean isAdmin) {
-    return jpaTm()
+    return TransactionManagerFactory.tm()
         .transact(
             () -> {
-              DateTime now = jpaTm().getTransactionTime();
+              DateTime now = TransactionManagerFactory.tm().getTransactionTime();
               RegistryLock lock = getByVerificationCode(verificationCode);
 
               checkArgument(
@@ -128,10 +128,10 @@ public final class DomainLockUtils {
   /** Verifies and applies the unlock request previously requested by a user. */
   public RegistryLock verifyAndApplyUnlock(String verificationCode, boolean isAdmin) {
     RegistryLock lock =
-        jpaTm()
+        TransactionManagerFactory.tm()
             .transact(
                 () -> {
-                  DateTime now = jpaTm().getTransactionTime();
+                  DateTime now = TransactionManagerFactory.tm().getTransactionTime();
                   RegistryLock previousLock = getByVerificationCode(verificationCode);
                   checkArgument(
                       !previousLock.getUnlockCompletionTime().isPresent(),
@@ -165,10 +165,10 @@ public final class DomainLockUtils {
    */
   public RegistryLock administrativelyApplyLock(
       String domainName, String registrarId, @Nullable String registrarPocId, boolean isAdmin) {
-    return jpaTm()
+    return TransactionManagerFactory.tm()
         .transact(
             () -> {
-              DateTime now = jpaTm().getTransactionTime();
+              DateTime now = TransactionManagerFactory.tm().getTransactionTime();
               RegistryLock newLock =
                   RegistryLockDao.save(
                       createLockBuilder(domainName, registrarId, registrarPocId, isAdmin)
@@ -188,10 +188,10 @@ public final class DomainLockUtils {
   public RegistryLock administrativelyApplyUnlock(
       String domainName, String registrarId, boolean isAdmin, Optional<Duration> relockDuration) {
     RegistryLock lock =
-        jpaTm()
+        TransactionManagerFactory.tm()
             .transact(
                 () -> {
-                  DateTime now = jpaTm().getTransactionTime();
+                  DateTime now = TransactionManagerFactory.tm().getTransactionTime();
                   RegistryLock result =
                       RegistryLockDao.save(
                           createUnlockBuilder(domainName, registrarId, isAdmin, relockDuration)
@@ -240,7 +240,7 @@ public final class DomainLockUtils {
   }
 
   private void setAsRelock(RegistryLock newLock) {
-    jpaTm()
+    TransactionManagerFactory.tm()
         .transact(
             () ->
                 RegistryLockDao.getMostRecentVerifiedUnlockByRepoId(newLock.getRepoId())
@@ -251,7 +251,7 @@ public final class DomainLockUtils {
 
   private RegistryLock.Builder createLockBuilder(
       String domainName, String registrarId, @Nullable String registrarPocId, boolean isAdmin) {
-    DateTime now = jpaTm().getTransactionTime();
+    DateTime now = TransactionManagerFactory.tm().getTransactionTime();
     Domain domain = getDomain(domainName, registrarId, now);
     verifyDomainNotLocked(domain, isAdmin);
 
@@ -276,7 +276,7 @@ public final class DomainLockUtils {
 
   private RegistryLock.Builder createUnlockBuilder(
       String domainName, String registrarId, boolean isAdmin, Optional<Duration> relockDuration) {
-    DateTime now = jpaTm().getTransactionTime();
+    DateTime now = TransactionManagerFactory.tm().getTransactionTime();
     Domain domain = getDomain(domainName, registrarId, now);
     Optional<RegistryLock> lockOptional =
         RegistryLockDao.getMostRecentVerifiedLockByRepoId(domain.getRepoId());
