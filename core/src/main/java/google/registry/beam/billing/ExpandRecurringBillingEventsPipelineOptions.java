@@ -33,6 +33,11 @@ public interface ExpandRecurringBillingEventsPipelineOptions extends RegistryPip
 
   void setEndTime(String endTime);
 
+  @Default.Integer(100)
+  int getShard();
+
+  void setShard(int shard);
+
   @Description("If true, the expanded billing events and history entries will not be saved.")
   @Default.Boolean(false)
   boolean getIsDryRun();

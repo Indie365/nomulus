@@ -15,18 +15,16 @@
 package google.registry.beam.billing;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Sets.difference;
 import static google.registry.model.common.Cursor.CursorType.RECURRING_BILLING;
 import static google.registry.model.domain.Period.Unit.YEARS;
 import static google.registry.model.reporting.HistoryEntry.Type.DOMAIN_AUTORENEW;
-import static google.registry.persistence.transaction.QueryComposer.Comparator.EQ;
+import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 import static google.registry.util.CollectionUtils.union;
 import static google.registry.util.DateTimeUtils.START_OF_TIME;
 import static google.registry.util.DateTimeUtils.earliestOf;
 import static google.registry.util.DateTimeUtils.latestOf;
-import static org.apache.beam.sdk.values.TypeDescriptors.integers;
 import static org.apache.beam.sdk.values.TypeDescriptors.voids;
 
 import com.google.common.collect.ImmutableMap;
@@ -53,11 +51,13 @@ import google.registry.model.reporting.DomainTransactionRecord.TransactionReport
 import google.registry.model.tld.Registry;
 import google.registry.persistence.PersistenceModule.TransactionIsolationLevel;
 import java.io.Serializable;
+import java.util.concurrent.ThreadLocalRandom;
 import javax.inject.Singleton;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineResult;
 import org.apache.beam.sdk.coders.KvCoder;
 import org.apache.beam.sdk.coders.SerializableCoder;
+import org.apache.beam.sdk.coders.VarIntCoder;
 import org.apache.beam.sdk.metrics.Counter;
 import org.apache.beam.sdk.metrics.Metrics;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
@@ -67,7 +67,6 @@ import org.apache.beam.sdk.transforms.GroupIntoBatches;
 import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.Wait;
-import org.apache.beam.sdk.transforms.WithKeys;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PDone;
@@ -134,6 +133,7 @@ public class ExpandRecurringBillingEventsPipeline implements Serializable {
   private final DateTime startTime;
   // Exclusive lower bound of the expansion window.
   private final DateTime endTime;
+  private final int shard;
   private final boolean isDryRun;
   private final boolean advanceCursor;
   private final Counter recurringsInScopeCounter =
@@ -147,6 +147,7 @@ public class ExpandRecurringBillingEventsPipeline implements Serializable {
     checkArgument(
         startTime.isBefore(endTime),
         String.format("[%s, %s) is not a valid window of operation", startTime, endTime));
+    shard = options.getShard();
     isDryRun = options.getIsDryRun();
     advanceCursor = options.getAdvanceCursor();
   }
@@ -157,14 +158,16 @@ public class ExpandRecurringBillingEventsPipeline implements Serializable {
   }
 
   void setupPipeline(Pipeline pipeline) {
-    PCollection<KV<Recurring, KV<Domain, Registry>>> recurrings = getRecurringsInScope(pipeline);
+    PCollection<KV<Integer, KV<Recurring, KV<Domain, Registry>>>> recurrings =
+        getRecurringsInScope(pipeline);
     PCollection<Void> expanded = expandRecurrings(recurrings);
     if (!isDryRun && advanceCursor) {
       advanceCursor(expanded);
     }
   }
 
-  PCollection<KV<Recurring, KV<Domain, Registry>>> getRecurringsInScope(Pipeline pipeline) {
+  PCollection<KV<Integer, KV<Recurring, KV<Domain, Registry>>>> getRecurringsInScope(
+      Pipeline pipeline) {
     return pipeline.apply(
         "Read all Recurrings in scope",
         RegistryJpaIO.read(
@@ -192,36 +195,38 @@ public class ExpandRecurringBillingEventsPipeline implements Serializable {
                   Recurring recurring = (Recurring) row[0];
                   Domain domain = (Domain) row[1];
                   Registry registry = (Registry) row[2];
-                  return KV.of(recurring, KV.of(domain, registry));
+                  // Note that because all elements are mapped to the same dummy key, the next
+                  // batching transform will effectively be serial. This however does not matter for
+                  // our use case because the elements were obtained from a SQL read query, which
+                  // are returned sequentially already. Therefore, having a sequential step to group
+                  // them does not reduce overall parallelism of the pipeline, and the batches can
+                  // then be distributed to all available workers for further processing, where the
+                  // main benefit of parallelism shows. In fact, distributing elements to random
+                  // keys in this step might increase overall latency as more elements need to be
+                  // processed to generate a batch, when batching only occurs on elements with the
+                  // same key (therefore increasing the overall buffer size of elements waiting to
+                  // be grouped, across all keys), delaying subsequent steps when batches could be
+                  // produced as soon as possible if the buffer size is kept at the minimum (same as
+                  // batch size).
+                  //
+                  // See: https://stackoverflow.com/a/44956702/791306
+                  return KV.of(
+                      ThreadLocalRandom.current().nextInt(shard),
+                      KV.of(recurring, KV.of(domain, registry)));
                 })
             .withCoder(
                 KvCoder.of(
-                    SerializableCoder.of(Recurring.class),
+                    VarIntCoder.of(),
                     KvCoder.of(
-                        SerializableCoder.of(Domain.class),
-                        SerializableCoder.of(Registry.class)))));
+                        SerializableCoder.of(Recurring.class),
+                        KvCoder.of(
+                            SerializableCoder.of(Domain.class),
+                            SerializableCoder.of(Registry.class))))));
   }
 
   private PCollection<Void> expandRecurrings(
-      PCollection<KV<Recurring, KV<Domain, Registry>>> recurrings) {
+      PCollection<KV<Integer, KV<Recurring, KV<Domain, Registry>>>> recurrings) {
     return recurrings
-        // Note that because all elements are mapped to the same dummy key, the next batching
-        // transform will effectively be serial. This however does not matter for our use case
-        // because the elements were obtained from a SQL read query, which are returned sequentially
-        // already. Therefore, having a sequential step to group them does not reduce overall
-        // parallelism of the pipeline, and the batches can then be distributed to all available
-        // workers for further processing, where the main benefit of parallelism shows. In fact,
-        // distributing elements to random keys in this step might increase overall latency as
-        // more elements need to be processed to generate a batch, when batching only occurs on
-        // elements with the same key (therefore increasing the overall buffer size of elements
-        // waiting to be grouped, across all keys), delaying subsequent steps when batches could
-        // be produced as soon as possible if the buffer size is kept at the minimum (same as batch
-        // size).
-        //
-        // See: https://stackoverflow.com/a/44956702/791306
-        .apply(
-            "Add dummy keys",
-            WithKeys.<Integer, KV<Recurring, KV<Domain, Registry>>>of(0).withKeyType(integers()))
         .apply(
             "Group into batches",
             GroupIntoBatches.<Integer, KV<Recurring, KV<Domain, Registry>>>ofSize(batchSize)
@@ -264,16 +269,17 @@ public class ExpandRecurringBillingEventsPipeline implements Serializable {
                         earliestOf(recurring.getRecurrenceEndTime(), endTime))));
 
     // Find the times for which the OneTime billing event are already created, making this expansion
-    // idempotent.
+    // idempotent. There is no need to match to the domain repo ID as the cancellation matching
+    // billing event itself can only be for a single domain.
     ImmutableSet<DateTime> existingEventTimes =
-        tm()
-            .createQueryComposer(OneTime.class)
-            // There is no need to match to the domain repo ID as the cancellation matching billing
-            // event itself can only be for a single domain.
-            .where("cancellationMatchingBillingEvent", EQ, recurring.getId())
-            .stream()
-            .map(OneTime::getEventTime)
-            .collect(toImmutableSet());
+        ImmutableSet.copyOf(
+            jpaTm()
+                .query(
+                    "SELECT eventTime FROM BillingEvent WHERE cancellationMatchingBillingEvent ="
+                        + " :key",
+                    DateTime.class)
+                .setParameter("key", recurring.createVKey())
+                .getResultList());
 
     DateTime recurrenceLastExpansionTime = recurring.getRecurrenceLastExpansion();
 
@@ -387,7 +393,7 @@ public class ExpandRecurringBillingEventsPipeline implements Serializable {
     // the parallelism of the pipeline to 1.
     //
     // See: https://www.postgresql.org/docs/current/transaction-iso.html
-    options.setIsolationOverride(TransactionIsolationLevel.TRANSACTION_REPEATABLE_READ);
+    options.setIsolationOverride(TransactionIsolationLevel.TRANSACTION_SERIALIZABLE);
     Pipeline pipeline = Pipeline.create(options);
     new ExpandRecurringBillingEventsPipeline(options).run(pipeline);
   }
