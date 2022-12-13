@@ -114,14 +114,14 @@ public class CheckPackagesComplianceAction implements Runnable {
       }
 
       Long activeDomains =
-          (Long)
-              jpaTm()
-                  .query(
-                      "SELECT COUNT(*) FROM Domain WHERE current_package_token = :token"
-                          + " AND deletion_time = :endOfTime")
-                  .setParameter("token", packagePromo.getToken().getKey().toString())
-                  .setParameter("endOfTime", END_OF_TIME.toDate())
-                  .getSingleResult();
+          jpaTm()
+              .query(
+                  "SELECT COUNT(*) FROM Domain WHERE currentPackageToken = :token"
+                      + " AND deletionTime = :endOfTime",
+                  Long.class)
+              .setParameter("token", packagePromo.getToken())
+              .setParameter("endOfTime", END_OF_TIME)
+              .getSingleResult();
 
       if (activeDomains > packagePromo.getMaxDomains()) {
         int overage = Ints.saturatedCast(activeDomains) - packagePromo.getMaxDomains();
