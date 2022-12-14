@@ -77,11 +77,11 @@ public class ExpandRecurringBillingEventsPipelineTest {
   private static final DateTimeFormatter DATE_TIME_FORMATTER =
       DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
 
-  private final FakeClock clock = new FakeClock(DateTime.parse("2022-02-02T00:00:05Z"));
+  private final FakeClock clock = new FakeClock(DateTime.parse("2021-02-02T00:00:05Z"));
 
-  private final DateTime startTime = DateTime.parse("2022-02-01TZ");
+  private final DateTime startTime = DateTime.parse("2021-02-01TZ");
 
-  private DateTime endTime = DateTime.parse("2022-02-02TZ");
+  private DateTime endTime = DateTime.parse("2021-02-02TZ");
 
   private final Cursor cursor = Cursor.createGlobal(RECURRING_BILLING, startTime);
 
@@ -125,7 +125,7 @@ public class ExpandRecurringBillingEventsPipelineTest {
         assertThrows(IllegalArgumentException.class, this::runPipeline);
     assertThat(thrown)
         .hasMessageThat()
-        .contains("[2022-02-01T00:00:00.000Z, 2022-01-31T23:59:59.999Z)");
+        .contains("[2021-02-01T00:00:00.000Z, 2021-01-31T23:59:59.999Z)");
   }
 
   @Test
@@ -134,6 +134,30 @@ public class ExpandRecurringBillingEventsPipelineTest {
 
     // Assert about DomainHistory.
     assertAutoRenewDomainHistories(defaultDomainHistory());
+
+    // Assert about BillingEvents.
+    assertBillingEventsForResource(
+        domain,
+        defaultOneTime(getOnlyAutoRenewHistory()),
+        recurring
+            .asBuilder()
+            .setRecurrenceLastExpansion(domain.getCreationTime().plusYears(1))
+            .build());
+
+    // Assert about Cursor.
+    assertCursorAt(endTime);
+  }
+
+  @Test
+  void testSuccess_expandSingleEvent_deletedDuringGracePeriod() {
+    domain = persistResource(domain.asBuilder().setDeletionTime(endTime.minusHours(2)).build());
+    recurring =
+        persistResource(recurring.asBuilder().setRecurrenceEndTime(endTime.minusHours(2)).build());
+    runPipeline();
+
+    // Assert about DomainHistory, no transaction record should have been written.
+    assertAutoRenewDomainHistories(
+        defaultDomainHistory().asBuilder().setDomainTransactionRecords(ImmutableSet.of()).build());
 
     // Assert about BillingEvents.
     assertBillingEventsForResource(
