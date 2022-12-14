@@ -51,14 +51,15 @@ import google.registry.model.reporting.DomainTransactionRecord.TransactionReport
 import google.registry.model.tld.Registry;
 import google.registry.persistence.PersistenceModule.TransactionIsolationLevel;
 import java.io.Serializable;
+import java.math.BigInteger;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.inject.Singleton;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineResult;
 import org.apache.beam.sdk.coders.KvCoder;
-import org.apache.beam.sdk.coders.SerializableCoder;
 import org.apache.beam.sdk.coders.VarIntCoder;
+import org.apache.beam.sdk.coders.VarLongCoder;
 import org.apache.beam.sdk.metrics.Counter;
 import org.apache.beam.sdk.metrics.Metrics;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
@@ -159,31 +160,30 @@ public class ExpandRecurringBillingEventsPipeline implements Serializable {
   }
 
   void setupPipeline(Pipeline pipeline) {
-    PCollection<KV<Integer, KV<Recurring, KV<Domain, Registry>>>> recurrings =
-        getRecurringsInScope(pipeline);
-    PCollection<Void> expanded = expandRecurrings(recurrings);
+    PCollection<KV<Integer, Long>> recurringIds = getRecurringsInScope(pipeline);
+    PCollection<Void> expanded = expandRecurrings(recurringIds);
     if (!isDryRun && advanceCursor) {
       advanceCursor(expanded);
     }
   }
 
-  PCollection<KV<Integer, KV<Recurring, KV<Domain, Registry>>>> getRecurringsInScope(
-      Pipeline pipeline) {
+  PCollection<KV<Integer, Long>> getRecurringsInScope(Pipeline pipeline) {
     return pipeline.apply(
         "Read all Recurrings in scope",
+        // Use native query because JPQL does not support timestamp arithmetics.
         RegistryJpaIO.read(
-                "SELECT br, d, tld "
-                    + "FROM BillingRecurrence as br, Domain as d, Tld as tld "
-                    + "WHERE br.domainRepoId = d.repoId "
-                    + "AND d.tld = tld.tldStr "
+                "SELECT billing_recurrence_id "
+                    + "FROM \"BillingRecurrence\" "
                     // Recurrence should not close before the first event time.
-                    + "AND br.eventTime < br.recurrenceEndTime "
+                    + "WHERE event_time < recurrence_end_time "
                     // First event time should be before end time.
-                    + "AND br.eventTime < :endTime "
+                    + "AND event_Time < :endTime "
                     // Recurrence should not close before start time.
-                    + "AND :startTime < br.recurrenceEndTime "
+                    + "AND :startTime < recurrence_end_time "
                     // Last expansion should happen at least one year before start time.
-                    + "AND br.recurrenceLastExpansion <= :oneYearAgo",
+                    + "AND recurrence_last_expansion <= :oneYearAgo "
+                    // The recurrence should not close before next expansion time.
+                    + "AND recurrence_last_expansion + INTERVAL '1 YEAR' < recurrence_end_time",
                 ImmutableMap.of(
                     "endTime",
                     endTime,
@@ -191,11 +191,8 @@ public class ExpandRecurringBillingEventsPipeline implements Serializable {
                     startTime,
                     "oneYearAgo",
                     endTime.minusYears(1)),
-                Object[].class,
-                (Object[] row) -> {
-                  Recurring recurring = (Recurring) row[0];
-                  Domain domain = (Domain) row[1];
-                  Registry registry = (Registry) row[2];
+                true,
+                (BigInteger id) -> {
                   // Note that because all elements are mapped to the same dummy key, the next
                   // batching transform will effectively be serial. This however does not matter for
                   // our use case because the elements were obtained from a SQL read query, which
@@ -211,38 +208,27 @@ public class ExpandRecurringBillingEventsPipeline implements Serializable {
                   // batch size).
                   //
                   // See: https://stackoverflow.com/a/44956702/791306
-                  return KV.of(
-                      ThreadLocalRandom.current().nextInt(shard),
-                      KV.of(recurring, KV.of(domain, registry)));
+                  return KV.of(ThreadLocalRandom.current().nextInt(shard), id.longValue());
                 })
-            .withCoder(
-                KvCoder.of(
-                    VarIntCoder.of(),
-                    KvCoder.of(
-                        SerializableCoder.of(Recurring.class),
-                        KvCoder.of(
-                            SerializableCoder.of(Domain.class),
-                            SerializableCoder.of(Registry.class))))));
+            .withCoder(KvCoder.of(VarIntCoder.of(), VarLongCoder.of())));
   }
 
-  private PCollection<Void> expandRecurrings(
-      PCollection<KV<Integer, KV<Recurring, KV<Domain, Registry>>>> recurrings) {
-    return recurrings
+  private PCollection<Void> expandRecurrings(PCollection<KV<Integer, Long>> recurringIds) {
+    return recurringIds
         .apply(
             "Group into batches",
-            GroupIntoBatches.<Integer, KV<Recurring, KV<Domain, Registry>>>ofSize(batchSize)
-                .withShardedKey())
+            GroupIntoBatches.<Integer, Long>ofSize(batchSize).withShardedKey())
         .apply(
             "Expand and save Recurrings into OneTimes and corresponding DomainHistories",
             MapElements.into(voids())
                 .via(
                     element -> {
-                      Iterable<KV<Recurring, KV<Domain, Registry>>> kvs = element.getValue();
+                      Iterable<Long> ids = element.getValue();
                       tm().transact(
                               () -> {
                                 ImmutableSet.Builder<ImmutableObject> results =
                                     new ImmutableSet.Builder<>();
-                                kvs.forEach(kv -> expandOneRecurring(kv, results));
+                                ids.forEach(id -> expandOneRecurring(id, results));
                                 if (!isDryRun) {
                                   tm().putAll(results.build());
                                 }
@@ -251,21 +237,11 @@ public class ExpandRecurringBillingEventsPipeline implements Serializable {
                     }));
   }
 
-  private void expandOneRecurring(
-      KV<Recurring, KV<Domain, Registry>> kv, ImmutableSet.Builder<ImmutableObject> results) {
-    Recurring recurring = kv.getKey();
-    // If the next event time is at or after recurrence end time, it could not have happened. It
-    // would have been better if we could filter this kind of recurring out in SQL, but JPQL does
-    // not support the needed arithmetic operation.
-    if (!recurring
-        .getRecurrenceLastExpansion()
-        .plusYears(1)
-        .isBefore(recurring.getRecurrenceEndTime())) {
-      return;
-    }
+  private void expandOneRecurring(Long recurringId, ImmutableSet.Builder<ImmutableObject> results) {
+    Recurring recurring = tm().loadByKey(Recurring.createVKey(recurringId));
     recurringsInScopeCounter.inc();
-    Domain domain = kv.getValue().getKey();
-    Registry tld = kv.getValue().getValue();
+    Domain domain = tm().loadByKey(Domain.createVKey(recurring.getDomainRepoId()));
+    Registry tld = Registry.get(domain.getTld());
 
     // Determine the complete set of EventTimes this recurring event should expand to within
     // [max(recurrenceLastExpansion + 1 yr, startTime), min(recurrenceEndTime, endTime)).
@@ -304,25 +280,28 @@ public class ExpandRecurringBillingEventsPipeline implements Serializable {
       recurrenceLastExpansionTime = latestOf(recurrenceLastExpansionTime, eventTime);
       expandedOneTimeCounter.inc();
       DateTime billingTime = eventTime.plus(tld.getAutoRenewGracePeriodLength());
-      if (domain.getDeletionTime().isBefore(billingTime)) {}
-
       // Note that the DomainHistory is created as of transaction time, as opposed to event time.
       // This might be counterintuitive because other DomainHistories are created at the time
       // mutation events occur, such as in DomainDeleteFlow or DomainRenewFlow. Therefore, it is
-      // possible to have a DomainHistory for a delete after autorenew (during the grace period)
-      // with a modification time before that of the DomainHistory for the autorenew itself. This is
-      // not ideal, but necessary because we save the *current* state of the domain (as of
-      // transaction time) to the DomainHistory , instead of the state of the domain as of event
-      // time (which would required loading the domain from DomainHistory at event time). Even
-      // though that is seemly possible, it generally is a bad idea to create DomainHistories
-      // retroactively and in all instances that we create a HistoryEntry we always set the
-      // modification time to the transaction time. It would also violate the invariance that a
-      // DomainHistory with a higher revision ID (which is always allocated with monotonic increase)
-      // always has a later modification time. Because the domain entity itself did not change as
-      // part of the expansion, the belatedly created DomainHistory does not actually affect
-      // anything materially (e.g. RDE). We can understand it in such a way that this history
-      // represents not when the domain is autorenewed (at event time), but when its autorenew
-      // billing event is created (at transaction time).
+      // possible to have a DomainHistory for a delete during the autorenew grace period with a
+      // modification time before that of the DomainHistory for the autorenew itself. This is not
+      // ideal, but necessary because we save the **current** state of the domain (as of transaction
+      // time) to the DomainHistory , instead of the state of the domain as of event time (which
+      // would required loading the domain from DomainHistory at event time).
+      //
+      // Even though doing the loading is seemly possible, it generally is a bad idea to create
+      // DomainHistories retroactively and in all instances that we create a HistoryEntry we always
+      // set the modification time to the transaction time. It would also violate the invariance
+      // that a DomainHistory with a higher revision ID (which is always allocated with monotonic
+      // increase) always has a later modification time.
+      //
+      // Lastly because the domain entity itself did not change as part of the expansion, we should
+      // not project it to transaction time before saving it in the history, which would require us
+      // to save the projected domain as well. Any changes to the domain itself are handled when
+      // the domain is actually used or explicitly projected and saved. The DomainHistory created
+      // here does not actually affect anything materially (e.g. RDE). We can understand it in such
+      // a way that this history represents not when the domain is autorenewed (at event time), but
+      // when its autorenew billing event is created (at transaction time).
       DomainHistory historyEntry =
           new DomainHistory.Builder()
               .setBySuperuser(false)
@@ -340,8 +319,13 @@ public class ExpandRecurringBillingEventsPipeline implements Serializable {
                   // records already present. In this case the domain was deleted before this
                   // pipeline runs to expand the OneTime (which should be rare because this pipeline
                   // should run every day), and no negating transaction records would have been
-                  // created when the deletion occurred.
+                  // created when the deletion occurred. Again, there is no need to project the
+                  // domain, because if it were deleted before this transaction, its updated delete
+                  // time would have already been load here.
                   //
+                  // We don't compare recurrence end time with billing time because the recurrence
+                  // could be caused for other reasons during the grace period, like a manual
+                  // renewal, in which case we still want to write the transaction record.
                   // See: DomainFlowUtils#createCancellingRecords
                   domain.getDeletionTime().isBefore(billingTime)
                       ? ImmutableSet.of()
@@ -355,8 +339,9 @@ public class ExpandRecurringBillingEventsPipeline implements Serializable {
               .build();
       results.add(historyEntry);
 
-      // It is OK to always create a OneTime, even though the domain might be deleted later during
-      // autorenew grace period.
+      // It is OK to always create a OneTime, even though the domain might be deleted or transferred
+      // later during autorenew grace period, as a cancellation will always be written out in those
+      // instances.
       OneTime oneTime =
           new OneTime.Builder()
               .setBillingTime(billingTime)
