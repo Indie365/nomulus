@@ -187,7 +187,7 @@ public class ExpandRecurringBillingEventsPipeline implements Serializable {
                     // Recurrence should not close before start time.
                     + "AND :startTime < recurrence_end_time "
                     // Last expansion should happen at least one year before start time.
-                    + "AND recurrence_last_expansion <= :oneYearAgo "
+                    + "AND recurrence_last_expansion < :oneYearAgo "
                     // The recurrence should not close before next expansion time.
                     + "AND recurrence_last_expansion + INTERVAL '1 YEAR' < recurrence_end_time",
                 ImmutableMap.of(
