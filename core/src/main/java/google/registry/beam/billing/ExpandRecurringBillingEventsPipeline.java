@@ -50,6 +50,8 @@ import google.registry.model.reporting.DomainTransactionRecord;
 import google.registry.model.reporting.DomainTransactionRecord.TransactionReportField;
 import google.registry.model.tld.Registry;
 import google.registry.persistence.PersistenceModule.TransactionIsolationLevel;
+import google.registry.util.Clock;
+import google.registry.util.SystemClock;
 import java.io.Serializable;
 import java.math.BigInteger;
 import java.util.Set;
@@ -143,12 +145,16 @@ public class ExpandRecurringBillingEventsPipeline implements Serializable {
   private final Counter expandedOneTimeCounter =
       Metrics.counter("ExpandBilling", "ExpandedOneTime");
 
-  ExpandRecurringBillingEventsPipeline(ExpandRecurringBillingEventsPipelineOptions options) {
+  ExpandRecurringBillingEventsPipeline(
+      ExpandRecurringBillingEventsPipelineOptions options, Clock clock) {
     startTime = DateTime.parse(options.getStartTime());
     endTime = DateTime.parse(options.getEndTime());
     checkArgument(
+        !endTime.isAfter(clock.nowUtc()),
+        String.format("End time %s must be on or before now.", endTime));
+    checkArgument(
         startTime.isBefore(endTime),
-        String.format("[%s, %s) is not a valid window of operation", startTime, endTime));
+        String.format("[%s, %s) is not a valid window of operation.", startTime, endTime));
     shard = options.getShard();
     isDryRun = options.getIsDryRun();
     advanceCursor = options.getAdvanceCursor();
@@ -428,7 +434,7 @@ public class ExpandRecurringBillingEventsPipeline implements Serializable {
     // See: https://www.postgresql.org/docs/current/transaction-iso.html
     options.setIsolationOverride(TransactionIsolationLevel.TRANSACTION_SERIALIZABLE);
     Pipeline pipeline = Pipeline.create(options);
-    new ExpandRecurringBillingEventsPipeline(options).run(pipeline);
+    new ExpandRecurringBillingEventsPipeline(options, new SystemClock()).run(pipeline);
   }
 
   @Singleton

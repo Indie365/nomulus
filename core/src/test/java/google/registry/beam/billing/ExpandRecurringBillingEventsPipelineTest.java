@@ -48,7 +48,6 @@ import google.registry.model.domain.DomainHistory;
 import google.registry.model.domain.Period;
 import google.registry.model.reporting.DomainTransactionRecord;
 import google.registry.model.reporting.DomainTransactionRecord.TransactionReportField;
-import google.registry.model.reporting.HistoryEntry;
 import google.registry.model.tld.Registry;
 import google.registry.persistence.PersistenceModule.TransactionIsolationLevel;
 import google.registry.persistence.transaction.JpaTestExtensions;
@@ -60,9 +59,10 @@ import java.util.List;
 import org.apache.beam.runners.direct.DirectOptions;
 import org.apache.beam.sdk.Pipeline.PipelineExecutionException;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
-import org.hibernate.cfg.Environment;
+import org.hibernate.cfg.AvailableSettings;
 import org.joda.money.Money;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.junit.jupiter.api.BeforeEach;
@@ -96,7 +96,8 @@ public class ExpandRecurringBillingEventsPipelineTest {
       new JpaTestExtensions.Builder()
           .withClock(clock)
           .withProperty(
-              Environment.ISOLATION, TransactionIsolationLevel.TRANSACTION_REPEATABLE_READ.name())
+              AvailableSettings.ISOLATION,
+              TransactionIsolationLevel.TRANSACTION_SERIALIZABLE.name())
           .buildIntegrationTestExtension();
 
   @RegisterExtension
@@ -116,6 +117,16 @@ public class ExpandRecurringBillingEventsPipelineTest {
     createTld("tld");
     recurring = createDomainAtTime("example.tld", startTime.minusYears(1).plusHours(12));
     domain = loadByForeignKey(Domain.class, "example.tld", clock.nowUtc()).get();
+  }
+
+  @Test
+  void testFailure_endTimeAfterNow() {
+    options.setEndTime(DATE_TIME_FORMATTER.print(clock.nowUtc().plusMillis(1)));
+    IllegalArgumentException thrown =
+        assertThrows(IllegalArgumentException.class, this::runPipeline);
+    assertThat(thrown)
+        .hasMessageThat()
+        .contains("End time 2021-02-02T00:00:05.001Z must be on or before now");
   }
 
   @Test
@@ -341,6 +352,7 @@ public class ExpandRecurringBillingEventsPipelineTest {
 
   @Test
   void testSuccess_expandMultipleEvents_multipleEventTime() {
+    clock.advanceBy(Duration.standardDays(365));
     endTime = endTime.plusYears(1);
     options.setEndTime(DATE_TIME_FORMATTER.print(endTime));
 
@@ -398,7 +410,7 @@ public class ExpandRecurringBillingEventsPipelineTest {
 
   private void runPipeline() {
     ExpandRecurringBillingEventsPipeline expandRecurringBillingEventsPipeline =
-        new ExpandRecurringBillingEventsPipeline(options);
+        new ExpandRecurringBillingEventsPipeline(options, clock);
     expandRecurringBillingEventsPipeline.setupPipeline(pipeline);
     pipeline.run(options).waitUntilFinish();
   }
@@ -477,7 +489,7 @@ public class ExpandRecurringBillingEventsPipelineTest {
     assertAutoRenewDomainHistories(domain, expected);
   }
 
-  private void assertAutoRenewDomainHistories(Domain domain, DomainHistory... expected) {
+  private static void assertAutoRenewDomainHistories(Domain domain, DomainHistory... expected) {
     ImmutableList<DomainHistory> actuals =
         loadHistoryObjectsForResource(domain.createVKey(), DomainHistory.class).stream()
             .filter(domainHistory -> DOMAIN_AUTORENEW.equals(domainHistory.getType()))
@@ -489,14 +501,14 @@ public class ExpandRecurringBillingEventsPipelineTest {
             actuals.stream()
                 .map(history -> history.getDomainBase().get())
                 .collect(toImmutableList()))
-        .comparingElementsUsing(immutableObjectCorrespondence("nsHosts"))
+        .comparingElementsUsing(immutableObjectCorrespondence("nsHosts", "updateTimestamp"))
         .containsExactlyElementsIn(
             Arrays.stream(expected)
                 .map(history -> history.getDomainBase().get())
                 .collect(toImmutableList()));
   }
 
-  private DomainHistory getOnlyAutoRenewHistory(Domain domain) {
+  private static DomainHistory getOnlyAutoRenewHistory(Domain domain) {
     return getOnlyHistoryEntryOfType(domain, DOMAIN_AUTORENEW, DomainHistory.class);
   }
 
@@ -504,19 +516,19 @@ public class ExpandRecurringBillingEventsPipelineTest {
     return getOnlyAutoRenewHistory(domain);
   }
 
-  private void assertCursorAt(DateTime expectedCursorTime) {
+  private static void assertCursorAt(DateTime expectedCursorTime) {
     Cursor cursor = tm().transact(() -> tm().loadByKey(Cursor.createGlobalVKey(RECURRING_BILLING)));
     assertThat(cursor).isNotNull();
     assertThat(cursor.getCursorTime()).isEqualTo(expectedCursorTime);
   }
 
-  private Recurring createDomainAtTime(String domainName, DateTime createTime) {
+  private static Recurring createDomainAtTime(String domainName, DateTime createTime) {
     Domain domain = persistActiveDomain(domainName, createTime);
     DomainHistory domainHistory =
         persistResource(
             new DomainHistory.Builder()
                 .setRegistrarId(domain.getCreationRegistrarId())
-                .setType(HistoryEntry.Type.DOMAIN_CREATE)
+                .setType(DOMAIN_CREATE)
                 .setModificationTime(createTime)
                 .setDomain(domain)
                 .build());
