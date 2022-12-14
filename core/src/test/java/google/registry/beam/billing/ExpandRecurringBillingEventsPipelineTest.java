@@ -31,7 +31,6 @@ import static google.registry.testing.DatabaseHelper.persistActiveDomain;
 import static google.registry.testing.DatabaseHelper.persistPremiumList;
 import static google.registry.testing.DatabaseHelper.persistResource;
 import static google.registry.util.DateTimeUtils.END_OF_TIME;
-import static google.registry.util.DateTimeUtils.START_OF_TIME;
 import static org.joda.money.CurrencyUnit.USD;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -78,7 +77,7 @@ public class ExpandRecurringBillingEventsPipelineTest {
   private static final DateTimeFormatter DATE_TIME_FORMATTER =
       DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
 
-  private final FakeClock clock = new FakeClock(DateTime.parse("2022-02-02TZ"));
+  private final FakeClock clock = new FakeClock(DateTime.parse("2022-02-02T00:00:05Z"));
 
   private final DateTime startTime = DateTime.parse("2022-02-01TZ");
 
@@ -115,7 +114,7 @@ public class ExpandRecurringBillingEventsPipelineTest {
 
     // Set up the database.
     createTld("tld");
-    recurring = createDomainAtTime("example.tld", clock.nowUtc().minusYears(1).minusHours(12));
+    recurring = createDomainAtTime("example.tld", startTime.minusYears(1).plusHours(12));
     domain = loadByForeignKey(Domain.class, "example.tld", clock.nowUtc()).get();
   }
 
@@ -182,6 +181,7 @@ public class ExpandRecurringBillingEventsPipelineTest {
                 .asBuilder()
                 .setRecurrenceEndTime(recurring.getEventTime().minusDays(1))
                 .build());
+    runPipeline();
     assertNothingHappened();
   }
 
@@ -189,12 +189,27 @@ public class ExpandRecurringBillingEventsPipelineTest {
   void testSuccess_noExpansion_recurrenceClosedBeforeStartTime() {
     recurring =
         persistResource(recurring.asBuilder().setRecurrenceEndTime(startTime.minusDays(1)).build());
+    runPipeline();
+    assertNothingHappened();
+  }
+
+  @Test
+  void testSuccess_noExpansion_recurrenceClosedBeforeNextExpansion() {
+    recurring =
+        persistResource(
+            recurring
+                .asBuilder()
+                .setEventTime(recurring.getEventTime().minusYears(1))
+                .setRecurrenceEndTime(startTime.plusHours(6))
+                .build());
+    runPipeline();
     assertNothingHappened();
   }
 
   @Test
   void testSuccess_noExpansion_eventTimeAfterEndTime() {
     recurring = persistResource(recurring.asBuilder().setEventTime(endTime.plusDays(1)).build());
+    runPipeline();
     assertNothingHappened();
   }
 
@@ -206,6 +221,7 @@ public class ExpandRecurringBillingEventsPipelineTest {
                 .asBuilder()
                 .setRecurrenceLastExpansion(startTime.minusYears(1).plusDays(1))
                 .build());
+    runPipeline();
     assertNothingHappened();
   }
 
@@ -230,7 +246,7 @@ public class ExpandRecurringBillingEventsPipelineTest {
   void testSuccess_expandSingleEvent_dryRun() {
     options.setIsDryRun(true);
     runPipeline();
-    assertNothingHappened();
+    assertNothingHappened(true);
   }
 
   @Test
@@ -364,6 +380,10 @@ public class ExpandRecurringBillingEventsPipelineTest {
   }
 
   void assertNothingHappened() {
+    assertNothingHappened(false);
+  }
+
+  void assertNothingHappened(boolean dryRun) {
     // Only the original domain create history entry is present.
     List<DomainHistory> persistedHistory =
         loadHistoryObjectsForResource(domain.createVKey(), DomainHistory.class);
@@ -373,8 +393,10 @@ public class ExpandRecurringBillingEventsPipelineTest {
     // Only the original recurrence is present.
     assertBillingEventsForResource(domain, recurring);
 
-    // The cursor is not moved.
-    assertCursorAt(startTime);
+    // If this is not a try run, the cursor should still be moved even though nothing happened,
+    // because we still successfully processed all the needed expansions in the window. Therefore,
+    // the cursor should be up-to-date as of end time.
+    assertCursorAt(dryRun ? startTime : endTime);
   }
 
   private DomainHistory defaultDomainHistory() {
@@ -483,7 +505,6 @@ public class ExpandRecurringBillingEventsPipelineTest {
             .setReason(Reason.RENEW)
             .setRecurrenceEndTime(END_OF_TIME)
             .setTargetId(domain.getDomainName())
-            .setRecurrenceLastExpansion(START_OF_TIME)
             .build());
   }
 
