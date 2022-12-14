@@ -51,6 +51,7 @@ import google.registry.model.reporting.DomainTransactionRecord.TransactionReport
 import google.registry.model.tld.Registry;
 import google.registry.persistence.PersistenceModule.TransactionIsolationLevel;
 import java.io.Serializable;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.inject.Singleton;
 import org.apache.beam.sdk.Pipeline;
@@ -189,7 +190,7 @@ public class ExpandRecurringBillingEventsPipeline implements Serializable {
                     "startTime",
                     startTime,
                     "oneYearAgo",
-                    startTime.minusYears(1)),
+                    endTime.minusYears(1)),
                 Object[].class,
                 (Object[] row) -> {
                   Recurring recurring = (Recurring) row[0];
@@ -252,8 +253,17 @@ public class ExpandRecurringBillingEventsPipeline implements Serializable {
 
   private void expandOneRecurring(
       KV<Recurring, KV<Domain, Registry>> kv, ImmutableSet.Builder<ImmutableObject> results) {
-    recurringsInScopeCounter.inc();
     Recurring recurring = kv.getKey();
+    // If the next event time is at or after recurrence end time, it could not have happened. It
+    // would have been better if we could filter this kind of recurring out in SQL, but JPQL does
+    // not support the needed arithmetic operation.
+    if (!recurring
+        .getRecurrenceLastExpansion()
+        .plusYears(1)
+        .isBefore(recurring.getRecurrenceEndTime())) {
+      return;
+    }
+    recurringsInScopeCounter.inc();
     Domain domain = kv.getValue().getKey();
     Registry tld = kv.getValue().getValue();
 
@@ -281,13 +291,38 @@ public class ExpandRecurringBillingEventsPipeline implements Serializable {
                 .setParameter("key", recurring.createVKey())
                 .getResultList());
 
+    Set<DateTime> eventTimesToExpand = difference(eventTimes, existingEventTimes);
+
+    if (eventTimesToExpand.isEmpty()) {
+      return;
+    }
+
     DateTime recurrenceLastExpansionTime = recurring.getRecurrenceLastExpansion();
 
     // Create new OneTime and DomainHistory for EventTimes that needs to be expanded.
-    for (DateTime eventTime : difference(eventTimes, existingEventTimes)) {
+    for (DateTime eventTime : eventTimesToExpand) {
       recurrenceLastExpansionTime = latestOf(recurrenceLastExpansionTime, eventTime);
       expandedOneTimeCounter.inc();
       DateTime billingTime = eventTime.plus(tld.getAutoRenewGracePeriodLength());
+      if (domain.getDeletionTime().isBefore(billingTime)) {}
+
+      // Note that the DomainHistory is created as of transaction time, as opposed to event time.
+      // This might be counterintuitive because other DomainHistories are created at the time
+      // mutation events occur, such as in DomainDeleteFlow or DomainRenewFlow. Therefore, it is
+      // possible to have a DomainHistory for a delete after autorenew (during the grace period)
+      // with a modification time before that of the DomainHistory for the autorenew itself. This is
+      // not ideal, but necessary because we save the *current* state of the domain (as of
+      // transaction time) to the DomainHistory , instead of the state of the domain as of event
+      // time (which would required loading the domain from DomainHistory at event time). Even
+      // though that is seemly possible, it generally is a bad idea to create DomainHistories
+      // retroactively and in all instances that we create a HistoryEntry we always set the
+      // modification time to the transaction time. It would also violate the invariance that a
+      // DomainHistory with a higher revision ID (which is always allocated with monotonic increase)
+      // always has a later modification time. Because the domain entity itself did not change as
+      // part of the expansion, the belatedly created DomainHistory does not actually affect
+      // anything materially (e.g. RDE). We can understand it in such a way that this history
+      // represents not when the domain is autorenewed (at event time), but when its autorenew
+      // billing event is created (at transaction time).
       DomainHistory historyEntry =
           new DomainHistory.Builder()
               .setBySuperuser(false)
@@ -299,16 +334,29 @@ public class ExpandRecurringBillingEventsPipeline implements Serializable {
               .setRequestedByRegistrar(false)
               .setType(DOMAIN_AUTORENEW)
               .setDomainTransactionRecords(
-                  ImmutableSet.of(
-                      DomainTransactionRecord.create(
-                          tld.getTldStr(),
-                          // We report this when the autorenew grace period ends.
-                          billingTime,
-                          TransactionReportField.netRenewsFieldFromYears(1),
-                          1)))
+                  // Don't write a domain transaction record if the domain is deleted before billing
+                  // time (i.e. within the autorenew grace period). We cannot rely on a negating
+                  // DomainHistory created by DomainDeleteFlow because it only cancels transaction
+                  // records already present. In this case the domain was deleted before this
+                  // pipeline runs to expand the OneTime (which should be rare because this pipeline
+                  // should run every day), and no negating transaction records would have been
+                  // created when the deletion occurred.
+                  //
+                  // See: DomainFlowUtils#createCancellingRecords
+                  domain.getDeletionTime().isBefore(billingTime)
+                      ? ImmutableSet.of()
+                      : ImmutableSet.of(
+                          DomainTransactionRecord.create(
+                              tld.getTldStr(),
+                              // We report this when the autorenew grace period ends.
+                              billingTime,
+                              TransactionReportField.netRenewsFieldFromYears(1),
+                              1)))
               .build();
       results.add(historyEntry);
 
+      // It is OK to always create a OneTime, even though the domain might be deleted later during
+      // autorenew grace period.
       OneTime oneTime =
           new OneTime.Builder()
               .setBillingTime(billingTime)
