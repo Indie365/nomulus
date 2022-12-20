@@ -306,6 +306,8 @@ oAuth:
   # in this list. Client IDs are typically of the format
   # numbers-alphanumerics.apps.googleusercontent.com
   allowedOauthClientIds: []
+  # GCP Identity-Aware Proxy client ID, if set up
+  iapClientId: null
 
 credentialOAuth:
   # OAuth scopes required for accessing Google APIs using the default
