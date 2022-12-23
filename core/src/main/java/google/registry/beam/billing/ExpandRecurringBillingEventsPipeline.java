@@ -19,7 +19,6 @@ import static com.google.common.collect.Sets.difference;
 import static google.registry.model.common.Cursor.CursorType.RECURRING_BILLING;
 import static google.registry.model.domain.Period.Unit.YEARS;
 import static google.registry.model.reporting.HistoryEntry.Type.DOMAIN_AUTORENEW;
-import static google.registry.persistence.transaction.TransactionManagerFactory.jpaTm;
 import static google.registry.persistence.transaction.TransactionManagerFactory.tm;
 import static google.registry.util.CollectionUtils.union;
 import static google.registry.util.DateTimeUtils.START_OF_TIME;
@@ -265,8 +264,7 @@ public class ExpandRecurringBillingEventsPipeline implements Serializable {
     // billing event itself can only be for a single domain.
     ImmutableSet<DateTime> existingEventTimes =
         ImmutableSet.copyOf(
-            jpaTm()
-                .query(
+            tm().query(
                     "SELECT eventTime FROM BillingEvent WHERE cancellationMatchingBillingEvent ="
                         + " :key",
                     DateTime.class)
