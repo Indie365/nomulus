@@ -54,7 +54,6 @@ import google.registry.util.SystemClock;
 import java.io.Serializable;
 import java.math.BigInteger;
 import java.util.Set;
-import java.util.concurrent.ThreadLocalRandom;
 import javax.inject.Singleton;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineResult;
@@ -136,7 +135,6 @@ public class ExpandRecurringBillingEventsPipeline implements Serializable {
   private final DateTime startTime;
   // Exclusive lower bound of the expansion window.
   private final DateTime endTime;
-  private final int shard;
   private final boolean isDryRun;
   private final boolean advanceCursor;
   private final Counter recurringsInScopeCounter =
@@ -154,7 +152,6 @@ public class ExpandRecurringBillingEventsPipeline implements Serializable {
     checkArgument(
         startTime.isBefore(endTime),
         String.format("[%s, %s) is not a valid window of operation.", startTime, endTime));
-    shard = options.getShard();
     isDryRun = options.getIsDryRun();
     advanceCursor = options.getAdvanceCursor();
   }
@@ -204,16 +201,14 @@ public class ExpandRecurringBillingEventsPipeline implements Serializable {
                   // are returned sequentially already. Therefore, having a sequential step to group
                   // them does not reduce overall parallelism of the pipeline, and the batches can
                   // then be distributed to all available workers for further processing, where the
-                  // main benefit of parallelism shows. In fact, distributing elements to random
-                  // keys in this step might increase overall latency as more elements need to be
-                  // processed to generate a batch, when batching only occurs on elements with the
-                  // same key (therefore increasing the overall buffer size of elements waiting to
-                  // be grouped, across all keys), delaying subsequent steps when batches could be
-                  // produced as soon as possible if the buffer size is kept at the minimum (same as
-                  // batch size).
+                  // main benefit of parallelism shows. In benchmarking, turning the distribution
+                  // of elements in this step resulted in marginal improvement in overall
+                  // performance at best without clear indication on why or to which degree. If the
+                  // runtime becomes a concern later on, we could consider fine-tuning the sharding
+                  // of output elements in this step.
                   //
                   // See: https://stackoverflow.com/a/44956702/791306
-                  return KV.of(ThreadLocalRandom.current().nextInt(shard), id.longValue());
+                  return KV.of(0, id.longValue());
                 })
             .withCoder(KvCoder.of(VarIntCoder.of(), VarLongCoder.of())));
   }

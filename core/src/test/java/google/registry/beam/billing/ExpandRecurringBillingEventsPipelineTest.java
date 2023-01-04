@@ -217,7 +217,7 @@ public class ExpandRecurringBillingEventsPipelineTest {
                 .setRecurrenceEndTime(recurring.getEventTime().minusDays(1))
                 .build());
     runPipeline();
-    assertNothingHappened();
+    assertNoExpansionsHappened();
   }
 
   @Test
@@ -225,7 +225,7 @@ public class ExpandRecurringBillingEventsPipelineTest {
     recurring =
         persistResource(recurring.asBuilder().setRecurrenceEndTime(startTime.minusDays(1)).build());
     runPipeline();
-    assertNothingHappened();
+    assertNoExpansionsHappened();
   }
 
   @Test
@@ -238,14 +238,14 @@ public class ExpandRecurringBillingEventsPipelineTest {
                 .setRecurrenceEndTime(startTime.plusHours(6))
                 .build());
     runPipeline();
-    assertNothingHappened();
+    assertNoExpansionsHappened();
   }
 
   @Test
   void testSuccess_noExpansion_eventTimeAfterEndTime() {
     recurring = persistResource(recurring.asBuilder().setEventTime(endTime.plusDays(1)).build());
     runPipeline();
-    assertNothingHappened();
+    assertNoExpansionsHappened();
   }
 
   @Test
@@ -257,7 +257,7 @@ public class ExpandRecurringBillingEventsPipelineTest {
                 .setRecurrenceLastExpansion(startTime.minusYears(1).plusDays(1))
                 .build());
     runPipeline();
-    assertNothingHappened();
+    assertNoExpansionsHappened();
   }
 
   @Test
@@ -281,7 +281,7 @@ public class ExpandRecurringBillingEventsPipelineTest {
   void testSuccess_expandSingleEvent_dryRun() {
     options.setIsDryRun(true);
     runPipeline();
-    assertNothingHappened(true);
+    assertNoExpansionsHappened(true);
   }
 
   @Test
@@ -415,11 +415,11 @@ public class ExpandRecurringBillingEventsPipelineTest {
     pipeline.run(options).waitUntilFinish();
   }
 
-  void assertNothingHappened() {
-    assertNothingHappened(false);
+  void assertNoExpansionsHappened() {
+    assertNoExpansionsHappened(false);
   }
 
-  void assertNothingHappened(boolean dryRun) {
+  void assertNoExpansionsHappened(boolean dryRun) {
     // Only the original domain create history entry is present.
     List<DomainHistory> persistedHistory =
         loadHistoryObjectsForResource(domain.createVKey(), DomainHistory.class);
@@ -429,8 +429,9 @@ public class ExpandRecurringBillingEventsPipelineTest {
     // Only the original recurrence is present.
     assertBillingEventsForResource(domain, recurring);
 
-    // If this is not a try run, the cursor should still be moved even though nothing happened,
-    // because we still successfully processed all the needed expansions in the window. Therefore,
+    // If this is not a dry run, the cursor should still be moved even though expansions happened,
+    // because we still successfully processed all the needed expansions (none in this case) in the
+    // window. Therefore,
     // the cursor should be up-to-date as of end time.
     assertCursorAt(dryRun ? startTime : endTime);
   }
