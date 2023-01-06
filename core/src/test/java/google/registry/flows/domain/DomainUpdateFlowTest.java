@@ -964,6 +964,21 @@ class DomainUpdateFlowTest extends ResourceFlowTestCase<DomainUpdateFlow, Domain
   }
 
   @Test
+  void testFailure_existingDSDataInvalid() throws Exception {
+    setEppInput("domain_update_dsdata_add.xml", OTHER_DSDATA_TEMPLATE_MAP);
+    persistResource(
+        DatabaseHelper.newDomain(getUniqueIdFromCommand())
+            .asBuilder()
+            .setDsData(ImmutableSet.of(DomainDsData.create(1, 2, 3, new byte[] {0, 1, 2})))
+            .build());
+    EppException thrown = assertThrows(InvalidDsRecordException.class, this::runFlow);
+    assertAboutEppExceptions().that(thrown).marshalsToXml();
+    assertThat(thrown)
+        .hasMessageThat()
+        .contains("Existing DS Data is invalid and has to be corrected or removed.");
+  }
+
+  @Test
   void testFailure_secDnsMultipleInvalidDigestTypes() throws Exception {
     setEppInput("domain_update_dsdata_add.xml", OTHER_DSDATA_TEMPLATE_MAP);
     persistResource(
@@ -1047,8 +1062,9 @@ class DomainUpdateFlowTest extends ResourceFlowTestCase<DomainUpdateFlow, Domain
   @Test
   void testFailure_secDnsTooManyDsRecords() throws Exception {
     ImmutableSet.Builder<DomainDsData> builder = new ImmutableSet.Builder<>();
+    byte[] b = new byte[32];
     for (int i = 0; i < 8; ++i) {
-      builder.add(DomainDsData.create(i, 2, 2, new byte[] {0, 1, 2}));
+      builder.add(DomainDsData.create(i, 2, 2, b));
     }
 
     setEppInput("domain_update_dsdata_add.xml", OTHER_DSDATA_TEMPLATE_MAP);

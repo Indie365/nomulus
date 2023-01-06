@@ -32,6 +32,7 @@ import static google.registry.flows.domain.DomainFlowUtils.cloneAndLinkReference
 import static google.registry.flows.domain.DomainFlowUtils.updateDsData;
 import static google.registry.flows.domain.DomainFlowUtils.validateContactsHaveTypes;
 import static google.registry.flows.domain.DomainFlowUtils.validateDsData;
+import static google.registry.flows.domain.DomainFlowUtils.validateExistingDsData;
 import static google.registry.flows.domain.DomainFlowUtils.validateFeesAckedIfPresent;
 import static google.registry.flows.domain.DomainFlowUtils.validateNameserversAllowedOnTld;
 import static google.registry.flows.domain.DomainFlowUtils.validateNameserversCountForTld;
@@ -176,6 +177,7 @@ public final class DomainUpdateFlow implements TransactionalFlow {
     Update command = cloneAndLinkReferences((Update) resourceCommand, now);
     Domain existingDomain = loadAndVerifyExistence(Domain.class, targetId, now);
     verifyUpdateAllowed(command, existingDomain, now);
+    validateExistingDsData(existingDomain.getDsData());
     flowCustomLogic.afterValidation(
         AfterValidationParameters.newBuilder().setExistingDomain(existingDomain).build());
     Domain newDomain = performUpdate(command, existingDomain, now);
