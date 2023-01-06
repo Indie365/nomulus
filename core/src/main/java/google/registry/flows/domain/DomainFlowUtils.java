@@ -161,6 +161,7 @@ public class DomainFlowUtils {
   public static final ImmutableSet<ReservationType> TYPES_ALLOWED_FOR_CREATE_ONLY_IN_SUNRISE =
       Sets.immutableEnumSet(ALLOWED_IN_SUNRISE, NAME_COLLISION);
 
+
   /** Warning message for allocation of collision domains in sunrise. */
   public static final String COLLISION_MESSAGE =
       "Domain on the name collision list was allocated. But by policy, the domain will not be "
@@ -183,6 +184,9 @@ public class DomainFlowUtils {
 
   /** Maximum number of characters in a domain label, from RFC 2181. */
   private static final int MAX_LABEL_SIZE = 63;
+
+  private static final String EXISTING_DS_DATA_INVALID =
+      "Existing DS Data is invalid and has to be corrected or removed. ";
 
   /**
    * Returns parsed version of {@code name} if domain name label follows our naming rules and is
@@ -310,6 +314,17 @@ public class DomainFlowUtils {
         .getBillingAccountMap()
         .containsKey(registry.getCurrency())) {
       throw new DomainFlowUtils.MissingBillingAccountMapException(registry.getCurrency());
+    }
+  }
+
+  /** Check that the DS data on existing domain is valid. */
+  static void validateExistingDsData(Set<DomainDsData> dsData) throws EppException {
+    try {
+      validateDsData(dsData);
+    } catch (InvalidDsRecordException e) {
+      throw new InvalidDsRecordException(EXISTING_DS_DATA_INVALID + e.getMessage());
+    } catch (TooManyDsRecordsException e) {
+      throw new TooManyDsRecordsException(EXISTING_DS_DATA_INVALID + e.getMessage());
     }
   }
 
