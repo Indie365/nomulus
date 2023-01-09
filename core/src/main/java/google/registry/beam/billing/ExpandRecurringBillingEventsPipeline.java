@@ -320,11 +320,26 @@ public class ExpandRecurringBillingEventsPipeline implements Serializable {
                   // should run every day), and no negating transaction records would have been
                   // created when the deletion occurred. Again, there is no need to project the
                   // domain, because if it were deleted before this transaction, its updated delete
-                  // time would have already been load here.
+                  // time would have already been loaded here.
                   //
                   // We don't compare recurrence end time with billing time because the recurrence
                   // could be caused for other reasons during the grace period, like a manual
-                  // renewal, in which case we still want to write the transaction record.
+                  // renewal, in which case we still want to write the transaction record. Also,
+                  // the expansion happens when event time is in scope, which means the billing time
+                  // is still 45 days in the future, and the recurrence could have been closed
+                  // between now and then.
+                  //
+                  // A side effect of this logic is that if a transfer occurs within the ARGP, it
+                  // would have recorded both a TRANSFER_SUCCESSFUL and a NET_RENEWS_1_YEAR, even
+                  // though the transfer would have subsumed the autorenew. There is no perfect
+                  // solution for this because even if we expand the recurrence when the billing
+                  // event is in scope (as was the case in the old action), we still cannot use
+                  // recurrence end time < billing time as an indicator for if a transfer had
+                  // occurred during ARGP (see last paragraph, renewals during ARPG also close the
+                  // recurrence),therefore we still cannot always be correct when constructing the
+                  // transaction records that way (either we miss transfers, or we miss renewals
+                  // during ARGP).
+                  //
                   // See: DomainFlowUtils#createCancellingRecords
                   domain.getDeletionTime().isBefore(billingTime)
                       ? ImmutableSet.of()
