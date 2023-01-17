@@ -68,8 +68,14 @@ public final class NordnVerifyAction implements Runnable {
   @Inject Response response;
   @Inject UrlConnectionService urlConnectionService;
 
-  @Inject @Parameter(NORDN_URL_PARAM) URL url;
-  @Inject @Parameter(NORDN_LOG_ID_ARAM) String actionLogId;
+  @Inject
+  @Parameter(NORDN_URL_PARAM)
+  URL url;
+
+  @Inject
+  @Parameter(NORDN_LOG_ID_ARAM)
+  String actionLogId;
+
   @Inject @Parameter(RequestParameters.PARAM_TLD) String tld;
   @Inject NordnVerifyAction() {}
 
