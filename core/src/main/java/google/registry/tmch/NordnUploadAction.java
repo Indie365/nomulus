@@ -38,6 +38,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.flogger.FluentLogger;
 import google.registry.config.RegistryConfig.Config;
@@ -49,7 +50,6 @@ import google.registry.request.UrlConnectionUtils;
 import google.registry.request.auth.Auth;
 import google.registry.util.Clock;
 import google.registry.util.Retrier;
-import google.registry.util.TaskQueueUtils;
 import google.registry.util.UrlConnectionException;
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -81,6 +81,7 @@ public final class NordnUploadAction implements Runnable {
   static final String PATH = "/_dr/task/nordnUpload";
   static final String LORDN_PHASE_PARAM = "lordn-phase";
 
+  private static final int QUEUE_BATCH_SIZE = 1000;
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
   private static final Duration LEASE_PERIOD = Duration.standardHours(1);
 
@@ -100,7 +101,6 @@ public final class NordnUploadAction implements Runnable {
   @Inject @Config("tmchMarksdbUrl") String tmchMarksdbUrl;
   @Inject @Parameter(LORDN_PHASE_PARAM) String phase;
   @Inject @Parameter(RequestParameters.PARAM_TLD) String tld;
-  @Inject TaskQueueUtils taskQueueUtils;
   @Inject NordnUploadAction() {}
 
   /**
@@ -127,7 +127,7 @@ public final class NordnUploadAction implements Runnable {
    * delimited String.
    */
   static String convertTasksToCsv(List<TaskHandle> tasks, DateTime now, String columns) {
-    // Use a Set for deduping purposes so we can be idempotent in case tasks happened to be
+    // Use a Set for deduping purposes, so we can be idempotent in case tasks happened to be
     // enqueued multiple times for a given domain create.
     ImmutableSortedSet.Builder<String> builder =
         new ImmutableSortedSet.Builder<>(Ordering.natural());
@@ -152,7 +152,7 @@ public final class NordnUploadAction implements Runnable {
                   queue.leaseTasks(
                       LeaseOptions.Builder.withTag(tld)
                           .leasePeriod(LEASE_PERIOD.getMillis(), TimeUnit.MILLISECONDS)
-                          .countLimit(TaskQueueUtils.getBatchSize())),
+                          .countLimit(QUEUE_BATCH_SIZE)),
               TransientFailureException.class,
               DeadlineExceededException.class);
       if (tasks.isEmpty()) {
@@ -182,7 +182,11 @@ public final class NordnUploadAction implements Runnable {
     if (!tasks.isEmpty()) {
       String csvData = convertTasksToCsv(tasks, now, columns);
       uploadCsvToLordn(String.format("/LORDN/%s/%s", tld, phase), csvData);
-      taskQueueUtils.deleteTasks(queue, tasks);
+      Lists.partition(tasks, QUEUE_BATCH_SIZE)
+          .forEach(
+              batch ->
+                  retrier.callWithRetry(
+                      () -> queue.deleteTask(batch), TransientFailureException.class));
     }
   }
 

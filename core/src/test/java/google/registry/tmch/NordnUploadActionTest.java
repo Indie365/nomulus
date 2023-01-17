@@ -58,7 +58,6 @@ import google.registry.testing.FakeUrlConnectionService;
 import google.registry.testing.TaskQueueExtension;
 import google.registry.testing.TaskQueueHelper.TaskMatcher;
 import google.registry.util.Retrier;
-import google.registry.util.TaskQueueUtils;
 import google.registry.util.UrlConnectionException;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -120,7 +119,6 @@ class NordnUploadActionTest {
     action.urlConnectionService = urlConnectionService;
     action.lordnRequestInitializer = lordnRequestInitializer;
     action.phase = "claims";
-    action.taskQueueUtils = new TaskQueueUtils(new Retrier(new FakeSleeper(clock), 3));
     action.tld = "tld";
     action.tmchMarksdbUrl = "http://127.0.0.1";
     action.random = new SecureRandom();
