@@ -15,7 +15,6 @@
 package google.registry.tmch;
 
 import static com.google.appengine.api.taskqueue.QueueFactory.getQueue;
-import static com.google.appengine.api.taskqueue.TaskOptions.Builder.withUrl;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.net.HttpHeaders.LOCATION;
@@ -143,7 +142,7 @@ public final class NordnUploadAction implements Runnable {
    * delimited String.
    */
   static String convertTasksToCsv(List<TaskHandle> tasks, DateTime now, String columns) {
-    // Use a Set for deduping purposes so we can be idempotent in case tasks happened to be
+    // Use a Set for deduping purposes, so we can be idempotent in case tasks happened to be
     // enqueued multiple times for a given domain create.
     ImmutableSortedSet.Builder<String> builder =
         new ImmutableSortedSet.Builder<>(Ordering.natural());
@@ -248,7 +247,7 @@ public final class NordnUploadAction implements Runnable {
                 actionLogId),
             connection);
       }
-      getQueue(NordnVerifyAction.QUEUE).add(makeVerifyTask(new URL(location)));
+      cloudTasksUtils.enqueue(NordnVerifyAction.QUEUE, makeVerifyTask(new URL(location)));
     } catch (IOException e) {
       throw new IOException(String.format("Error connecting to MarksDB at URL %s", url), e);
     }
@@ -256,15 +255,14 @@ public final class NordnUploadAction implements Runnable {
 
   private Task makeVerifyTask(URL url) {
     // The actionLogId is used to uniquely associate the verify task back to the upload task.
-    cloudTasksUtils.createPostTaskWithDelay(
+    return cloudTasksUtils.createPostTaskWithDelay(
         NordnVerifyAction.PATH,
         Service.BACKEND.toString(),
-        ImmutableMultimap.<String, String>builder().put(RequestParameters.PARAM_TLD, tld).build(),
+        ImmutableMultimap.<String, String>builder()
+            .put(NordnVerifyAction.NORDN_URL_PARAM, url.toString())
+            .put(NordnVerifyAction.NORDN_LOG_ID_ARAM, actionLogId)
+            .put(RequestParameters.PARAM_TLD, tld)
+            .build(),
         Duration.millis(VERIFY_DELAY.getMillis()));
-    return withUrl(NordnVerifyAction.PATH)
-        .header(NordnVerifyAction.URL_HEADER, url.toString())
-        .header(NordnVerifyAction.HEADER_ACTION_LOG_ID, actionLogId)
-        .param(RequestParameters.PARAM_TLD, tld)
-        .countdownMillis(VERIFY_DELAY.getMillis());
   }
 }
