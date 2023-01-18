@@ -14,7 +14,6 @@
 
 package google.registry.reporting.icann;
 
-import google.registry.bigquery.BigqueryConnection;
 import org.joda.time.YearMonth;
 
 /**
@@ -36,16 +35,13 @@ public interface DnsCountQueryCoordinator {
    */
   class Params {
 
-    public BigqueryConnection bigquery;
-
     /** The Google Cloud project id. */
     public String projectId;
 
     /** The BigQuery dataset from which to query. */
     public String icannReportingDataSet;
 
-    public Params(BigqueryConnection bigquery, String projectId, String icannReportingDataSet) {
-      this.bigquery = bigquery;
+    public Params(String projectId, String icannReportingDataSet) {
       this.projectId = projectId;
       this.icannReportingDataSet = icannReportingDataSet;
     }

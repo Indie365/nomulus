@@ -31,11 +31,10 @@ public class DnsCountQueryCoordinatorModule {
   @Provides
   static DnsCountQueryCoordinator provideDnsCountQueryCoordinator(
       @Config("dnsCountQueryCoordinatorClass") String customClass,
-      BigqueryConnection bigquery,
       @Config("projectId") String projectId,
       @Named(ICANN_REPORTING_DATA_SET) String icannReportingDataSet) {
     DnsCountQueryCoordinator.Params params =
-        new DnsCountQueryCoordinator.Params(bigquery, projectId, icannReportingDataSet);
+        new DnsCountQueryCoordinator.Params(projectId, icannReportingDataSet);
     return instantiate(getClassFromString(customClass, DnsCountQueryCoordinator.class), params);
   }
 }

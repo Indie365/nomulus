@@ -142,7 +142,7 @@ public final class IcannReportingStagingAction implements Runnable {
       response.setPayload(
           String.format(
               "Staging failed due to %s",
-              getRootCause(e).toString()));
+              getRootCause(e)));
       throw new RuntimeException("Staging action failed.", e);
     }
   }

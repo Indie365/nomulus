@@ -34,6 +34,9 @@ import org.joda.time.Duration;
 @Module
 public final class IcannReportingModule {
 
+  private IcannReportingModule() {
+  }
+
   /** Enum determining the type of report to generate or upload. */
   public enum ReportType {
     TRANSACTIONS,

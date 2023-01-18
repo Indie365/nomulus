@@ -77,7 +77,7 @@ public class IcannReportingStager {
   ImmutableList<String> stageReports(YearMonth yearMonth, String subdir, ReportType reportType)
       throws Exception {
     QueryBuilder queryBuilder =
-        (reportType == ReportType.ACTIVITY) ? activityQueryBuilder : transactionsQueryBuilder;
+        reportType == ReportType.ACTIVITY ? activityQueryBuilder : transactionsQueryBuilder;
 
     if (reportType == ReportType.ACTIVITY) {
       // Prepare for the DNS count query, which may have special needs.
@@ -97,7 +97,7 @@ public class IcannReportingStager {
     // Get report headers from the table schema and convert into CSV format.
     String headerRow = constructRow(getHeaders(reportTable.columnKeySet()));
 
-    return (reportType == ReportType.ACTIVITY)
+    return reportType == ReportType.ACTIVITY
         ? stageActivityReports(yearMonth, subdir, headerRow, reportTable.rowMap().values())
         : stageTransactionsReports(yearMonth, subdir, headerRow, reportTable.rowMap().values());
   }
@@ -119,10 +119,10 @@ public class IcannReportingStager {
         .get();
   }
 
-  private Iterable<String> getHeaders(ImmutableSet<TableFieldSchema> fields) {
+  private static Iterable<String> getHeaders(ImmutableSet<TableFieldSchema> fields) {
     return fields
         .stream()
-        .map((schema) -> schema.getName().replace('_', '-'))
+        .map(schema -> schema.getName().replace('_', '-'))
         .collect(toImmutableList());
   }
 
@@ -191,7 +191,7 @@ public class IcannReportingStager {
   }
 
   /** Adds a row's values to an existing list of integers (totals). */
-  private void addToTotal(List<Integer> totals, Map<TableFieldSchema, Object> row) {
+  private static void addToTotal(List<Integer> totals, Map<TableFieldSchema, Object> row) {
     List<Integer> rowVals =
         row.values()
             .stream()
@@ -208,7 +208,7 @@ public class IcannReportingStager {
   }
 
   /** Returns a list of integers (totals) as a comma separated string. */
-  private String constructTotalRow(List<Integer> totals) {
+  private static String constructTotalRow(List<Integer> totals) {
     return "Totals,," + totals.stream().map(Object::toString).collect(Collectors.joining(","));
   }
 
@@ -218,7 +218,7 @@ public class IcannReportingStager {
    *
    * <p>This discards the first object, which is assumed to be the TLD field.
    * */
-  private String constructRow(Iterable<?> iterable) {
+  private static String constructRow(Iterable<?> iterable) {
     Iterator<?> rowIter = iterable.iterator();
     StringBuilder rowString = new StringBuilder();
     // Skip the TLD column
@@ -237,7 +237,7 @@ public class IcannReportingStager {
    * <p>Note that activity reports will only have one row, while transactions reports may have
    * multiple rows.
    */
-  private String createReport(String headers, List<String> rows) {
+  private static String createReport(String headers, List<String> rows) {
     StringBuilder reportCsv = new StringBuilder(headers);
     for (String row : rows) {
       // Add CRLF between rows per ICANN specification
@@ -271,7 +271,7 @@ public class IcannReportingStager {
     final BlobId gcsFilename =
         BlobId.of(reportingBucket, String.format("%s/%s", subdir, MANIFEST_FILE_NAME));
     StringBuilder manifestString = new StringBuilder();
-    filenames.forEach((filename) -> manifestString.append(filename).append("\n"));
+    filenames.forEach(filename -> manifestString.append(filename).append('\n'));
     gcsUtils.createFromBytes(gcsFilename, manifestString.toString().getBytes(UTF_8));
     logger.atInfo().log("Wrote %d filenames to manifest at '%s'.", filenames.size(), gcsFilename);
   }
