@@ -36,6 +36,13 @@ configurations {
   testImplementation.extendsFrom testingCompile
   testRuntimeOnly.extendsFrom testingRuntime
 
+  // Starting from Gradle 7.1, the 'testing' configuration must be explicitly
+  // created, unlike any other configuration. This is because it is also a
+  // SourceSet name. Therefore, when Gradle stops automatically creates a
+  // same-named config for each SourceSet, 'testing.extendsFrom' is executed on
+  // a wrong object. The name 'testing' is appropriate. We are keeping it
+  // instead of renaming the configuration or the SourceSet.
+
   // All testing util classes. Other projects may declare dependency as:
   // testImplementation project(path: 'common', configuration: 'testing')
   create("testing")
